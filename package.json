@@ -15,5 +15,9 @@
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "alpinejs": "^3.17.5",
+        "lucide": "^1.67.0"
     }
 }
