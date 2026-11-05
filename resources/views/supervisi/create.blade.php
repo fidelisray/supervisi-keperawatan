@@ -285,25 +285,11 @@
                 <div class="px-6 py-3 bg-slate-100/50 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs">
                     <span class="text-slate-500 font-semibold mr-1">Ringkasan Masalah:</span>
 
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 font-medium">
-                        <span class="w-2 h-2 rounded-full bg-rose-600 mr-1.5"></span>
-                        Complain: <strong class="ml-1" x-text="countByCategory('complain')">0</strong>
-                    </span>
-
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium">
-                        <span class="w-2 h-2 rounded-full bg-amber-600 mr-1.5"></span>
-                        Fasilitas: <strong class="ml-1" x-text="countByCategory('fasilitas')">0</strong>
-                    </span>
-
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200 font-medium">
-                        <span class="w-2 h-2 rounded-full bg-teal-600 mr-1.5"></span>
-                        JKN &ge; 6 Hari: <strong class="ml-1" x-text="countByCategory('jkn_6_hari')">0</strong>
-                    </span>
-
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-200 text-slate-800 border border-slate-300 font-medium">
-                        <span class="w-2 h-2 rounded-full bg-slate-600 mr-1.5"></span>
-                        Lain-Lain: <strong class="ml-1" x-text="countByCategory('lain_lain')">0</strong>
-                    </span>
+                    @foreach($incidentCategories as $cat)
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full {{ $cat->badgeClasses() }} font-medium">
+                            {{ $cat->incident_category }}: <strong class="ml-1" x-text="countByCategory({{ $cat->id }})">0</strong>
+                        </span>
+                    @endforeach
 
                     <span class="ml-auto text-slate-500 font-medium">
                         Total: <strong class="text-slate-900" x-text="incidents.length">0</strong> Butir Kejadian
@@ -547,34 +533,16 @@
                                     Kategori Masalah / Poin Kejadian
                                 </label>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="complain" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-800 font-semibold text-xs hover:bg-slate-50">
-                                            Complain
-                                        </div>
-                                    </label>
-
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="fasilitas" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 font-semibold text-xs hover:bg-slate-50">
-                                            Fasilitas
-                                        </div>
-                                    </label>
-
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="jkn_6_hari" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-teal-500 peer-checked:bg-teal-50 peer-checked:text-teal-800 font-semibold text-xs hover:bg-slate-50">
-                                            JKN &ge; 6 Hari
-                                        </div>
-                                    </label>
-
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="lain_lain" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-800 font-semibold text-xs hover:bg-slate-50">
-                                            Lain-Lain
-                                        </div>
-                                    </label>
+                                    @foreach($incidentCategories as $cat)
+                                        <label class="cursor-pointer" title="{{ $cat->description }}">
+                                            <input type="radio" x-model.number="modalData.category" value="{{ $cat->id }}" class="peer sr-only">
+                                            <div class="p-2.5 rounded-lg border border-slate-200 text-center transition {{ $cat->radioPeerClasses() }} font-semibold text-xs hover:bg-slate-50">
+                                                {{ $cat->incident_category }}
+                                            </div>
+                                        </label>
+                                    @endforeach
                                 </div>
+                                <p class="text-[11px] text-slate-500 mt-1.5" x-show="getCategoryDescription(modalData.category)" x-text="getCategoryDescription(modalData.category)"></p>
                             </div>
 
                             <!-- Jam Kejadian & Status -->
@@ -658,8 +626,21 @@
     </div>
 
     <!-- Alpine.js Component Script -->
+    @php
+        $categoryMeta = $incidentCategories->mapWithKeys(fn ($cat) => [
+            $cat->id => [
+                'label' => $cat->incident_category,
+                'description' => $cat->description,
+                'style' => $cat->badgeClasses(),
+            ],
+        ]);
+        $defaultCategoryId = $incidentCategories->first()?->id ?? 1;
+    @endphp
     <script>
         function supervisionLogbook() {
+            const categoryMeta = @json($categoryMeta);
+            const defaultCategoryId = @json($defaultCategoryId);
+
             return {
                 collaborators: @json(old('collaborators', [])),
                 collaboratorInput: '',
@@ -669,7 +650,7 @@
                 editingIndex: null,
                 modalError: '',
                 modalData: {
-                    category: 'complain',
+                    category: defaultCategoryId,
                     incident_time: '',
                     description: '',
                     action_taken: '',
@@ -707,7 +688,7 @@
                     const minutes = String(now.getMinutes()).padStart(2, '0');
 
                     this.modalData = {
-                        category: 'complain',
+                        category: defaultCategoryId,
                         incident_time: `${hours}:${minutes}`,
                         description: '',
                         action_taken: '',
@@ -753,6 +734,8 @@
                         return;
                     }
 
+                    this.modalData.category = Number(this.modalData.category);
+
                     if (this.editingIndex !== null) {
                         this.incidents[this.editingIndex] = JSON.parse(JSON.stringify(this.modalData));
                     } else {
@@ -768,28 +751,20 @@
                     }
                 },
 
-                countByCategory(cat) {
-                    return this.incidents.filter(i => i.category === cat).length;
+                countByCategory(catId) {
+                    return this.incidents.filter(i => Number(i.category) === Number(catId)).length;
                 },
 
-                getCategoryLabel(cat) {
-                    const labels = {
-                        'complain': 'Complain',
-                        'fasilitas': 'Fasilitas',
-                        'jkn_6_hari': 'JKN ≥ 6 Hari',
-                        'lain_lain': 'Lain-Lain'
-                    };
-                    return labels[cat] || 'Lain-Lain';
+                getCategoryLabel(catId) {
+                    return categoryMeta[catId]?.label || `Kategori #${catId}`;
                 },
 
-                getCategoryStyle(cat) {
-                    const styles = {
-                        'complain': 'bg-rose-100 text-rose-800 border border-rose-300',
-                        'fasilitas': 'bg-amber-100 text-amber-800 border border-amber-300',
-                        'jkn_6_hari': 'bg-teal-100 text-teal-800 border border-teal-300',
-                        'lain_lain': 'bg-slate-100 text-slate-800 border border-slate-300'
-                    };
-                    return styles[cat] || styles['lain_lain'];
+                getCategoryDescription(catId) {
+                    return categoryMeta[catId]?.description || '';
+                },
+
+                getCategoryStyle(catId) {
+                    return categoryMeta[catId]?.style || 'bg-slate-100 text-slate-800 border border-slate-300';
                 },
 
                 getStatusLabel(status) {

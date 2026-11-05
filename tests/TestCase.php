@@ -215,6 +215,60 @@ abstract class TestCase extends BaseTestCase
             ]);
         }
 
+        if (! $schema->hasTable('tb_master_nurse_supervision_incidents_category')) {
+            $schema->create('tb_master_nurse_supervision_incidents_category', function (Blueprint $table) {
+                $table->id();
+                $table->string('incident_category', 150);
+                $table->text('description')->nullable();
+                $table->string('created_by', 50)->nullable();
+                $table->timestamp('created_at')->nullable();
+                $table->string('updated_by', 50)->nullable();
+                $table->timestamp('updated_at')->nullable();
+                $table->string('deleted_by', 50)->nullable();
+                $table->timestamp('deleted_at')->nullable();
+                $table->string('is_active', 10)->default('true');
+            });
+
+            DB::connection('sqlsrv')->table('tb_master_nurse_supervision_incidents_category')->insert([
+                [
+                    'id' => 1,
+                    'incident_category' => 'Complain',
+                    'description' => 'Keluhan pasien atau keluarga pasien.',
+                    'created_by' => '5508150824',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'is_active' => 'true',
+                ],
+                [
+                    'id' => 2,
+                    'incident_category' => 'Fasilitas',
+                    'description' => 'Kendala fasilitas dan alat kesehatan.',
+                    'created_by' => '5508150824',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'is_active' => 'true',
+                ],
+                [
+                    'id' => 3,
+                    'incident_category' => 'JKN >= 6 Hari',
+                    'description' => 'Pemantauan pasien JKN >= 6 hari.',
+                    'created_by' => '5508150824',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'is_active' => 'true',
+                ],
+                [
+                    'id' => 4,
+                    'incident_category' => 'Lain-Lain',
+                    'description' => 'Kejadian lainnya.',
+                    'created_by' => '5508150824',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'is_active' => 'true',
+                ],
+            ]);
+        }
+
         if (! $schema->hasTable('tb_nurse_supervision_reports')) {
             $schema->create('tb_nurse_supervision_reports', function (Blueprint $table) {
                 $table->id();
@@ -235,7 +289,7 @@ abstract class TestCase extends BaseTestCase
             $schema->create('tb_nurse_supervision_incidents', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('supervision_report_id')->constrained('tb_nurse_supervision_reports')->cascadeOnDelete();
-                $table->string('category');
+                $table->foreignId('category')->constrained('tb_master_nurse_supervision_incidents_category');
                 $table->string('incident_time')->nullable();
                 $table->text('description');
                 $table->text('action_taken')->nullable();

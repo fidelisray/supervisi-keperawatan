@@ -253,16 +253,14 @@
                                                     $cats = $report->incidents->groupBy('category');
                                                 @endphp
 
-                                                @if(isset($cats['complain']))
-                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
-                                                        {{ $cats['complain']->count() }} Complain
+                                                @foreach($cats as $catId => $catIncidents)
+                                                    @php
+                                                        $firstIncident = $catIncidents->first();
+                                                    @endphp
+                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $firstIncident->categoryBadgeClasses() }}">
+                                                        {{ $catIncidents->count() }} {{ $firstIncident->categoryLabel() }}
                                                     </span>
-                                                @endif
-                                                @if(isset($cats['fasilitas']))
-                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                                                        {{ $cats['fasilitas']->count() }} Fasilitas
-                                                    </span>
-                                                @endif
+                                                @endforeach
                                             </div>
                                         @endif
                                     </td>

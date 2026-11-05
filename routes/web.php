@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\IncidentCategoryController;
 use App\Http\Controllers\Admin\RoleManagementController;
 use App\Http\Controllers\Auth\SsoAuthController;
 use App\Http\Controllers\SupervisionAnalyticsController;
@@ -35,5 +36,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/roles/users', [RoleManagementController::class, 'assignUserRole'])->name('roles.assign-user');
         Route::patch('/roles/users/{appRole}', [RoleManagementController::class, 'updateUserRole'])->name('roles.update-user');
         Route::delete('/roles/users/{appRole}', [RoleManagementController::class, 'destroyUserRole'])->name('roles.destroy-user');
+
+        Route::get('/incident-categories', [IncidentCategoryController::class, 'index'])->name('incident-categories.index');
+        Route::post('/incident-categories', [IncidentCategoryController::class, 'store'])->name('incident-categories.store');
+        Route::put('/incident-categories/{incidentCategory}', [IncidentCategoryController::class, 'update'])->name('incident-categories.update');
+        Route::patch('/incident-categories/{incidentCategory}/toggle-active', [IncidentCategoryController::class, 'toggleActive'])->name('incident-categories.toggle-active');
+        Route::delete('/incident-categories/{incidentCategory}', [IncidentCategoryController::class, 'destroy'])->name('incident-categories.destroy');
     });
 });

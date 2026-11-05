@@ -27,7 +27,7 @@ test('analytics page renders incident distribution charts scoped to user role', 
 
     Incident::create([
         'supervision_report_id' => $report->id,
-        'category' => 'complain',
+        'category' => 1,
         'incident_time' => '10:00',
         'description' => 'Keluhan keterlambatan diet pasien.',
         'action_taken' => 'Koordinasi instalasi gizi.',
@@ -39,5 +39,5 @@ test('analytics page renders incident distribution charts scoped to user role', 
     $response->assertSuccessful();
     $response->assertSee('Analisis & Grafik Kejadian Ruangan');
     $response->assertSee('FRANSISKUS');
-    $response->assertSee('Complain Pasien/Keluarga');
+    $response->assertSee('Complain');
 });

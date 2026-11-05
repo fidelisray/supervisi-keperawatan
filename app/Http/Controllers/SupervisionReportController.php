@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AppRole;
 use App\Models\Incident;
+use App\Models\IncidentCategory;
 use App\Models\Room;
 use App\Models\SupervisionReport;
 use Carbon\Carbon;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -44,7 +46,7 @@ class SupervisionReportController extends Controller
             });
 
         $reports = (clone $filteredQuery)
-            ->with('incidents')
+            ->with(['incidents.incidentCategory'])
             ->latest('report_date')
             ->latest('id')
             ->paginate(10)
@@ -52,12 +54,20 @@ class SupervisionReportController extends Controller
 
         $accessibleIdsSubquery = (clone $accessibleReportsQuery)->select('id');
 
+        $complaintCategoryIds = IncidentCategory::withTrashed()
+            ->get(['id', 'incident_category'])
+            ->filter(fn (IncidentCategory $cat): bool => $cat->isComplaintCategory())
+            ->pluck('id')
+            ->all();
+
         $todayReportsCount = (clone $accessibleReportsQuery)->whereDate('report_date', $today)->count();
         $totalIncidentsCount = Incident::query()->whereIn('supervision_report_id', $accessibleIdsSubquery)->count();
-        $totalComplaintsCount = Incident::query()
-            ->whereIn('supervision_report_id', $accessibleIdsSubquery)
-            ->where('category', 'complain')
-            ->count();
+        $totalComplaintsCount = count($complaintCategoryIds) > 0
+            ? Incident::query()
+                ->whereIn('supervision_report_id', $accessibleIdsSubquery)
+                ->whereIn('category', $complaintCategoryIds)
+                ->count()
+            : 0;
         $resolvedIncidentsCount = Incident::query()
             ->whereIn('supervision_report_id', $accessibleIdsSubquery)
             ->where('status', 'resolved')
@@ -90,10 +100,15 @@ class SupervisionReportController extends Controller
             ->operationalNurses()
             ->orderBy('description')
             ->get(['id', 'nip', 'description', 'app_roles']);
+        $incidentCategories = IncidentCategory::query()
+            ->active()
+            ->orderBy('id')
+            ->get();
 
         return view('supervisi.create', [
             'rooms' => $rooms,
             'nurses' => $nurses,
+            'incidentCategories' => $incidentCategories,
             'shifts' => $this->availableShifts(),
             'defaultShift' => $this->resolveDefaultShift(),
             'defaultSupervisor' => $request->user()?->name ?? '',
@@ -141,7 +156,7 @@ class SupervisionReportController extends Controller
     {
         abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
 
-        $supervisionReport->load('incidents');
+        $supervisionReport->load(['incidents.incidentCategory']);
 
         return view('supervisi.show', [
             'report' => $supervisionReport,
@@ -155,7 +170,7 @@ class SupervisionReportController extends Controller
     {
         abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
 
-        $supervisionReport->load('incidents');
+        $supervisionReport->load(['incidents.incidentCategory']);
 
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
@@ -163,10 +178,25 @@ class SupervisionReportController extends Controller
             ->orderBy('description')
             ->get(['id', 'nip', 'description', 'app_roles']);
 
+        $usedCategoryIds = $supervisionReport->incidents->pluck('category')->map(fn ($id) => (int) $id)->unique()->all();
+
+        $incidentCategories = IncidentCategory::withTrashed()
+            ->where(function (Builder $query) use ($usedCategoryIds): void {
+                $query->where(function (Builder $sub): void {
+                    $sub->whereNull('deleted_at')->where('is_active', 'true');
+                });
+                if (count($usedCategoryIds) > 0) {
+                    $query->orWhereIn('id', $usedCategoryIds);
+                }
+            })
+            ->orderBy('id')
+            ->get();
+
         return view('supervisi.edit', [
             'report' => $supervisionReport,
             'rooms' => $rooms,
             'nurses' => $nurses,
+            'incidentCategories' => $incidentCategories,
             'shifts' => $this->availableShifts(),
         ]);
     }
@@ -230,6 +260,11 @@ class SupervisionReportController extends Controller
      */
     private function validateReportPayload(Request $request): array
     {
+        $validCategoryIds = IncidentCategory::withTrashed()
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         return $request->validate([
             'report_date' => ['required', 'date'],
             'shift' => ['nullable', 'in:pagi,sore,malam'],
@@ -242,7 +277,7 @@ class SupervisionReportController extends Controller
             'nurse_in_charge' => ['nullable', 'string', 'max:255'],
             'general_notes' => ['nullable', 'string', 'max:2000'],
             'incidents' => ['nullable', 'array'],
-            'incidents.*.category' => ['required_with:incidents', 'in:complain,fasilitas,jkn_6_hari,lain_lain'],
+            'incidents.*.category' => ['required_with:incidents', 'integer', Rule::in($validCategoryIds)],
             'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
             'incidents.*.description' => ['required_with:incidents', 'string'],
             'incidents.*.action_taken' => ['nullable', 'string'],
@@ -277,7 +312,7 @@ class SupervisionReportController extends Controller
     {
         foreach ($incidents as $incidentData) {
             $report->incidents()->create([
-                'category' => $incidentData['category'],
+                'category' => (int) $incidentData['category'],
                 'incident_time' => $incidentData['incident_time'] ?? null,
                 'description' => $incidentData['description'],
                 'action_taken' => $incidentData['action_taken'] ?? null,

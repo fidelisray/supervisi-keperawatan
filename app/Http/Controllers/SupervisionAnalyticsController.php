@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IncidentCategory;
 use App\Models\Room;
 use App\Models\SupervisionReport;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,7 +28,7 @@ class SupervisionAnalyticsController extends Controller
             });
 
         $reports = $reportsQuery
-            ->with('incidents')
+            ->with(['incidents.incidentCategory'])
             ->orderBy('report_date')
             ->get();
 
@@ -35,20 +36,27 @@ class SupervisionAnalyticsController extends Controller
         $totalReports = $reports->count();
         $totalIncidents = $allIncidents->count();
 
-        $categories = [
-            'complain' => ['label' => 'Complain Pasien/Keluarga', 'color' => 'bg-rose-600', 'badge' => 'bg-rose-50 text-rose-800 border-rose-200'],
-            'fasilitas' => ['label' => 'Kendala Fasilitas & Sarpras', 'color' => 'bg-amber-500', 'badge' => 'bg-amber-50 text-amber-800 border-amber-200'],
-            'jkn_6_hari' => ['label' => 'Pasien JKN >= 6 Hari', 'color' => 'bg-teal-600', 'badge' => 'bg-teal-50 text-teal-800 border-teal-200'],
-            'lain_lain' => ['label' => 'Kejadian Lain-Lain', 'color' => 'bg-slate-600', 'badge' => 'bg-slate-100 text-slate-800 border-slate-300'],
-        ];
+        $usedCategoryIds = $allIncidents->pluck('category')->map(fn ($id) => (int) $id)->unique()->all();
+
+        $categories = IncidentCategory::withTrashed()
+            ->where(function (Builder $query) use ($usedCategoryIds): void {
+                $query->where(function (Builder $sub): void {
+                    $sub->whereNull('deleted_at')->where('is_active', 'true');
+                });
+                if (count($usedCategoryIds) > 0) {
+                    $query->orWhereIn('id', $usedCategoryIds);
+                }
+            })
+            ->orderBy('id')
+            ->get();
 
         $categoryStats = [];
-        foreach ($categories as $key => $meta) {
-            $count = $allIncidents->where('category', $key)->count();
-            $categoryStats[$key] = [
-                'label' => $meta['label'],
-                'color' => $meta['color'],
-                'badge' => $meta['badge'],
+        foreach ($categories as $category) {
+            $count = $allIncidents->where('category', (int) $category->id)->count();
+            $categoryStats[$category->id] = [
+                'label' => $category->incident_category,
+                'color' => $category->chartColorClass(),
+                'badge' => $category->badgeClasses(),
                 'count' => $count,
                 'percentage' => $totalIncidents > 0 ? round(($count / $totalIncidents) * 100, 1) : 0.0,
             ];
@@ -72,16 +80,22 @@ class SupervisionAnalyticsController extends Controller
             ];
         }
 
+        $complaintCategoryIds = $categories
+            ->filter(fn (IncidentCategory $cat): bool => $cat->isComplaintCategory())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         $roomStats = $reports
             ->groupBy('room_name')
-            ->map(function ($roomReports, string $roomName): array {
+            ->map(function ($roomReports, string $roomName) use ($complaintCategoryIds): array {
                 $incidents = $roomReports->flatMap(fn (SupervisionReport $r) => $r->incidents);
 
                 return [
                     'room_name' => $roomName,
                     'reports_count' => $roomReports->count(),
                     'incidents_count' => $incidents->count(),
-                    'complain_count' => $incidents->where('category', 'complain')->count(),
+                    'complain_count' => $incidents->whereIn('category', $complaintCategoryIds)->count(),
                     'resolved_count' => $incidents->where('status', 'resolved')->count(),
                 ];
             })

@@ -37,6 +37,17 @@ class Incident extends Model
     ];
 
     /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'supervision_report_id' => 'integer',
+            'category' => 'integer',
+        ];
+    }
+
+    /**
      * @return BelongsTo<SupervisionReport, $this>
      */
     public function supervisionReport(): BelongsTo
@@ -44,13 +55,33 @@ class Incident extends Model
         return $this->belongsTo(SupervisionReport::class);
     }
 
+    /**
+     * @return BelongsTo<IncidentCategory, $this>
+     */
+    public function incidentCategory(): BelongsTo
+    {
+        return $this->belongsTo(IncidentCategory::class, 'category')->withTrashed();
+    }
+
     public function categoryLabel(): string
     {
-        return match ($this->category) {
-            'complain' => 'Complain',
-            'fasilitas' => 'Fasilitas',
-            'jkn_6_hari' => 'JKN ≥ 6 Hari',
-            default => 'Lain-Lain',
-        };
+        if ($this->relationLoaded('incidentCategory') && $this->incidentCategory !== null) {
+            return (string) $this->incidentCategory->incident_category;
+        }
+
+        if ($this->incidentCategory !== null) {
+            return (string) $this->incidentCategory->incident_category;
+        }
+
+        return 'Kategori #'.$this->category;
+    }
+
+    public function categoryBadgeClasses(): string
+    {
+        if ($this->incidentCategory !== null) {
+            return $this->incidentCategory->badgeClasses();
+        }
+
+        return 'bg-slate-100 text-slate-800 border border-slate-200';
     }
 }

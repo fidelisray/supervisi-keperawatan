@@ -5,12 +5,20 @@
         $initialCollaborators = old('collaborators', $report->collaboratorList());
         $initialIncidents = old('incidents', $report->incidents->map(fn ($inc) => [
             'id' => $inc->id,
-            'category' => $inc->category,
+            'category' => (int) $inc->category,
             'incident_time' => $inc->incident_time ?? '',
             'description' => $inc->description,
             'action_taken' => $inc->action_taken ?? '',
             'status' => $inc->status,
         ])->values()->all());
+        $categoryMeta = $incidentCategories->mapWithKeys(fn ($cat) => [
+            $cat->id => [
+                'label' => $cat->incident_category,
+                'description' => $cat->description,
+                'style' => $cat->badgeClasses(),
+            ],
+        ]);
+        $defaultCategoryId = $incidentCategories->first()?->id ?? 1;
     @endphp
 
     <div 
@@ -427,23 +435,16 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Kategori Masalah</label>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="complain" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-rose-500 peer-checked:bg-rose-50 peer-checked:text-rose-800 font-semibold text-xs">Complain</div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="fasilitas" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 font-semibold text-xs">Fasilitas</div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="jkn_6_hari" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-teal-500 peer-checked:bg-teal-50 peer-checked:text-teal-800 font-semibold text-xs">JKN &ge; 6 Hari</div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" x-model="modalData.category" value="lain_lain" class="peer sr-only">
-                                        <div class="p-2.5 rounded-lg border border-slate-200 text-center transition peer-checked:border-slate-500 peer-checked:bg-slate-100 peer-checked:text-slate-800 font-semibold text-xs">Lain-Lain</div>
-                                    </label>
+                                    @foreach($incidentCategories as $cat)
+                                        <label class="cursor-pointer" title="{{ $cat->description }}">
+                                            <input type="radio" x-model.number="modalData.category" value="{{ $cat->id }}" class="peer sr-only">
+                                            <div class="p-2.5 rounded-lg border border-slate-200 text-center transition {{ $cat->radioPeerClasses() }} font-semibold text-xs hover:bg-slate-50">
+                                                {{ $cat->incident_category }}
+                                            </div>
+                                        </label>
+                                    @endforeach
                                 </div>
+                                <p class="text-[11px] text-slate-500 mt-1.5" x-show="getCategoryDescription(modalData.category)" x-text="getCategoryDescription(modalData.category)"></p>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -485,6 +486,9 @@
 
     <script>
         function editSupervisionLogbook() {
+            const categoryMeta = @json($categoryMeta);
+            const defaultCategoryId = @json($defaultCategoryId);
+
             return {
                 collaborators: @json($initialCollaborators),
                 collaboratorInput: '',
@@ -494,7 +498,7 @@
                 editingIndex: null,
                 modalError: '',
                 modalData: {
-                    category: 'complain',
+                    category: defaultCategoryId,
                     incident_time: '',
                     description: '',
                     action_taken: '',
@@ -526,7 +530,7 @@
                     const hours = String(now.getHours()).padStart(2, '0');
                     const minutes = String(now.getMinutes()).padStart(2, '0');
                     this.modalData = {
-                        category: 'complain',
+                        category: defaultCategoryId,
                         incident_time: `${hours}:${minutes}`,
                         description: '',
                         action_taken: '',
@@ -553,6 +557,7 @@
                         this.modalError = 'Uraian masalah kejadian wajib diisi!';
                         return;
                     }
+                    this.modalData.category = Number(this.modalData.category);
                     if (this.editingIndex !== null) {
                         this.incidents[this.editingIndex] = JSON.parse(JSON.stringify(this.modalData));
                     } else {
@@ -565,24 +570,16 @@
                     this.incidents.splice(index, 1);
                 },
 
-                getCategoryLabel(cat) {
-                    const labels = {
-                        'complain': 'Complain',
-                        'fasilitas': 'Fasilitas',
-                        'jkn_6_hari': 'JKN ≥ 6 Hari',
-                        'lain_lain': 'Lain-Lain'
-                    };
-                    return labels[cat] || 'Lain-Lain';
+                getCategoryLabel(catId) {
+                    return categoryMeta[catId]?.label || `Kategori #${catId}`;
                 },
 
-                getCategoryStyle(cat) {
-                    const styles = {
-                        'complain': 'bg-rose-100 text-rose-800 border border-rose-300',
-                        'fasilitas': 'bg-amber-100 text-amber-800 border border-amber-300',
-                        'jkn_6_hari': 'bg-teal-100 text-teal-800 border border-teal-300',
-                        'lain_lain': 'bg-slate-100 text-slate-800 border border-slate-300'
-                    };
-                    return styles[cat] || styles['lain_lain'];
+                getCategoryDescription(catId) {
+                    return categoryMeta[catId]?.description || '';
+                },
+
+                getCategoryStyle(catId) {
+                    return categoryMeta[catId]?.style || 'bg-slate-100 text-slate-800 border border-slate-300';
                 },
 
                 getStatusLabel(status) {

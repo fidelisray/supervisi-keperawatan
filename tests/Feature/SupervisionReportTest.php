@@ -58,7 +58,7 @@ test('can store a new supervision report with multiple collaborators and without
         'general_notes' => 'Operan shift berjalan lancar.',
         'incidents' => [
             [
-                'category' => 'complain',
+                'category' => 1,
                 'incident_time' => '09:30',
                 'description' => 'Keluarga pasien mengeluhkan pendingin ruangan (AC) kamar 204 kurang dingin.',
                 'action_taken' => 'Perawat menghubungi bagian teknisi sarpras.',
@@ -95,7 +95,7 @@ test('collaborator and creator can view, edit logbook, and update incident statu
 
     $incident = Incident::create([
         'supervision_report_id' => $report->id,
-        'category' => 'fasilitas',
+        'category' => 2,
         'incident_time' => '15:20',
         'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
         'action_taken' => 'Menunggu teknisi.',
@@ -130,7 +130,7 @@ test('collaborator and creator can view, edit logbook, and update incident statu
             'general_notes' => 'Updated by collaborator.',
             'incidents' => [
                 [
-                    'category' => 'fasilitas',
+                    'category' => 2,
                     'incident_time' => '15:20',
                     'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
                     'action_taken' => 'Alat sudah diganti unit cadangan.',

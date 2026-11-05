@@ -123,13 +123,7 @@
                                             {{ $index + 1 }}
                                         </span>
 
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold
-                                            @if($incident->category === 'complain') bg-rose-100 text-rose-800 border border-rose-200
-                                            @elseif($incident->category === 'fasilitas') bg-amber-100 text-amber-800 border border-amber-200
-                                            @elseif($incident->category === 'jkn_6_hari') bg-teal-100 text-teal-800 border border-teal-200
-                                            @else bg-slate-100 text-slate-800 border border-slate-200
-                                            @endif
-                                        ">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold {{ $incident->categoryBadgeClasses() }}">
                                             {{ $incident->categoryLabel() }}
                                         </span>
 
