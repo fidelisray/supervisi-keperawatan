@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ReadOnlyModel;
 use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
 {
+    use ReadOnlyModel;
+
     /**
      * The database connection that should be used by the model.
      *
@@ -49,20 +52,11 @@ class Employee extends Model
     public $timestamps = false;
 
     /**
-     * The attributes that are mass assignable.
+     * The attributes that aren't mass assignable.
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'nip',
-        'nama',
-        'gender',
-        'id_profesi',
-        'id_unit',
-        'status_karyawan',
-        'pin',
-        'foto_profil',
-    ];
+    protected $guarded = ['*'];
 
     /**
      * Get the route key for the model.

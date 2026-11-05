@@ -107,17 +107,39 @@
             </nav>
 
             <!-- User Information Card -->
-            <div class="p-4 border-t border-slate-800 bg-slate-950/80">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-800 border-2 border-blue-400/40 flex items-center justify-center font-bold text-white text-xs">
-                        PA
+            @auth
+                <div class="p-4 border-t border-slate-800 bg-slate-950/80 space-y-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-teal-700 border-2 border-teal-400/40 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                            {{ auth()->user()->initials() }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-white truncate" title="{{ auth()->user()->name }}">
+                                {{ auth()->user()->name }}
+                            </p>
+                            <p class="text-[11px] text-slate-400 font-mono truncate">
+                                NIP: {{ auth()->user()->nip }}
+                            </p>
+                            <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-teal-300 border border-slate-700">
+                                {{ auth()->user()->roleLabel() }}
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-semibold text-white truncate">Purwanto Ali Sastra, S.Kom</p>
-                        <p class="text-[11px] text-slate-400 truncate">NIP: 5508150824</p>
-                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="w-full min-h-10 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 bg-slate-900 hover:bg-rose-950/70 hover:text-rose-200 border border-slate-800 hover:border-rose-800/60 transition cursor-pointer"
+                        >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span>Keluar Sesi SSO</span>
+                        </button>
+                    </form>
                 </div>
-            </div>
+            @endauth
         </aside>
 
         <!-- Backdrop for mobile menu -->
@@ -188,7 +210,7 @@
 
             <!-- Hospital Footer -->
             <footer class="mt-auto border-t border-slate-200 bg-white py-4 px-8 text-center md:text-left text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-2">
-                <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang — Tim Supervisi & Mutu Keperawatan.</p>
+                <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang &middot; Tim Supervisi & Mutu Keperawatan.</p>
                 <p class="text-slate-400">Versi 2.0 (Modern Clinical Architecture)</p>
             </footer>
         </div>

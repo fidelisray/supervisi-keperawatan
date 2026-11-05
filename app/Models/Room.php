@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ReadOnlyModel;
 use Illuminate\Database\Eloquent\Model;
 
 class Room extends Model
 {
+    use ReadOnlyModel;
+
     /**
      * The database connection that should be used by the model.
      *
@@ -49,13 +52,9 @@ class Room extends Model
     public $timestamps = false;
 
     /**
-     * The attributes that are mass assignable.
+     * The attributes that aren't mass assignable.
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'id_ruang',
-        'nama_ruangan',
-        'instalasi',
-    ];
+    protected $guarded = ['*'];
 }

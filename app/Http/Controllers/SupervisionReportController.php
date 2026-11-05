@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Employee;
+use App\Models\AppRole;
 use App\Models\Incident;
 use App\Models\Room;
 use App\Models\SupervisionReport;
@@ -43,12 +43,13 @@ class SupervisionReportController extends Controller
     /**
      * Show the form for creating a new supervision logbook report.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
-        $employees = Employee::where('status_karyawan', 'AKTIF')
-            ->orderBy('nama')
-            ->get(['nip', 'nama']);
+        $nurses = AppRole::query()
+            ->operationalNurses()
+            ->orderBy('description')
+            ->get(['id', 'nip', 'description', 'app_roles']);
 
         $shifts = [
             'pagi' => 'Shift Pagi (07:00 - 14:00)',
@@ -56,7 +57,6 @@ class SupervisionReportController extends Controller
             'malam' => 'Shift Malam (21:00 - 07:00)',
         ];
 
-        // Sensible default based on current hour
         $currentHour = (int) now()->format('H');
         $defaultShift = match (true) {
             $currentHour >= 7 && $currentHour < 14 => 'pagi',
@@ -66,10 +66,10 @@ class SupervisionReportController extends Controller
 
         return view('supervisi.create', [
             'rooms' => $rooms,
-            'employees' => $employees,
+            'nurses' => $nurses,
             'shifts' => $shifts,
             'defaultShift' => $defaultShift,
-            'defaultSupervisor' => 'Purwanto Ali Sastra, S.Kom',
+            'defaultSupervisor' => $request->user()?->name ?? '',
             'today' => now()->format('Y-m-d'),
         ]);
     }
@@ -96,14 +96,16 @@ class SupervisionReportController extends Controller
             'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
         ]);
 
-        $report = DB::connection('sqlsrv')->transaction(function () use ($validated) {
+        $supervisorName = $request->user()?->name ?: $validated['supervisor_name'];
+
+        $report = DB::connection('sqlsrv')->transaction(function () use ($validated, $supervisorName) {
             $report = SupervisionReport::create([
                 'report_date' => $validated['report_date'],
                 'shift' => $validated['shift'],
                 'room_name' => $validated['room_name'],
                 'patient_count' => $validated['patient_count'],
                 'nurse_count' => $validated['nurse_count'],
-                'supervisor_name' => $validated['supervisor_name'],
+                'supervisor_name' => $supervisorName,
                 'nurse_in_charge' => $validated['nurse_in_charge'],
                 'general_notes' => $validated['general_notes'] ?? null,
                 'status' => 'submitted',

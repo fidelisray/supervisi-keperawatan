@@ -186,24 +186,26 @@
 
                     <!-- Supervisor (Penginput) -->
                     <div class="md:col-span-6">
-                        <label for="supervisor_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Supervisor / Pengawas Keperawatan
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="supervisor_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Supervisor / Pengawas Keperawatan
+                            </label>
+                            @auth
+                                <span class="text-[11px] font-mono font-medium text-slate-500">
+                                    NIP: {{ auth()->user()->nip }}
+                                </span>
+                            @endauth
+                        </div>
                         <div class="relative">
                             <input 
-                                list="supervisor_list"
                                 type="text" 
                                 id="supervisor_name" 
                                 name="supervisor_name" 
                                 value="{{ old('supervisor_name', $defaultSupervisor) }}"
+                                readonly
                                 required 
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-medium"
+                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 text-sm font-medium cursor-not-allowed shadow-2xs"
                             >
-                            <datalist id="supervisor_list">
-                                @foreach($employees as $employee)
-                                    <option value="{{ $employee->nama }}">{{ $employee->nip }}</option>
-                                @endforeach
-                            </datalist>
                         </div>
                         @error('supervisor_name')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
@@ -221,13 +223,13 @@
                             id="nurse_in_charge" 
                             name="nurse_in_charge" 
                             value="{{ old('nurse_in_charge') }}"
-                            placeholder="Ketik atau pilih nama perawat dari master pegawai..."
+                            placeholder="Ketik atau pilih nama perawat terdaftar..."
                             required 
                             class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                         >
                         <datalist id="nurse_list">
-                            @foreach($employees as $employee)
-                                <option value="{{ $employee->nama }}">{{ $employee->nip }}</option>
+                            @foreach($nurses as $nurse)
+                                <option value="{{ $nurse->description }}">{{ $nurse->nip }}</option>
                             @endforeach
                         </datalist>
                         @error('nurse_in_charge')
