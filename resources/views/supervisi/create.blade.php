@@ -80,40 +80,11 @@
                         @enderror
                     </div>
 
-                    <!-- Pilihan Shift -->
-                    <div class="md:col-span-8">
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Shift Operasional
-                        </label>
-                        <div class="grid grid-cols-3 gap-2.5">
-                            @foreach($shifts as $shiftKey => $shiftLabel)
-                                <label class="cursor-pointer relative">
-                                    <input 
-                                        type="radio" 
-                                        name="shift" 
-                                        value="{{ $shiftKey }}"
-                                        {{ old('shift', $defaultShift) === $shiftKey ? 'checked' : '' }}
-                                        class="peer sr-only"
-                                    >
-                                    <div class="p-2.5 rounded-lg border border-slate-300 text-center transition peer-checked:border-blue-600 peer-checked:bg-blue-50/70 peer-checked:text-blue-900 peer-checked:shadow-xs hover:bg-slate-50">
-                                        <p class="text-xs font-bold uppercase">{{ ucfirst($shiftKey) }}</p>
-                                        <p class="text-[11px] text-slate-500 peer-checked:text-blue-700 font-medium mt-0.5">
-                                            @if($shiftKey === 'pagi') 07:00 - 14:00
-                                            @elseif($shiftKey === 'sore') 14:00 - 21:00
-                                            @else 21:00 - 07:00
-                                            @endif
-                                        </p>
-                                    </div>
-                                </label>
-                            @endforeach
-                        </div>
-                        @error('shift')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <!-- Pilihan Shift (Disembunyikan sesuai konfigurasi saat ini) -->
+                    <input type="hidden" name="shift" value="{{ old('shift', $defaultShift) }}">
 
                     <!-- Ruangan Instalasi -->
-                    <div class="md:col-span-6">
+                    <div class="md:col-span-4">
                         <label for="room_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                             Ruangan / Instalasi Perawatan
                         </label>
@@ -137,7 +108,7 @@
                     </div>
 
                     <!-- Jumlah Pasien Hari Ini -->
-                    <div class="md:col-span-3">
+                    <div class="md:col-span-2">
                         <label for="patient_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                             Jumlah Pasien (BOR)
                         </label>
@@ -161,7 +132,7 @@
                     </div>
 
                     <!-- Jumlah Perawat Bertugas -->
-                    <div class="md:col-span-3">
+                    <div class="md:col-span-2">
                         <label for="nurse_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                             Perawat Bertugas
                         </label>
@@ -185,7 +156,7 @@
                     </div>
 
                     <!-- Supervisor (Penginput) -->
-                    <div class="md:col-span-6">
+                    <div class="md:col-span-5">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="supervisor_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
                                 Supervisor / Pengawas Keperawatan
@@ -212,26 +183,68 @@
                         @enderror
                     </div>
 
-                    <!-- Perawat Penanggung Jawab / Katim -->
-                    <div class="md:col-span-6">
-                        <label for="nurse_in_charge" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Perawat Yang Disupervisi / Katim Shift
-                        </label>
-                        <input 
-                            list="nurse_list"
-                            type="text" 
-                            id="nurse_in_charge" 
-                            name="nurse_in_charge" 
-                            value="{{ old('nurse_in_charge') }}"
-                            placeholder="Ketik atau pilih nama perawat terdaftar..."
-                            required 
-                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
-                        >
+                    <!-- Multi-Kolaborator Supervisi -->
+                    <div class="md:col-span-7">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="collaborator_picker" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Kolaborator Supervisi (Dapat Lebih dari Satu)
+                            </label>
+                            <span class="text-[11px] text-slate-500 font-medium">
+                                <span class="font-bold text-teal-700" x-text="collaborators.length">0</span> dipilih
+                            </span>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <input 
+                                list="nurse_list"
+                                type="text" 
+                                id="collaborator_picker" 
+                                x-model="collaboratorInput"
+                                @keydown.enter.prevent="addCollaborator()"
+                                placeholder="Ketik atau pilih nama kolaborator terdaftar lalu klik Tambah..."
+                                class="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                            >
+                            <button
+                                type="button"
+                                @click="addCollaborator()"
+                                class="inline-flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition shadow-2xs shrink-0 cursor-pointer"
+                            >
+                                + Tambah Kolaborator
+                            </button>
+                        </div>
+
                         <datalist id="nurse_list">
                             @foreach($nurses as $nurse)
                                 <option value="{{ $nurse->description }}">{{ $nurse->nip }}</option>
                             @endforeach
                         </datalist>
+
+                        <input type="hidden" name="nurse_in_charge" :value="collaborators.join(' | ')">
+                        <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
+                            <input type="hidden" :name="'collaborators[' + cIndex + ']'" :value="collab">
+                        </template>
+
+                        <!-- Selected Collaborator Chips -->
+                        <div class="mt-2.5 flex flex-wrap gap-2" x-show="collaborators.length > 0">
+                            <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-900 border border-teal-200">
+                                    <span x-text="collab"></span>
+                                    <button
+                                        type="button"
+                                        @click="removeCollaborator(cIndex)"
+                                        class="text-teal-600 hover:text-rose-600 focus:outline-none cursor-pointer"
+                                        :aria-label="'Hapus kolaborator ' + collab"
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
+
+                        <p x-show="collaboratorError" x-cloak class="text-xs text-rose-600 mt-1.5 font-medium" x-text="collaboratorError"></p>
+                        @error('collaborators')
+                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
                         @error('nurse_in_charge')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
@@ -648,6 +661,9 @@
     <script>
         function supervisionLogbook() {
             return {
+                collaborators: @json(old('collaborators', [])),
+                collaboratorInput: '',
+                collaboratorError: '',
                 incidents: [],
                 showIncidentModal: false,
                 editingIndex: null,
@@ -661,11 +677,26 @@
                 },
 
                 init() {
-                    // Pre-fill time with current hour
                     const now = new Date();
                     const hours = String(now.getHours()).padStart(2, '0');
                     const minutes = String(now.getMinutes()).padStart(2, '0');
                     this.modalData.incident_time = `${hours}:${minutes}`;
+                },
+
+                addCollaborator() {
+                    const value = (this.collaboratorInput || '').trim();
+                    if (!value) {
+                        return;
+                    }
+                    if (!this.collaborators.includes(value)) {
+                        this.collaborators.push(value);
+                    }
+                    this.collaboratorInput = '';
+                    this.collaboratorError = '';
+                },
+
+                removeCollaborator(index) {
+                    this.collaborators.splice(index, 1);
                 },
 
                 openModal() {
@@ -780,7 +811,16 @@
                 },
 
                 submitForm(event) {
-                    event.target.submit();
+                    if (this.collaboratorInput && this.collaboratorInput.trim() !== '') {
+                        this.addCollaborator();
+                    }
+                    if (this.collaborators.length === 0) {
+                        this.collaboratorError = 'Silakan pilih minimal satu Kolaborator sebelum menyimpan laporan.';
+                        return;
+                    }
+                    this.$nextTick(() => {
+                        event.target.submit();
+                    });
                 }
             }
         }

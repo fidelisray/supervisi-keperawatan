@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\ReadOnlyModel;
+use App\Models\Concerns\ScopedToAppSixModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AppRole extends Model
 {
-    use ReadOnlyModel;
+    use ScopedToAppSixModel;
 
     public const APP_ID = 6;
 
@@ -26,7 +26,24 @@ class AppRole extends Model
     /**
      * @var list<string>
      */
-    protected $guarded = ['*'];
+    protected $fillable = [
+        'nip',
+        'app_id',
+        'app_roles',
+        'description',
+        'push_token',
+    ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'app_id' => 'integer',
+            'app_roles' => 'integer',
+        ];
+    }
 
     /**
      * Scope query to users registered for the Nursing Supervision application (app_id = 6).
@@ -59,5 +76,10 @@ class AppRole extends Model
     {
         return $this->belongsTo(RefAppRole::class, 'app_roles', 'role_id')
             ->where('app_id', self::APP_ID);
+    }
+
+    public function roleLabel(): string
+    {
+        return RefAppRole::resolveRoleName((int) $this->app_roles);
     }
 }

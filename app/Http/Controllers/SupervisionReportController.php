@@ -7,29 +7,67 @@ use App\Models\Incident;
 use App\Models\Room;
 use App\Models\SupervisionReport;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SupervisionReportController extends Controller
 {
     /**
-     * Display a listing of recent supervision reports.
+     * Display a listing of supervision reports scoped to the authenticated user's role.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
+        $user = $request->user();
         $today = Carbon::today();
 
-        $reports = SupervisionReport::with('incidents')
+        $accessibleReportsQuery = SupervisionReport::query()->accessibleBy($user);
+
+        $filteredQuery = (clone $accessibleReportsQuery)
+            ->when($request->filled('room'), function (Builder $query) use ($request): void {
+                $query->where('room_name', (string) $request->string('room'));
+            })
+            ->when($request->filled('date_from'), function (Builder $query) use ($request): void {
+                $query->whereDate('report_date', '>=', (string) $request->string('date_from'));
+            })
+            ->when($request->filled('date_to'), function (Builder $query) use ($request): void {
+                $query->whereDate('report_date', '<=', (string) $request->string('date_to'));
+            })
+            ->when($user->isAdmin() && $request->filled('supervisor'), function (Builder $query) use ($request): void {
+                $query->where('supervisor_name', 'like', '%'.trim((string) $request->string('supervisor')).'%');
+            })
+            ->when($request->filled('collaborator'), function (Builder $query) use ($request): void {
+                $query->where('nurse_in_charge', 'like', '%'.trim((string) $request->string('collaborator')).'%');
+            });
+
+        $reports = (clone $filteredQuery)
+            ->with('incidents')
             ->latest('report_date')
             ->latest('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
-        $todayReportsCount = SupervisionReport::whereDate('report_date', $today)->count();
-        $totalIncidentsCount = Incident::count();
-        $totalComplaintsCount = Incident::where('category', 'complain')->count();
-        $resolvedIncidentsCount = Incident::where('status', 'resolved')->count();
+        $accessibleIdsSubquery = (clone $accessibleReportsQuery)->select('id');
+
+        $todayReportsCount = (clone $accessibleReportsQuery)->whereDate('report_date', $today)->count();
+        $totalIncidentsCount = Incident::query()->whereIn('supervision_report_id', $accessibleIdsSubquery)->count();
+        $totalComplaintsCount = Incident::query()
+            ->whereIn('supervision_report_id', $accessibleIdsSubquery)
+            ->where('category', 'complain')
+            ->count();
+        $resolvedIncidentsCount = Incident::query()
+            ->whereIn('supervision_report_id', $accessibleIdsSubquery)
+            ->where('status', 'resolved')
+            ->count();
+
+        $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
+        $nurses = AppRole::query()
+            ->forSupervisiApp()
+            ->orderBy('description')
+            ->get(['id', 'nip', 'description', 'app_roles']);
 
         return view('supervisi.index', [
             'reports' => $reports,
@@ -37,6 +75,8 @@ class SupervisionReportController extends Controller
             'totalIncidentsCount' => $totalIncidentsCount,
             'totalComplaintsCount' => $totalComplaintsCount,
             'resolvedIncidentsCount' => $resolvedIncidentsCount,
+            'rooms' => $rooms,
+            'nurses' => $nurses,
         ]);
     }
 
@@ -51,24 +91,11 @@ class SupervisionReportController extends Controller
             ->orderBy('description')
             ->get(['id', 'nip', 'description', 'app_roles']);
 
-        $shifts = [
-            'pagi' => 'Shift Pagi (07:00 - 14:00)',
-            'sore' => 'Shift Sore (14:00 - 21:00)',
-            'malam' => 'Shift Malam (21:00 - 07:00)',
-        ];
-
-        $currentHour = (int) now()->format('H');
-        $defaultShift = match (true) {
-            $currentHour >= 7 && $currentHour < 14 => 'pagi',
-            $currentHour >= 14 && $currentHour < 21 => 'sore',
-            default => 'malam',
-        };
-
         return view('supervisi.create', [
             'rooms' => $rooms,
             'nurses' => $nurses,
-            'shifts' => $shifts,
-            'defaultShift' => $defaultShift,
+            'shifts' => $this->availableShifts(),
+            'defaultShift' => $this->resolveDefaultShift(),
             'defaultSupervisor' => $request->user()?->name ?? '',
             'today' => now()->format('Y-m-d'),
         ]);
@@ -79,49 +106,26 @@ class SupervisionReportController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'report_date' => ['required', 'date'],
-            'shift' => ['required', 'in:pagi,sore,malam'],
-            'room_name' => ['required', 'string', 'max:255'],
-            'patient_count' => ['required', 'integer', 'min:0'],
-            'nurse_count' => ['required', 'integer', 'min:0'],
-            'supervisor_name' => ['required', 'string', 'max:255'],
-            'nurse_in_charge' => ['required', 'string', 'max:255'],
-            'general_notes' => ['nullable', 'string', 'max:2000'],
-            'incidents' => ['nullable', 'array'],
-            'incidents.*.category' => ['required_with:incidents', 'in:complain,fasilitas,jkn_6_hari,lain_lain'],
-            'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
-            'incidents.*.description' => ['required_with:incidents', 'string'],
-            'incidents.*.action_taken' => ['nullable', 'string'],
-            'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
-        ]);
+        $validated = $this->validateReportPayload($request);
+        $collaboratorsString = $this->extractCollaboratorsString($request);
 
-        $supervisorName = $request->user()?->name ?: $validated['supervisor_name'];
+        $supervisorName = $request->user()?->name ?: ($validated['supervisor_name'] ?? '');
+        $shift = $validated['shift'] ?? $this->resolveDefaultShift();
 
-        $report = DB::connection('sqlsrv')->transaction(function () use ($validated, $supervisorName) {
+        $report = DB::connection('sqlsrv')->transaction(function () use ($validated, $supervisorName, $collaboratorsString, $shift) {
             $report = SupervisionReport::create([
                 'report_date' => $validated['report_date'],
-                'shift' => $validated['shift'],
+                'shift' => $shift,
                 'room_name' => $validated['room_name'],
                 'patient_count' => $validated['patient_count'],
                 'nurse_count' => $validated['nurse_count'],
                 'supervisor_name' => $supervisorName,
-                'nurse_in_charge' => $validated['nurse_in_charge'],
+                'nurse_in_charge' => $collaboratorsString,
                 'general_notes' => $validated['general_notes'] ?? null,
                 'status' => 'submitted',
             ]);
 
-            if (! empty($validated['incidents'])) {
-                foreach ($validated['incidents'] as $incidentData) {
-                    $report->incidents()->create([
-                        'category' => $incidentData['category'],
-                        'incident_time' => $incidentData['incident_time'] ?? null,
-                        'description' => $incidentData['description'],
-                        'action_taken' => $incidentData['action_taken'] ?? null,
-                        'status' => $incidentData['status'] ?? 'in_progress',
-                    ]);
-                }
-            }
+            $this->syncReportIncidents($report, $validated['incidents'] ?? []);
 
             return $report;
         });
@@ -133,12 +137,175 @@ class SupervisionReportController extends Controller
     /**
      * Display the specified supervision report.
      */
-    public function show(SupervisionReport $supervisionReport): View
+    public function show(Request $request, SupervisionReport $supervisionReport): View
     {
+        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+
         $supervisionReport->load('incidents');
 
         return view('supervisi.show', [
             'report' => $supervisionReport,
         ]);
+    }
+
+    /**
+     * Show the form for editing an existing supervision report.
+     */
+    public function edit(Request $request, SupervisionReport $supervisionReport): View
+    {
+        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+
+        $supervisionReport->load('incidents');
+
+        $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
+        $nurses = AppRole::query()
+            ->operationalNurses()
+            ->orderBy('description')
+            ->get(['id', 'nip', 'description', 'app_roles']);
+
+        return view('supervisi.edit', [
+            'report' => $supervisionReport,
+            'rooms' => $rooms,
+            'nurses' => $nurses,
+            'shifts' => $this->availableShifts(),
+        ]);
+    }
+
+    /**
+     * Update the specified supervision report and its incidents.
+     */
+    public function update(Request $request, SupervisionReport $supervisionReport): RedirectResponse
+    {
+        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+
+        $validated = $this->validateReportPayload($request);
+        $collaboratorsString = $this->extractCollaboratorsString($request);
+
+        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsString) {
+            $supervisionReport->update([
+                'report_date' => $validated['report_date'],
+                'shift' => $validated['shift'] ?? $supervisionReport->shift,
+                'room_name' => $validated['room_name'],
+                'patient_count' => $validated['patient_count'],
+                'nurse_count' => $validated['nurse_count'],
+                'nurse_in_charge' => $collaboratorsString,
+                'general_notes' => $validated['general_notes'] ?? null,
+            ]);
+
+            $supervisionReport->incidents()->delete();
+            $this->syncReportIncidents($supervisionReport, $validated['incidents'] ?? []);
+        });
+
+        return redirect()->route('supervisi.show', $supervisionReport)
+            ->with('success', 'Perubahan logbook supervisi keperawatan berhasil disimpan.');
+    }
+
+    /**
+     * Update the follow-up status and action taken of a specific incident.
+     */
+    public function updateIncidentStatus(
+        Request $request,
+        SupervisionReport $supervisionReport,
+        Incident $incident
+    ): RedirectResponse {
+        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+        abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:in_progress,resolved,escalated'],
+            'action_taken' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $incident->update([
+            'status' => $validated['status'],
+            'action_taken' => $validated['action_taken'] ?? $incident->action_taken,
+        ]);
+
+        return redirect()->route('supervisi.show', $supervisionReport)
+            ->with('success', 'Status tindak lanjut kejadian berhasil diperbarui.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateReportPayload(Request $request): array
+    {
+        return $request->validate([
+            'report_date' => ['required', 'date'],
+            'shift' => ['nullable', 'in:pagi,sore,malam'],
+            'room_name' => ['required', 'string', 'max:255'],
+            'patient_count' => ['required', 'integer', 'min:0'],
+            'nurse_count' => ['required', 'integer', 'min:0'],
+            'supervisor_name' => ['nullable', 'string', 'max:255'],
+            'collaborators' => ['nullable', 'array'],
+            'collaborators.*' => ['nullable', 'string', 'max:255'],
+            'nurse_in_charge' => ['nullable', 'string', 'max:255'],
+            'general_notes' => ['nullable', 'string', 'max:2000'],
+            'incidents' => ['nullable', 'array'],
+            'incidents.*.category' => ['required_with:incidents', 'in:complain,fasilitas,jkn_6_hari,lain_lain'],
+            'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
+            'incidents.*.description' => ['required_with:incidents', 'string'],
+            'incidents.*.action_taken' => ['nullable', 'string'],
+            'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
+        ]);
+    }
+
+    private function extractCollaboratorsString(Request $request): string
+    {
+        $rawCollaborators = $request->input('collaborators');
+
+        if (is_array($rawCollaborators) && count($rawCollaborators) > 0) {
+            $formatted = SupervisionReport::formatCollaborators($rawCollaborators);
+        } else {
+            $formatted = SupervisionReport::formatCollaborators($request->input('nurse_in_charge'));
+        }
+
+        if ($formatted === '') {
+            throw ValidationException::withMessages([
+                'collaborators' => 'Minimal satu kolaborator perawat wajib dipilih.',
+                'nurse_in_charge' => 'Minimal satu kolaborator perawat wajib dipilih.',
+            ]);
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $incidents
+     */
+    private function syncReportIncidents(SupervisionReport $report, array $incidents): void
+    {
+        foreach ($incidents as $incidentData) {
+            $report->incidents()->create([
+                'category' => $incidentData['category'],
+                'incident_time' => $incidentData['incident_time'] ?? null,
+                'description' => $incidentData['description'],
+                'action_taken' => $incidentData['action_taken'] ?? null,
+                'status' => $incidentData['status'] ?? 'in_progress',
+            ]);
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function availableShifts(): array
+    {
+        return [
+            'pagi' => 'Shift Pagi (07:00 - 14:00)',
+            'sore' => 'Shift Sore (14:00 - 21:00)',
+            'malam' => 'Shift Malam (21:00 - 07:00)',
+        ];
+    }
+
+    private function resolveDefaultShift(): string
+    {
+        $currentHour = (int) now()->format('H');
+
+        return match (true) {
+            $currentHour >= 7 && $currentHour < 14 => 'pagi',
+            $currentHour >= 14 && $currentHour < 21 => 'sore',
+            default => 'malam',
+        };
     }
 }

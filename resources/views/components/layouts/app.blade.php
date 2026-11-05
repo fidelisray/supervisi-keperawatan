@@ -78,12 +78,12 @@
                     <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    <span>Input Logbook Shift</span>
+                    <span>Input Logbook Supervisi</span>
                 </a>
 
                 <a 
                     href="{{ route('supervisi.index') }}" 
-                    class="flex items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ request()->routeIs('supervisi.index') || request()->routeIs('supervisi.show') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ request()->routeIs('supervisi.index') || request()->routeIs('supervisi.show') || request()->routeIs('supervisi.edit') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}"
                 >
                     <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -95,29 +95,69 @@
                     Analisis & Laporan
                 </div>
 
-                <div class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-500 cursor-not-allowed">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span>Grafik Insiden</span>
-                    </div>
-                    <span class="text-[10px] uppercase font-bold bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Fase 2</span>
-                </div>
+                <a 
+                    href="{{ route('supervisi.analytics') }}" 
+                    class="flex items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ request()->routeIs('supervisi.analytics') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}"
+                >
+                    <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Grafik Insiden</span>
+                </a>
+
+                @auth
+                    @if(auth()->user()->isAdmin())
+                        <div class="pt-5 px-3 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Administrasi Sistem
+                        </div>
+
+                        <a 
+                            href="{{ route('admin.roles.index') }}" 
+                            class="flex items-center px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors {{ request()->routeIs('admin.roles.*') ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}"
+                        >
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <span>Manajemen Role & Akses</span>
+                        </a>
+                    @endif
+                @endauth
             </nav>
 
             <!-- User Information Card -->
-            <div class="p-4 border-t border-slate-800 bg-slate-950/80">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-blue-800 border-2 border-blue-400/40 flex items-center justify-center font-bold text-white text-xs">
-                        PA
+            @auth
+                <div class="p-4 border-t border-slate-800 bg-slate-950/80 space-y-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-teal-700 border-2 border-teal-400/40 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                            {{ auth()->user()->initials() }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-white truncate" title="{{ auth()->user()->name }}">
+                                {{ auth()->user()->name }}
+                            </p>
+                            <p class="text-[11px] text-slate-400 font-mono truncate">
+                                NIP: {{ auth()->user()->nip }}
+                            </p>
+                            <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-teal-300 border border-slate-700">
+                                {{ auth()->user()->roleLabel() }}
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-semibold text-white truncate">Purwanto Ali Sastra, S.Kom</p>
-                        <p class="text-[11px] text-slate-400 truncate">NIP: 5508150824</p>
-                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="w-full min-h-10 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-slate-200 bg-slate-900 hover:bg-rose-950/80 hover:text-rose-200 border border-slate-700 hover:border-rose-800/60 transition cursor-pointer"
+                        >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span>Keluar Sesi SSO</span>
+                        </button>
+                    </form>
                 </div>
-            </div>
+            @endauth
         </aside>
 
         <!-- Backdrop for mobile menu -->
@@ -134,14 +174,14 @@
             <header class="hidden md:flex bg-white border-b border-slate-200 px-8 py-3.5 items-center justify-between shadow-2xs">
                 <div class="flex items-center space-x-3">
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        Shift Operasional Rumah Sakit
+                        Supervisi Operasional Rumah Sakit
                     </span>
                     <span class="text-xs text-slate-500 font-medium">
                         {{ now()->translatedFormat('l, d F Y') }}
                     </span>
                 </div>
 
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-3">
                     <a 
                         href="{{ route('supervisi.create') }}" 
                         class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -151,6 +191,21 @@
                         </svg>
                         Logbook Baru
                     </a>
+
+                    @auth
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-rose-50 hover:text-rose-700 border border-slate-300 hover:border-rose-200 transition cursor-pointer"
+                            >
+                                <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Keluar
+                            </button>
+                        </form>
+                    @endauth
                 </div>
             </header>
 
@@ -188,7 +243,7 @@
 
             <!-- Hospital Footer -->
             <footer class="mt-auto border-t border-slate-200 bg-white py-4 px-8 text-center md:text-left text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-2">
-                <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang — Tim Supervisi & Mutu Keperawatan.</p>
+                <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang &middot; Tim Supervisi & Mutu Keperawatan.</p>
                 <p class="text-slate-400">Versi 2.0 (Modern Clinical Architecture)</p>
             </footer>
         </div>

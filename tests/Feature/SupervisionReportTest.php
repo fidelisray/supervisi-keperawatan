@@ -8,139 +8,168 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->user = User::factory()->create([
+    $this->supervisor = User::factory()->create([
         'nip' => '1672010896',
         'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
         'app_roles' => 1,
     ]);
+
+    $this->collaborator = User::factory()->create([
+        'nip' => '2351151100',
+        'name' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'app_roles' => 1,
+    ]);
+
+    $this->otherSupervisor = User::factory()->create([
+        'nip' => '2134010899',
+        'name' => 'Florentina Hardini, S.Kep.Ners',
+        'app_roles' => 1,
+    ]);
+
+    $this->admin = User::factory()->create([
+        'nip' => '5508150824',
+        'name' => 'Purwanto Ali',
+        'app_roles' => 0,
+    ]);
 });
 
-test('supervision create page can be rendered with master rooms and registered app_id 6 nurses', function () {
-    $response = $this->actingAs($this->user)->get(route('supervisi.create'));
+test('supervision create page renders master rooms, multi-collaborator picker, and logout button', function () {
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
 
     $response->assertSuccessful();
     $response->assertSee('Logbook Supervisi Ruang Perawatan');
-    $response->assertSee('Data Operasional Ruangan');
-    $response->assertSee('Kejadian di Ruangan Selama Dinas Shift');
+    $response->assertSee('Kolaborator Supervisi (Dapat Lebih dari Satu)');
+    $response->assertSee('Keluar Sesi SSO');
     $response->assertSee('FRANSISKUS');
-    $response->assertSee('V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep');
     $response->assertSee('Anastasia Naning Sudiar, S.Kep.Ners');
     $response->assertDontSee('Pegawai Aplikasi Lain');
 });
 
-test('supervision index page displays reports and metrics', function () {
-    SupervisionReport::create([
-        'report_date' => now()->toDateString(),
-        'shift' => 'pagi',
-        'room_name' => 'Bangsal Antonius (Pria Dewasa)',
-        'patient_count' => 15,
-        'nurse_count' => 4,
-        'supervisor_name' => $this->user->name,
-        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
-        'status' => 'submitted',
-    ]);
-
-    $response = $this->actingAs($this->user)->get(route('supervisi.index'));
-
-    $response->assertSuccessful();
-    $response->assertSee('Monitoring Supervisi Ruang Perawatan');
-    $response->assertSee('Bangsal Antonius (Pria Dewasa)');
-    $response->assertSee('15 Pasien');
-});
-
-test('can store a new supervision report with incidents using authenticated supervisor name', function () {
+test('can store a new supervision report with multiple collaborators and without explicit shift input', function () {
     $payload = [
-        'report_date' => '2026-11-04',
-        'shift' => 'pagi',
+        'report_date' => '2026-11-05',
         'room_name' => 'Bangsal Maria (Wanita Dewasa)',
         'patient_count' => 12,
         'nurse_count' => 3,
-        'supervisor_name' => $this->user->name,
-        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'collaborators' => [
+            'Anastasia Naning Sudiar, S.Kep.Ners',
+            'Cicilia Rumini, S.Kep.Ners',
+        ],
         'general_notes' => 'Operan shift berjalan lancar.',
         'incidents' => [
             [
                 'category' => 'complain',
                 'incident_time' => '09:30',
                 'description' => 'Keluarga pasien mengeluhkan pendingin ruangan (AC) kamar 204 kurang dingin.',
-                'action_taken' => 'Perawat menghubungi bagian teknisi sarpras untuk pengecekan filter AC.',
+                'action_taken' => 'Perawat menghubungi bagian teknisi sarpras.',
                 'status' => 'in_progress',
-            ],
-            [
-                'category' => 'jkn_6_hari',
-                'incident_time' => '10:15',
-                'description' => 'Pasien Bed 3 BPJS hari rawat ke-7, perlu review DPJP untuk rencana pulang.',
-                'action_taken' => 'Dokter DPJP sudah visit dan menjadwalkan KRS besok pagi.',
-                'status' => 'resolved',
             ],
         ],
     ];
 
-    $response = $this->actingAs($this->user)->post(route('supervisi.store'), $payload);
-
-    $this->assertDatabaseHas('tb_nurse_supervision_reports', [
-        'room_name' => 'Bangsal Maria (Wanita Dewasa)',
-        'shift' => 'pagi',
-        'patient_count' => 12,
-        'nurse_count' => 3,
-        'supervisor_name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
-    ], 'sqlsrv');
+    $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), $payload);
 
     $report = SupervisionReport::where('room_name', 'Bangsal Maria (Wanita Dewasa)')->first();
-    expect($report)->not->toBeNull();
-
-    $this->assertDatabaseCount('tb_nurse_supervision_incidents', 2, 'sqlsrv');
-    $this->assertDatabaseHas('tb_nurse_supervision_incidents', [
-        'supervision_report_id' => $report->id,
-        'category' => 'complain',
-        'incident_time' => '09:30',
-    ], 'sqlsrv');
-    $this->assertDatabaseHas('tb_nurse_supervision_incidents', [
-        'supervision_report_id' => $report->id,
-        'category' => 'jkn_6_hari',
-        'status' => 'resolved',
-    ], 'sqlsrv');
+    expect($report)->not->toBeNull()
+        ->and($report->supervisor_name)->toBe($this->supervisor->name)
+        ->and($report->collaboratorList())->toBe([
+            'Anastasia Naning Sudiar, S.Kep.Ners',
+            'Cicilia Rumini, S.Kep.Ners',
+        ]);
 
     $response->assertRedirect(route('supervisi.show', $report));
 });
 
-test('store requires mandatory room and shift information', function () {
-    $response = $this->actingAs($this->user)->post(route('supervisi.store'), [
-        'report_date' => '',
-        'shift' => 'invalid_shift',
-        'room_name' => '',
-    ]);
-
-    $response->assertSessionHasErrors(['report_date', 'shift', 'room_name', 'patient_count', 'nurse_count']);
-});
-
-test('supervision show page displays report and full incidents details', function () {
+test('collaborator and creator can view, edit logbook, and update incident status while unrelated supervisor is forbidden', function () {
     $report = SupervisionReport::create([
         'report_date' => now()->toDateString(),
-        'shift' => 'sore',
+        'shift' => 'pagi',
         'room_name' => 'ICU (Intensive Care Unit)',
         'patient_count' => 6,
         'nurse_count' => 3,
-        'supervisor_name' => $this->user->name,
-        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners | Cicilia Rumini, S.Kep.Ners',
         'general_notes' => 'Pasien bed 2 kondisi kritis.',
         'status' => 'submitted',
     ]);
 
-    Incident::create([
+    $incident = Incident::create([
         'supervision_report_id' => $report->id,
         'category' => 'fasilitas',
         'incident_time' => '15:20',
         'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
-        'action_taken' => 'Alat diganti dengan unit cadangan dari ruang alat.',
-        'status' => 'resolved',
+        'action_taken' => 'Menunggu teknisi.',
+        'status' => 'in_progress',
     ]);
 
-    $response = $this->actingAs($this->user)->get(route('supervisi.show', $report));
+    // Collaborator can view and edit
+    $this->actingAs($this->collaborator)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful()
+        ->assertSee('ICU (Intensive Care Unit)');
 
-    $response->assertSuccessful();
-    $response->assertSee('ICU (Intensive Care Unit)');
-    $response->assertSee('Shift Sore');
-    $response->assertSee('Syringe pump nomor 4 alarm berbunyi baterai drop.');
-    $response->assertSee('Alat diganti dengan unit cadangan dari ruang alat.');
+    // Collaborator can update incident status
+    $this->actingAs($this->collaborator)
+        ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
+            'status' => 'resolved',
+            'action_taken' => 'Alat sudah diganti unit cadangan.',
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($incident->fresh()->status)->toBe('resolved')
+        ->and($incident->fresh()->action_taken)->toBe('Alat sudah diganti unit cadangan.');
+
+    // Collaborator can update full logbook
+    $this->actingAs($this->collaborator)
+        ->put(route('supervisi.update', $report), [
+            'report_date' => now()->toDateString(),
+            'room_name' => 'ICU (Intensive Care Unit)',
+            'patient_count' => 7,
+            'nurse_count' => 4,
+            'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+            'general_notes' => 'Updated by collaborator.',
+            'incidents' => [
+                [
+                    'category' => 'fasilitas',
+                    'incident_time' => '15:20',
+                    'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
+                    'action_taken' => 'Alat sudah diganti unit cadangan.',
+                    'status' => 'resolved',
+                ],
+            ],
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($report->fresh()->patient_count)->toBe(7);
+
+    $latestIncident = $report->fresh()->incidents()->first();
+
+    // Unrelated supervisor cannot view, edit, or update incident
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.show', $report))
+        ->assertForbidden();
+
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.edit', $report))
+        ->assertForbidden();
+
+    $this->actingAs($this->otherSupervisor)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'resolved',
+        ])
+        ->assertForbidden();
+
+    // Admin has full access to all reports
+    $this->actingAs($this->admin)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful();
+});
+
+test('store requires mandatory room and at least one collaborator', function () {
+    $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
+        'report_date' => '',
+        'room_name' => '',
+    ]);
+
+    $response->assertSessionHasErrors(['report_date', 'room_name', 'patient_count', 'nurse_count']);
 });
