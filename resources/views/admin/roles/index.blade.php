@@ -16,7 +16,7 @@
                     Manajemen Role &amp; Hak Akses Pengguna (App ID: 6)
                 </h1>
                 <p class="text-sm text-slate-600 mt-0.5">
-                    Kelola definisi role aplikasi (<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">ref_approles</code>) dan hak akses pegawai (<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">tb_approles</code>) khusus modul Supervisi Keperawatan.
+                    Kelola definisi role aplikasi (<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">ref_master_nurse_supervision_approles</code>) dan hak akses pegawai (<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">tb_master_nurse_supervision_approles</code>) secara mandiri tanpa menyentuh tabel master SIMRS.
                 </p>
             </div>
         </div>
@@ -27,17 +27,17 @@
             </div>
         @endif
 
-        <!-- Top Grid: 1. Definisi Role (ref_approles) & 2. Tambah Pegawai Baru ke tb_approles -->
+        <!-- Top Grid: 1. Definisi Role & 2. Tambah Pegawai Baru -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Panel 1: Definisi Role (ref_approles) -->
+            <!-- Panel 1: Definisi Role (ref_master_nurse_supervision_approles) -->
             <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col justify-between">
                 <div>
                     <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70">
                         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                            1. Daftar & Buat Role Baru (ref_approles)
+                            1. Daftar &amp; Buat Role Baru
                         </h2>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Definisi kode role khusus <span class="font-mono font-semibold">app_id = 6</span>.
+                            Tabel: <span class="font-mono font-semibold">ref_master_nurse_supervision_approles</span>
                         </p>
                     </div>
 
@@ -48,7 +48,7 @@
                                     <tr class="bg-slate-50 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
                                         <th class="px-4 py-2.5">Role ID</th>
                                         <th class="px-4 py-2.5">Nama Role</th>
-                                        <th class="px-4 py-2.5 text-center">App ID</th>
+                                        <th class="px-4 py-2.5 text-right">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -56,7 +56,27 @@
                                         <tr>
                                             <td class="px-4 py-2.5 font-mono font-bold text-slate-900">{{ $roleId }}</td>
                                             <td class="px-4 py-2.5 font-semibold text-slate-800">{{ $roleName }}</td>
-                                            <td class="px-4 py-2.5 text-center font-mono text-slate-500">6</td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                @if((int) $roleId > 1)
+                                                    <form
+                                                        method="POST"
+                                                        action="{{ route('admin.roles.destroy-definition', $roleId) }}"
+                                                        onsubmit="return confirm('Hapus definisi role {{ $roleName }}?');"
+                                                        class="inline"
+                                                    >
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button
+                                                            type="submit"
+                                                            class="px-2 py-1 rounded text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-[11px] text-slate-400 italic">Default</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -109,10 +129,10 @@
             <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70">
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                        2. Berikan Hak Akses kepada Pegawai Baru (tb_approles)
+                        2. Berikan Hak Akses kepada Pegawai Baru
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Pilih pegawai dari master <span class="font-mono">tb_employees</span> untuk didaftarkan ke aplikasi Supervisi Keperawatan (<span class="font-mono font-semibold">app_id = 6</span>).
+                        Pilih pegawai dari master <span class="font-mono">tb_employees</span> untuk ditambahkan ke <span class="font-mono font-semibold">tb_master_nurse_supervision_approles</span>.
                     </p>
                 </div>
 
@@ -166,7 +186,7 @@
                                 type="submit"
                                 class="inline-flex items-center px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
                             >
-                                + Daftarkan & Berikan Role Pegawai
+                                + Daftarkan &amp; Berikan Role Pegawai
                             </button>
                         </div>
                     </form>
@@ -174,7 +194,7 @@
             </div>
         </div>
 
-        <!-- Tabel Daftar Pengguna Terdaftar di app_id = 6 -->
+        <!-- Tabel Daftar Pengguna Terdaftar -->
         <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -182,7 +202,7 @@
                         3. Daftar Pengguna Terdaftar ({{ $appRoles->count() }} Pegawai)
                     </h2>
                     <p class="text-xs text-slate-500">
-                        Anda dapat mengganti role pengguna yang sudah terdaftar secara langsung pada tabel di bawah ini.
+                        Anda dapat mengubah role atau mencabut hak akses pengguna pada tabel <code class="font-mono">tb_master_nurse_supervision_approles</code> di bawah ini.
                     </p>
                 </div>
 
@@ -215,7 +235,7 @@
                             <th class="px-6 py-3">NIP</th>
                             <th class="px-6 py-3">Nama Pegawai / Perawat</th>
                             <th class="px-6 py-3">Role Saat Ini</th>
-                            <th class="px-6 py-3 text-right">Ubah Role</th>
+                            <th class="px-6 py-3 text-right">Kelola Role &amp; Akses</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -234,28 +254,49 @@
                                         {{ $userRole->roleLabel() }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-3.5 text-right">
-                                    <form method="POST" action="{{ route('admin.roles.update-user', $userRole) }}" class="inline-flex items-center justify-end gap-2">
-                                        @csrf
-                                        @method('PATCH')
-                                        <select
-                                            name="app_roles"
-                                            aria-label="Ubah role untuk {{ $userRole->description }}"
-                                            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-900"
-                                        >
-                                            @foreach($availableRoles as $roleId => $roleName)
-                                                <option value="{{ $roleId }}" {{ (int) $userRole->app_roles === (int) $roleId ? 'selected' : '' }}>
-                                                    {{ $roleId }} - {{ $roleName }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <button
-                                            type="submit"
-                                            class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition cursor-pointer"
-                                        >
-                                            Simpan
-                                        </button>
-                                    </form>
+                                <td class="px-6 py-3.5 text-right whitespace-nowrap">
+                                    <div class="inline-flex items-center justify-end gap-2">
+                                        <form method="POST" action="{{ route('admin.roles.update-user', $userRole) }}" class="inline-flex items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <select
+                                                name="app_roles"
+                                                aria-label="Ubah role untuk {{ $userRole->description }}"
+                                                class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-900"
+                                            >
+                                                @foreach($availableRoles as $roleId => $roleName)
+                                                    <option value="{{ $roleId }}" {{ (int) $userRole->app_roles === (int) $roleId ? 'selected' : '' }}>
+                                                        {{ $roleId }} - {{ $roleName }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <button
+                                                type="submit"
+                                                class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition cursor-pointer"
+                                            >
+                                                Simpan
+                                            </button>
+                                        </form>
+
+                                        @if(trim((string) auth()->user()?->nip) !== trim((string) $userRole->nip))
+                                            <form
+                                                method="POST"
+                                                action="{{ route('admin.roles.destroy-user', $userRole) }}"
+                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ $userRole->description }} (NIP: {{ $userRole->nip }})?');"
+                                                class="inline"
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+                                                <button
+                                                    type="submit"
+                                                    class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer"
+                                                    title="Hapus hak akses pengguna"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -265,4 +306,3 @@
         </div>
     </div>
 </x-layouts.app>
-

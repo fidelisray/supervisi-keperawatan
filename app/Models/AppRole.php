@@ -19,7 +19,7 @@ class AppRole extends Model
 
     protected $connection = 'sqlsrv';
 
-    protected $table = 'tb_approles';
+    protected $table = 'tb_master_nurse_supervision_approles';
 
     public $timestamps = false;
 

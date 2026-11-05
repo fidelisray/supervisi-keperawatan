@@ -80,6 +80,36 @@ class RoleManagementController extends Controller
             ->with('success', "Definisi role [{$roleId} - {$roleName}] untuk aplikasi Supervisi Keperawatan berhasil disimpan.");
     }
 
+    public function destroyRole(Request $request, int $roleId): RedirectResponse
+    {
+        if (array_key_exists($roleId, RefAppRole::DEFAULT_ROLE_LABELS)) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Role dasar sistem (Administrator & Supervisor Keperawatan) tidak dapat dihapus.',
+            ]);
+        }
+
+        $usersCount = AppRole::query()
+            ->forSupervisiApp()
+            ->where('app_roles', $roleId)
+            ->count();
+
+        if ($usersCount > 0) {
+            throw ValidationException::withMessages([
+                'role_id' => "Role ini masih digunakan oleh {$usersCount} pegawai. Silakan pindahkan role pegawai terkait terlebih dahulu.",
+            ]);
+        }
+
+        RefAppRole::query()
+            ->forSupervisiApp()
+            ->where('role_id', $roleId)
+            ->delete();
+
+        RefAppRole::clearRoleCache($roleId);
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', "Definisi role dengan kode [{$roleId}] berhasil dihapus.");
+    }
+
     public function assignUserRole(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -144,5 +174,27 @@ class RoleManagementController extends Controller
 
         return redirect()->route('admin.roles.index')
             ->with('success', "Role untuk {$appRole->description} (NIP: {$appRole->nip}) berhasil diperbarui.");
+    }
+
+    public function destroyUserRole(Request $request, AppRole $appRole): RedirectResponse
+    {
+        abort_unless((int) $appRole->app_id === AppRole::APP_ID, 403);
+
+        $currentUserNip = trim((string) $request->user()?->nip);
+        $targetNip = trim((string) $appRole->nip);
+
+        if ($currentUserNip !== '' && $currentUserNip === $targetNip) {
+            throw ValidationException::withMessages([
+                'nip' => 'Anda tidak dapat menghapus hak akses akun Anda sendiri yang sedang aktif digunakan.',
+            ]);
+        }
+
+        $deletedDescription = $appRole->description;
+        $appRole->delete();
+
+        User::query()->where('nip', $targetNip)->delete();
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', "Hak akses untuk {$deletedDescription} (NIP: {$targetNip}) berhasil dicabut dan dihapus.");
     }
 }

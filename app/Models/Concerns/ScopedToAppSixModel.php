@@ -58,26 +58,16 @@ trait ScopedToAppSixModel
         });
 
         static::deleting(function (Model $model): void {
-            throw new BadMethodCallException(sprintf(
-                'Deleting records from [%s] on the hospital database is strictly prohibited.',
-                static::class
-            ));
+            $appId = $model->getOriginal('app_id') ?? $model->getAttribute('app_id');
+
+            if ($appId !== null && (int) $appId !== AppRole::APP_ID) {
+                throw new BadMethodCallException(sprintf(
+                    'Model [%s] cannot delete records belonging to app_id [%s]. Only app_id = %d is permitted.',
+                    static::class,
+                    (string) $appId,
+                    AppRole::APP_ID
+                ));
+            }
         });
-    }
-
-    public function delete(): ?bool
-    {
-        throw new BadMethodCallException(sprintf(
-            'Deleting records from [%s] on the hospital database is strictly prohibited.',
-            static::class
-        ));
-    }
-
-    public function forceDelete(): ?bool
-    {
-        throw new BadMethodCallException(sprintf(
-            'Deleting records from [%s] on the hospital database is strictly prohibited.',
-            static::class
-        ));
     }
 }

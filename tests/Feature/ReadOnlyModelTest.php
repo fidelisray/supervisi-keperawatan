@@ -26,15 +26,9 @@ test('employee, room, and global account models throw exception when attempting 
     }
 });
 
-test('AppRole and RefAppRole block delete operations and block writes for app_id other than 6', function () {
-    foreach ([AppRole::class, RefAppRole::class] as $modelClass) {
-        $instance = $modelClass::where('app_id', 6)->first();
-        expect($instance)->not->toBeNull();
-
-        expect(function () use ($instance) {
-            $instance->delete();
-        })->toThrow(BadMethodCallException::class);
-    }
+test('AppRole and RefAppRole use dedicated supervision master tables and block writes for app_id other than 6', function () {
+    expect((new AppRole)->getTable())->toBe('tb_master_nurse_supervision_approles')
+        ->and((new RefAppRole)->getTable())->toBe('ref_master_nurse_supervision_approles');
 
     expect(function () {
         AppRole::create([

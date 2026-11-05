@@ -14,7 +14,7 @@ class RefAppRole extends Model
 
     protected $connection = 'sqlsrv';
 
-    protected $table = 'ref_approles';
+    protected $table = 'ref_master_nurse_supervision_approles';
 
     public $timestamps = false;
 
@@ -57,11 +57,11 @@ class RefAppRole extends Model
 
     /**
      * Resolve the human-readable role name for the Supervision app (app_id = 6),
-     * falling back to DEFAULT_ROLE_LABELS if ref_approles rows have not been seeded yet.
+     * falling back to DEFAULT_ROLE_LABELS if ref_master_nurse_supervision_approles rows have not been seeded yet.
      */
     public static function resolveRoleName(int $roleId): string
     {
-        $cacheKey = "ref_approles.app_6.role_{$roleId}";
+        $cacheKey = "ref_master_nurse_supervision_approles.app_6.role_{$roleId}";
 
         try {
             $roleName = Cache::remember($cacheKey, now()->addHour(), function () use ($roleId): ?string {
@@ -112,13 +112,13 @@ class RefAppRole extends Model
     public static function clearRoleCache(?int $roleId = null): void
     {
         if ($roleId !== null) {
-            Cache::forget("ref_approles.app_6.role_{$roleId}");
+            Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$roleId}");
 
             return;
         }
 
         foreach (array_keys(self::availableRoles()) as $id) {
-            Cache::forget("ref_approles.app_6.role_{$id}");
+            Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$id}");
         }
     }
 }

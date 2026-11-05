@@ -158,6 +158,63 @@ abstract class TestCase extends BaseTestCase
             ]);
         }
 
+        if (! $schema->hasTable('ref_master_nurse_supervision_approles')) {
+            $schema->create('ref_master_nurse_supervision_approles', function (Blueprint $table) {
+                $table->id();
+                $table->integer('role_id');
+                $table->string('role_name', 100);
+                $table->integer('app_id')->default(6);
+            });
+
+            DB::connection('sqlsrv')->table('ref_master_nurse_supervision_approles')->insert([
+                [
+                    'role_id' => 0,
+                    'role_name' => 'ADMINISTRATOR',
+                    'app_id' => 6,
+                ],
+                [
+                    'role_id' => 1,
+                    'role_name' => 'SUPERVISOR KEPERAWATAN',
+                    'app_id' => 6,
+                ],
+            ]);
+        }
+
+        if (! $schema->hasTable('tb_master_nurse_supervision_approles')) {
+            $schema->create('tb_master_nurse_supervision_approles', function (Blueprint $table) {
+                $table->id();
+                $table->string('nip', 30);
+                $table->integer('app_id')->default(6);
+                $table->integer('app_roles');
+                $table->string('description', 255)->nullable();
+                $table->string('push_token', 255)->nullable();
+            });
+
+            DB::connection('sqlsrv')->table('tb_master_nurse_supervision_approles')->insert([
+                [
+                    'nip' => '5508150824',
+                    'app_id' => 6,
+                    'app_roles' => 0,
+                    'description' => 'Purwanto Ali',
+                    'push_token' => null,
+                ],
+                [
+                    'nip' => '1672010896',
+                    'app_id' => 6,
+                    'app_roles' => 1,
+                    'description' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+                    'push_token' => null,
+                ],
+                [
+                    'nip' => '2351151100',
+                    'app_id' => 6,
+                    'app_roles' => 1,
+                    'description' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+                    'push_token' => null,
+                ],
+            ]);
+        }
+
         if (! $schema->hasTable('tb_nurse_supervision_reports')) {
             $schema->create('tb_nurse_supervision_reports', function (Blueprint $table) {
                 $table->id();
