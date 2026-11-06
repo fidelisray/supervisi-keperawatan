@@ -8,7 +8,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -21,8 +21,12 @@
         <!-- Mobile Header Bar -->
         <header class="md:hidden bg-blue-900 text-white px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
             <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center font-bold text-amber-300 text-sm">
-                    RSE
+                <div class="w-10 h-10 rounded-lg bg-white p-1.5 flex items-center justify-center shadow-xs shrink-0">
+                    <img 
+                        src="{{ Vite::asset('resources/images/logo.png') }}" 
+                        alt="Logo RS St. Elisabeth" 
+                        class="w-full h-full object-contain"
+                    >
                 </div>
                 <div>
                     <h1 class="text-sm font-bold tracking-tight">Supervisi Keperawatan</h1>
@@ -45,22 +49,29 @@
         <!-- Sidebar Navigation -->
         <aside 
             :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
-            class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out md:static md:translate-x-0 md:min-h-screen border-r border-slate-800"
+            class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out md:sticky md:top-0 md:h-screen md:max-h-screen md:translate-x-0 border-r border-slate-800 flex-shrink-0"
         >
             <!-- Hospital Branding -->
-            <div class="p-5 border-b border-slate-800 bg-slate-950/60">
-                <div class="flex items-center space-x-3">
-                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-700 to-indigo-900 flex items-center justify-center shadow-inner border border-blue-400/20 text-white font-extrabold text-lg tracking-wider">
-                        SE
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-white tracking-tight leading-snug">RS ST. ELISABETH</h2>
-                        <p class="text-xs text-blue-300 font-medium tracking-wide">SUPERVISI KEPERAWATAN</p>
-                    </div>
+            <div class="p-5 border-b border-slate-800 bg-slate-950/60 flex-shrink-0 space-y-3">
+                <!-- White Logo Card -->
+                <div class="bg-white rounded-xl p-3 shadow-xs border border-slate-800/60 flex items-center justify-center">
+                    <img 
+                        src="{{ Vite::asset('resources/images/logo.png') }}" 
+                        alt="Logo RS St. Elisabeth Semarang" 
+                        class="h-8 w-auto max-w-full object-contain"
+                    >
                 </div>
-                <div class="mt-3 px-2.5 py-1.5 rounded-lg bg-blue-950/70 border border-blue-900/50">
-                    <p class="text-[11px] text-slate-300 italic font-medium leading-tight">
-                        "Pancaran Cintanya Menyembuhkan Derita Sesama"
+
+                <div class="px-1 flex items-center justify-between">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/60">
+                        Supervisi Keperawatan
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-mono">Semarang</span>
+                </div>
+
+                <div class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                    <p class="text-[11px] text-slate-300 italic font-medium leading-tight text-center">
+                        &ldquo;Pancaran Cintanya Menyembuhkan Derita Sesama&rdquo;
                     </p>
                 </div>
             </div>
@@ -144,7 +155,7 @@
 
             <!-- User Information Card -->
             @auth
-                <div class="p-4 border-t border-slate-800 bg-slate-950/80 space-y-3">
+                <div class="p-4 border-t border-slate-800 bg-slate-950/80 space-y-3 flex-shrink-0">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-full bg-teal-700 border-2 border-teal-400/40 flex items-center justify-center font-bold text-white text-xs shrink-0">
                             {{ auth()->user()->initials() }}
@@ -262,8 +273,36 @@
             </main>
 
             <!-- Hospital Footer -->
-            <footer class="mt-auto border-t border-slate-200 bg-white py-4 px-8 text-center md:text-left text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-2">
-                <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang &middot; Tim Supervisi & Mutu Keperawatan.</p>
+            <footer class="mt-auto border-t border-slate-200 bg-white py-4 px-6 sm:px-8 text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-3 shadow-2xs">
+                <!-- Left: Hak Cipta & Unit Kerja -->
+                <div class="flex items-center space-x-2 text-slate-600">
+                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <p class="font-medium text-center md:text-left">
+                        &copy; {{ date('Y') }} <span class="font-bold text-slate-800">RS St. Elisabeth Semarang</span> &middot; Tim Supervisi &amp; Pengendalian Mutu Keperawatan
+                    </p>
+                </div>
+
+                <!-- Center: Status Konektivitas Sistem Aktif -->
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-800 shadow-2xs">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span>Sistem Terhubung &bull; Siap Pelaporan</span>
+                </div>
+
+                <!-- Right: Motto Rumah Sakit & Waktu Server -->
+                <div class="flex items-center space-x-3 text-slate-500 text-[11px]">
+                    <span class="hidden lg:inline italic text-slate-600">
+                        &ldquo;Pancaran Cintanya Menyembuhkan Derita Sesama&rdquo;
+                    </span>
+                    <span class="hidden sm:inline text-slate-300">|</span>
+                    <span class="font-mono text-slate-600 font-medium">
+                        {{ now()->translatedFormat('d F Y') }}
+                    </span>
+                </div>
             </footer>
         </div>
     </div>
