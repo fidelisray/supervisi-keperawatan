@@ -41,9 +41,11 @@ test('administrator can create, update, and delete roles and user access on dedi
     $this->actingAs($this->admin)
         ->get(route('admin.roles.index'))
         ->assertSuccessful()
-        ->assertSee('Manajemen Role & Hak Akses Pengguna (App ID: 6)')
-        ->assertSee('tb_master_nurse_supervision_approles')
-        ->assertSee('ref_master_nurse_supervision_approles');
+        ->assertSee('Manajemen Role & Hak Akses Pengguna')
+        ->assertDontSee('App ID')
+        ->assertDontSee('tb_master_nurse_supervision_approles')
+        ->assertDontSee('ref_master_nurse_supervision_approles')
+        ->assertDontSee('tb_employees');
 
     // 1. Create a new role definition in ref_master_nurse_supervision_approles
     $this->actingAs($this->admin)

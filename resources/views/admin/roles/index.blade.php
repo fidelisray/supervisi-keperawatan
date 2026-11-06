@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot name="title">Manajemen Role & Hak Akses Pengguna (App ID: 6)</x-slot>
+    <x-slot name="title">Manajemen Role & Hak Akses Pengguna</x-slot>
 
     @php
         $unregisteredEmployeesJson = $unregisteredEmployees->map(fn ($emp) => [
@@ -20,10 +20,10 @@
                     </ol>
                 </nav>
                 <h1 class="text-2xl font-bold tracking-tight text-slate-900">
-                    Manajemen Role &amp; Hak Akses Pengguna (App ID: 6)
+                    Manajemen Role &amp; Hak Akses Pengguna
                 </h1>
                 <p class="text-sm text-slate-600 mt-0.5">
-                    Kelola definisi role aplikasi (<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">ref_master_nurse_supervision_approles</code>), hak akses (permissions), dan penugasan pegawai secara mandiri.
+                    Kelola definisi role, hak akses, dan penugasan pegawai aplikasi.
                 </p>
             </div>
         </div>
@@ -43,9 +43,6 @@
                         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
                             1. Daftar &amp; Buat Role Baru
                         </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            Tabel: <span class="font-mono font-semibold">ref_master_nurse_supervision_approles</span> &amp; permissions
-                        </p>
                     </div>
 
                     <div class="p-6 space-y-4">
@@ -235,7 +232,7 @@
                         2. Berikan Hak Akses kepada Pegawai Baru
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        Pilih perawat dari master <span class="font-mono">tb_employees</span> untuk didaftarkan ke <span class="font-mono font-semibold">tb_master_nurse_supervision_approles</span>.
+                        Pilih perawat dari data pegawai untuk diberi hak akses.
                     </p>
                 </div>
 
@@ -251,7 +248,7 @@
 
                         <div class="relative" @click.outside="closeDropdown()">
                             <label for="assign_employee_search" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                                Cari Pegawai (NIP / Nama) dari Master Karyawan
+                                Cari Pegawai (NIP / Nama)
                             </label>
                             <div class="relative">
                                 <input 
@@ -296,7 +293,7 @@
                             </div>
                             <p x-show="employeeError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="employeeError"></p>
                             <p class="text-[11px] text-slate-500 mt-1">
-                                Nama pegawai akan diambil otomatis dari kolom <code class="font-mono">nama</code> pada <code class="font-mono">tb_employees</code>.
+                                Nama pegawai terisi otomatis.
                             </p>
                         </div>
 
@@ -339,7 +336,7 @@
                         3. Daftar Pengguna Terdaftar ({{ $appRoles->count() }} Pegawai)
                     </h2>
                     <p class="text-xs text-slate-500">
-                        Anda dapat mengubah role atau mencabut hak akses pengguna pada tabel <code class="font-mono">tb_master_nurse_supervision_approles</code> di bawah ini.
+                        Ubah role atau cabut hak akses pengguna di bawah ini.
                     </p>
                 </div>
 
@@ -486,7 +483,7 @@
                                     Kelola Hak Akses Role: <span class="text-teal-700" x-text="modalRoleName"></span>
                                 </h3>
                                 <p class="text-xs text-slate-500 mt-0.5">
-                                    Role ID: <span class="font-mono font-bold" x-text="modalRoleId"></span> &middot; Tentukan modul dan tindakan apa saja yang dapat diakses oleh role ini.
+                                    Kode Role: <span class="font-mono font-bold" x-text="modalRoleId"></span> &middot; Tentukan modul dan tindakan apa saja yang dapat diakses oleh role ini.
                                 </p>
                             </div>
                             <button
@@ -543,7 +540,6 @@
                                                 <div class="flex-1 min-w-0">
                                                     <div class="flex items-center justify-between">
                                                         <span class="text-xs font-bold text-slate-800">{{ $pMeta['label'] }}</span>
-                                                        <code class="text-[10px] text-slate-400 font-mono">{{ $pKey }}</code>
                                                     </div>
                                                     <p class="text-xs text-slate-500 mt-0.5">{{ $pMeta['description'] }}</p>
                                                 </div>

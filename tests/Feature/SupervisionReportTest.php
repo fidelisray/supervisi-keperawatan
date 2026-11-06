@@ -40,7 +40,8 @@ test('supervision create page renders master rooms, multi-collaborator picker, a
     $response->assertSee('Logbook Supervisi Ruang Perawatan');
     $response->assertSee('Formulir Logbook Supervisi');
     $response->assertSee('Kolaborator Supervisi (Dapat Lebih dari Satu)');
-    $response->assertSee('Keluar Sesi SSO');
+    $response->assertSee('Keluar');
+    $response->assertDontSee('Keluar Sesi SSO');
     $response->assertSee('FRANSISKUS');
     $response->assertSee('Anastasia Naning Sudiar, S.Kep.Ners');
     $response->assertDontSee('Pegawai Aplikasi Lain');

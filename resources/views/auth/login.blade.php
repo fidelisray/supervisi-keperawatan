@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Masuk SSO - Supervisi Keperawatan RS. St. Elisabeth Semarang</title>
+    <title>Masuk - Supervisi Keperawatan RS. St. Elisabeth Semarang</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,7 +67,7 @@
             </div>
         </aside>
 
-        <!-- Right Panel: SSO Authentication Form -->
+        {{-- Right Panel: Login Form --}}
         <main class="lg:col-span-7 flex items-center justify-center p-6 sm:p-12 bg-slate-50">
             <div class="w-full max-w-md" x-data="{ showPassword: false, submitting: false }">
                 <div class="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
@@ -155,7 +155,7 @@
                 </div>
 
                 {{-- <p class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
-                    Kendala akses akun atau belum terdaftar pada modul Supervisi Keperawatan? Hubungi bagian Sistem Informasi Manajemen Rumah Sakit (SIMRS).
+                    Kendala akses akun atau belum terdaftar pada modul Supervisi Keperawatan? Hubungi bagian Sistem Informasi rumah sakit.
                 </p> --}}
             </div>
         </main>

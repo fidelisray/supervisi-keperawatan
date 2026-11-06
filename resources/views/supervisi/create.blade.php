@@ -502,7 +502,7 @@
                     <div>
                         <span class="font-bold text-slate-800" x-text="incidents.length">0</span> kejadian tercatat
                         <span class="text-slate-400 mx-1">•</span>
-                        Siap disimpan ke database rumah sakit.
+                        Siap disimpan.
                     </div>
                 </div>
 

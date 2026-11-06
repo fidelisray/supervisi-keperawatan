@@ -171,7 +171,7 @@
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                             </svg>
-                            <span>Keluar Sesi SSO</span>
+                            <span>Keluar</span>
                         </button>
                     </form>
                 </div>
@@ -264,7 +264,6 @@
             <!-- Hospital Footer -->
             <footer class="mt-auto border-t border-slate-200 bg-white py-4 px-8 text-center md:text-left text-xs text-slate-500 flex flex-col md:flex-row justify-between items-center gap-2">
                 <p>&copy; {{ date('Y') }} RS St. Elisabeth Semarang &middot; Tim Supervisi & Mutu Keperawatan.</p>
-                <p class="text-slate-400">Versi 2.0 (Modern Clinical Architecture)</p>
             </footer>
         </div>
     </div>

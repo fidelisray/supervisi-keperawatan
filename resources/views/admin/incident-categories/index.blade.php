@@ -16,7 +16,7 @@
                     Manajemen Kategori Masalah &amp; Poin Kejadian
                 </h1>
                 <p class="text-sm text-slate-600 mt-0.5">
-                    Kelola daftar pilihan kategori masalah secara dinamis (`tb_master_nurse_supervision_incidents_category`) yang tampil pada formulir input logbook supervisi.
+                    Kelola daftar pilihan kategori masalah secara dinamis yang tampil pada formulir input logbook supervisi.
                 </p>
             </div>
         </div>
