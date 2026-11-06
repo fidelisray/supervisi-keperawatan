@@ -2,6 +2,16 @@
     <x-slot name="title">Edit Logbook Supervisi - {{ $report->room_name }}</x-slot>
 
     @php
+        $roomsJson = $rooms->map(fn ($r) => [
+            'name' => $r->nama_ruangan,
+            'installation' => $r->instalasi ? 'Instalasi ' . $r->instalasi : '',
+        ])->values();
+
+        $nursesJson = $nurses->map(fn ($n) => [
+            'name' => $n->description,
+            'nip' => $n->nip,
+        ])->values();
+
         $initialCollaborators = old('collaborators', $report->collaboratorList());
         $initialIncidents = old('incidents', $report->incidents->map(fn ($inc) => [
             'id' => $inc->id,
@@ -70,8 +80,8 @@
             @method('PUT')
 
             <!-- Section 1: Data Operasional Ruangan -->
-            <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-20">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">
                             1
@@ -104,25 +114,52 @@
                         @enderror
                     </div>
 
-                    <!-- Ruangan Instalasi -->
-                    <div class="md:col-span-4">
-                        <label for="room_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                    <!-- Ruangan Instalasi Perawatan (Searchable Combobox) -->
+                    <div class="md:col-span-4 relative z-30" @click.outside="closeRoomDropdown()">
+                        <label for="room_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                             Ruangan / Instalasi Perawatan
                         </label>
-                        <input 
-                            list="room_list" 
-                            id="room_name" 
-                            name="room_name" 
-                            value="{{ old('room_name', $report->room_name) }}"
-                            placeholder="Ketik atau pilih ruangan bangsal..."
-                            required 
-                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
-                        >
-                        <datalist id="room_list">
-                            @foreach($rooms as $room)
-                                <option value="{{ $room->nama_ruangan }}">{{ $room->instalasi ? 'Instalasi ' . $room->instalasi : '' }}</option>
-                            @endforeach
-                        </datalist>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="room_search_input"
+                                autocomplete="off"
+                                x-model="roomSearch"
+                                @focus="isRoomOpen = true; roomHighlightIndex = 0"
+                                @input="isRoomOpen = true; roomHighlightIndex = 0"
+                                @keydown.down.prevent="highlightNextRoom()"
+                                @keydown.up.prevent="highlightPrevRoom()"
+                                @keydown.enter.prevent="selectHighlightedRoom()"
+                                @keydown.escape="closeRoomDropdown()"
+                                placeholder="Ketik untuk cari ruangan / instalasi..." 
+                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                            >
+                            <input type="hidden" name="room_name" :value="selectedRoom">
+
+                            <!-- Dropdown Result List -->
+                            <div 
+                                x-show="isRoomOpen" 
+                                x-cloak
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                            >
+                                <template x-for="(room, rIdx) in filteredRooms" :key="room.name">
+                                    <button
+                                        type="button"
+                                        @click="selectRoom(room.name)"
+                                        @mouseenter="roomHighlightIndex = rIdx"
+                                        :class="{ 'bg-blue-50 text-blue-900 font-semibold': roomHighlightIndex === rIdx, 'text-slate-800': roomHighlightIndex !== rIdx }"
+                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-blue-50 transition cursor-pointer"
+                                    >
+                                        <span x-text="room.name"></span>
+                                        <span class="text-[11px] text-slate-400 font-normal ml-2" x-text="room.installation"></span>
+                                    </button>
+                                </template>
+                                <div x-show="filteredRooms.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    Ruangan tidak ditemukan
+                                </div>
+                            </div>
+                        </div>
+                        <p x-show="roomError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="roomError"></p>
                         @error('room_name')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
@@ -191,10 +228,10 @@
                         >
                     </div>
 
-                    <!-- Multi-Kolaborator Supervisi -->
-                    <div class="md:col-span-7">
+                    <!-- Multi-Kolaborator Supervisi (Searchable Combobox) -->
+                    <div class="md:col-span-7 relative z-20" @click.outside="isCollaboratorOpen = false">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="collaborator_picker" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="collaborator_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
                                 Kolaborator Supervisi (Dapat Lebih dari Satu)
                             </label>
                             <span class="text-[11px] text-slate-500 font-medium">
@@ -202,30 +239,65 @@
                             </span>
                         </div>
 
-                        <div class="flex gap-2">
-                            <input 
-                                list="nurse_list"
-                                type="text" 
-                                id="collaborator_picker" 
-                                x-model="collaboratorInput"
-                                @keydown.enter.prevent="addCollaborator()"
-                                placeholder="Ketik atau pilih nama kolaborator terdaftar lalu klik Tambah..."
-                                class="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
-                            >
-                            <button
-                                type="button"
-                                @click="addCollaborator()"
-                                class="inline-flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition shadow-2xs shrink-0 cursor-pointer"
-                            >
-                                + Tambah Kolaborator
-                            </button>
-                        </div>
+                        <div class="relative">
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <input 
+                                        type="text" 
+                                        id="collaborator_search_input"
+                                        x-ref="collaboratorSearchInput"
+                                        autocomplete="off"
+                                        x-model="collaboratorSearch"
+                                        @focus="isCollaboratorOpen = true; collaboratorHighlightIndex = 0"
+                                        @input="isCollaboratorOpen = true; collaboratorHighlightIndex = 0"
+                                        @keydown.down.prevent="highlightNextCollaborator()"
+                                        @keydown.up.prevent="highlightPrevCollaborator()"
+                                        @keydown.enter.prevent="selectHighlightedCollaborator()"
+                                        @keydown.escape="isCollaboratorOpen = false"
+                                        placeholder="Ketik NIP atau nama rekan perawat..." 
+                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                                    >
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="selectHighlightedCollaborator()"
+                                    class="inline-flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition shadow-2xs shrink-0 cursor-pointer"
+                                >
+                                    + Tambah Kolaborator
+                                </button>
+                            </div>
 
-                        <datalist id="nurse_list">
-                            @foreach($nurses as $nurse)
-                                <option value="{{ $nurse->description }}">{{ $nurse->nip }}</option>
-                            @endforeach
-                        </datalist>
+                            <!-- Collaborators Dropdown Result List -->
+                            <div 
+                                x-show="isCollaboratorOpen" 
+                                x-cloak
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                            >
+                                <template x-for="(nurse, nIdx) in filteredNurses" :key="nurse.nip + nurse.name">
+                                    <button
+                                        type="button"
+                                        @click="addCollaboratorDirect(nurse.name)"
+                                        @mouseenter="collaboratorHighlightIndex = nIdx"
+                                        :disabled="collaborators.includes(nurse.name)"
+                                        :class="{
+                                            'bg-teal-50 text-teal-900 font-semibold': collaboratorHighlightIndex === nIdx && !collaborators.includes(nurse.name),
+                                            'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400': collaborators.includes(nurse.name),
+                                            'text-slate-800': collaboratorHighlightIndex !== nIdx && !collaborators.includes(nurse.name)
+                                        }"
+                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer"
+                                    >
+                                        <div class="flex items-center gap-2 truncate">
+                                            <span class="font-medium" x-text="nurse.name"></span>
+                                            <span class="text-[11px] font-mono text-slate-500" x-text="'(NIP: ' + nurse.nip + ')'"></span>
+                                        </div>
+                                        <span x-show="collaborators.includes(nurse.name)" class="text-[10px] uppercase font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">Sudah Dipilih</span>
+                                    </button>
+                                </template>
+                                <div x-show="filteredNurses.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    Perawat tidak ditemukan dengan kata kunci tersebut
+                                </div>
+                            </div>
+                        </div>
 
                         <input type="hidden" name="nurse_in_charge" :value="collaborators.join(' | ')">
                         <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
@@ -254,7 +326,7 @@
             </div>
 
             <!-- Section 2: Log Kejadian Ruangan -->
-            <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-10 overflow-hidden">
                 <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
@@ -488,11 +560,25 @@
         function editSupervisionLogbook() {
             const categoryMeta = @json($categoryMeta);
             const defaultCategoryId = @json($defaultCategoryId);
+            const allRooms = @json($roomsJson);
+            const allNurses = @json($nursesJson);
+            const initialRoom = @json(old('room_name', $report->room_name));
 
             return {
+                rooms: allRooms,
+                roomSearch: initialRoom,
+                selectedRoom: initialRoom,
+                isRoomOpen: false,
+                roomHighlightIndex: 0,
+                roomError: '',
+
+                nurses: allNurses,
+                collaboratorSearch: '',
+                isCollaboratorOpen: false,
+                collaboratorHighlightIndex: 0,
                 collaborators: @json($initialCollaborators),
-                collaboratorInput: '',
                 collaboratorError: '',
+
                 incidents: @json($initialIncidents),
                 showIncidentModal: false,
                 editingIndex: null,
@@ -505,22 +591,131 @@
                     status: 'in_progress'
                 },
 
+                get filteredRooms() {
+                    const q = (this.roomSearch || '').trim().toLowerCase();
+                    if (!q) return this.rooms;
+                    return this.rooms.filter(r => 
+                        r.name.toLowerCase().includes(q) || 
+                        (r.installation && r.installation.toLowerCase().includes(q))
+                    );
+                },
+
+                get filteredNurses() {
+                    const q = (this.collaboratorSearch || '').trim().toLowerCase();
+                    if (!q) return this.nurses;
+                    return this.nurses.filter(n => 
+                        n.name.toLowerCase().includes(q) || 
+                        (n.nip && n.nip.toLowerCase().includes(q))
+                    );
+                },
+
                 init() {},
 
-                addCollaborator() {
-                    const value = (this.collaboratorInput || '').trim();
-                    if (!value) {
+                selectRoom(name) {
+                    this.selectedRoom = name;
+                    this.roomSearch = name;
+                    this.roomError = '';
+                    this.isRoomOpen = false;
+                },
+
+                selectHighlightedRoom() {
+                    if (this.filteredRooms.length > 0 && this.roomHighlightIndex >= 0 && this.roomHighlightIndex < this.filteredRooms.length) {
+                        this.selectRoom(this.filteredRooms[this.roomHighlightIndex].name);
+                    } else if (this.filteredRooms.length > 0) {
+                        this.selectRoom(this.filteredRooms[0].name);
+                    }
+                },
+
+                highlightNextRoom() {
+                    if (!this.isRoomOpen) {
+                        this.isRoomOpen = true;
+                        this.roomHighlightIndex = 0;
                         return;
                     }
-                    if (!this.collaborators.includes(value)) {
-                        this.collaborators.push(value);
+                    if (this.roomHighlightIndex < this.filteredRooms.length - 1) {
+                        this.roomHighlightIndex++;
                     }
-                    this.collaboratorInput = '';
+                },
+
+                highlightPrevRoom() {
+                    if (this.roomHighlightIndex > 0) {
+                        this.roomHighlightIndex--;
+                    }
+                },
+
+                closeRoomDropdown() {
+                    this.isRoomOpen = false;
+                    if (!this.roomSearch || this.roomSearch.trim() === '') {
+                        this.selectedRoom = '';
+                        return;
+                    }
+                    const exact = this.rooms.find(r => r.name.toLowerCase() === this.roomSearch.trim().toLowerCase());
+                    if (exact) {
+                        this.selectedRoom = exact.name;
+                        this.roomSearch = exact.name;
+                        this.roomError = '';
+                    } else if (this.selectedRoom) {
+                        this.roomSearch = this.selectedRoom;
+                    } else {
+                        this.selectedRoom = '';
+                    }
+                },
+
+                highlightNextCollaborator() {
+                    if (!this.isCollaboratorOpen) {
+                        this.isCollaboratorOpen = true;
+                        this.collaboratorHighlightIndex = 0;
+                        return;
+                    }
+                    if (this.collaboratorHighlightIndex < this.filteredNurses.length - 1) {
+                        this.collaboratorHighlightIndex++;
+                    }
+                },
+
+                highlightPrevCollaborator() {
+                    if (this.collaboratorHighlightIndex > 0) {
+                        this.collaboratorHighlightIndex--;
+                    }
+                },
+
+                addCollaboratorDirect(name) {
+                    const value = (name || '').trim();
+                    if (!value) return;
+                    if (this.collaborators.includes(value)) {
+                        this.collaboratorError = `"${value}" sudah ada dalam daftar kolaborator.`;
+                        return;
+                    }
+                    this.collaborators.push(value);
+                    this.collaboratorSearch = '';
                     this.collaboratorError = '';
+                    this.isCollaboratorOpen = false;
+                    this.collaboratorHighlightIndex = 0;
+                    this.$nextTick(() => {
+                        this.$refs.collaboratorSearchInput?.focus();
+                    });
+                },
+
+                selectHighlightedCollaborator() {
+                    if (this.filteredNurses.length > 0) {
+                        let candidate = this.filteredNurses[this.collaboratorHighlightIndex];
+                        if (candidate && this.collaborators.includes(candidate.name)) {
+                            candidate = this.filteredNurses.find(n => !this.collaborators.includes(n.name)) || candidate;
+                        }
+                        if (candidate) {
+                            this.addCollaboratorDirect(candidate.name);
+                            return;
+                        }
+                    }
+                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '') {
+                        this.addCollaboratorDirect(this.collaboratorSearch.trim());
+                    }
                 },
 
                 removeCollaborator(index) {
                     this.collaborators.splice(index, 1);
+                    this.$nextTick(() => {
+                        this.$refs.collaboratorSearchInput?.focus();
+                    });
                 },
 
                 openModal() {
@@ -601,11 +796,20 @@
                 },
 
                 submitForm(event) {
-                    if (this.collaboratorInput && this.collaboratorInput.trim() !== '') {
-                        this.addCollaborator();
+                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '') {
+                        const found = this.filteredNurses.find(n => !this.collaborators.includes(n.name));
+                        if (found) {
+                            this.addCollaboratorDirect(found.name);
+                        }
+                    }
+                    if (!this.selectedRoom || this.selectedRoom.trim() === '') {
+                        this.roomError = 'Ruangan / Instalasi perawatan wajib dipilih.';
+                        document.getElementById('room_search_input')?.focus();
+                        return;
                     }
                     if (this.collaborators.length === 0) {
                         this.collaboratorError = 'Minimal satu kolaborator wajib dipilih.';
+                        this.$refs.collaboratorSearchInput?.focus();
                         return;
                     }
                     this.$nextTick(() => {

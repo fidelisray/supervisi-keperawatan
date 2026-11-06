@@ -1,6 +1,13 @@
 <x-layouts.app>
     <x-slot name="title">Manajemen Role & Hak Akses Pengguna (App ID: 6)</x-slot>
 
+    @php
+        $unregisteredEmployeesJson = $unregisteredEmployees->map(fn ($emp) => [
+            'nip' => $emp->nip,
+            'name' => $emp->nama,
+        ])->values();
+    @endphp
+
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Page Title & Context Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
@@ -126,8 +133,8 @@
             </div>
 
             <!-- Panel 2: Berikan Role ke Pegawai yang Belum Terdaftar -->
-            <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70">
+            <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-2xs relative z-20">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 rounded-t-xl">
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
                         2. Berikan Hak Akses kepada Pegawai Baru
                     </h2>
@@ -137,27 +144,61 @@
                 </div>
 
                 <div class="p-6">
-                    <form method="POST" action="{{ route('admin.roles.assign-user') }}" class="space-y-4">
+                    <form 
+                        method="POST" 
+                        action="{{ route('admin.roles.assign-user') }}" 
+                        class="space-y-4"
+                        x-data="adminAssignEmployeeRole()"
+                        @submit="handleSubmit($event)"
+                    >
                         @csrf
 
-                        <div>
-                            <label for="assign_nip" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                                Cari Pegawai (NIP) dari Master Karyawan
+                        <div class="relative" @click.outside="closeDropdown()">
+                            <label for="assign_employee_search" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                Cari Pegawai (NIP / Nama) dari Master Karyawan
                             </label>
-                            <input
-                                list="unregistered_employees_list"
-                                type="text"
-                                id="assign_nip"
-                                name="nip"
-                                required
-                                placeholder="Ketik NIP atau nama pegawai..."
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:border-teal-600"
-                            >
-                            <datalist id="unregistered_employees_list">
-                                @foreach($unregisteredEmployees as $emp)
-                                    <option value="{{ $emp->nip }}">{{ $emp->nama }} ({{ $emp->nip }})</option>
-                                @endforeach
-                            </datalist>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="assign_employee_search"
+                                    x-ref="employeeSearchInput"
+                                    autocomplete="off"
+                                    x-model="employeeSearch"
+                                    @focus="isOpen = true; highlightIndex = 0"
+                                    @input="isOpen = true; highlightIndex = 0; onSearchInput()"
+                                    @keydown.down.prevent="highlightNext()"
+                                    @keydown.up.prevent="highlightPrev()"
+                                    @keydown.enter.prevent="selectHighlighted()"
+                                    @keydown.escape="closeDropdown()"
+                                    placeholder="Ketik NIP atau nama pegawai..." 
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-600 transition shadow-2xs"
+                                >
+                                <input type="hidden" name="nip" :value="selectedNip" required>
+
+                                <!-- Dropdown List -->
+                                <div 
+                                    x-show="isOpen" 
+                                    x-cloak
+                                    class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                                >
+                                    <template x-for="(emp, eIdx) in filteredEmployees" :key="emp.nip">
+                                        <button
+                                            type="button"
+                                            @click="selectEmployee(emp)"
+                                            @mouseenter="highlightIndex = eIdx"
+                                            :class="{ 'bg-teal-50 text-teal-900 font-semibold': highlightIndex === eIdx, 'text-slate-800': highlightIndex !== eIdx }"
+                                            class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer"
+                                        >
+                                            <span class="font-medium truncate" x-text="emp.name"></span>
+                                            <span class="text-[11px] font-mono text-slate-500 ml-2 shrink-0" x-text="'(NIP: ' + emp.nip + ')'"></span>
+                                        </button>
+                                    </template>
+                                    <div x-show="filteredEmployees.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                        Pegawai tidak ditemukan
+                                    </div>
+                                </div>
+                            </div>
+                            <p x-show="employeeError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="employeeError"></p>
                             <p class="text-[11px] text-slate-500 mt-1">
                                 Nama pegawai akan diambil otomatis dari kolom <code class="font-mono">nama</code> pada <code class="font-mono">tb_employees</code>.
                             </p>
@@ -195,7 +236,7 @@
         </div>
 
         <!-- Tabel Daftar Pengguna Terdaftar -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-xs relative z-10 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
@@ -305,4 +346,107 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function adminAssignEmployeeRole() {
+            const allEmployees = @json($unregisteredEmployeesJson);
+            const oldNip = @json(old('nip', ''));
+            const matchedOld = allEmployees.find(e => e.nip === oldNip);
+
+            return {
+                employees: allEmployees,
+                employeeSearch: matchedOld ? `${matchedOld.name} (NIP: ${matchedOld.nip})` : (oldNip ? `NIP: ${oldNip}` : ''),
+                selectedNip: oldNip,
+                isOpen: false,
+                highlightIndex: 0,
+                employeeError: '',
+
+                get filteredEmployees() {
+                    const q = (this.employeeSearch || '').trim().toLowerCase();
+                    if (!q) return this.employees;
+                    return this.employees.filter(e => 
+                        e.name.toLowerCase().includes(q) || 
+                        (e.nip && e.nip.toLowerCase().includes(q))
+                    );
+                },
+
+                onSearchInput() {
+                    this.employeeError = '';
+                    if (!this.employeeSearch || this.employeeSearch.trim() === '') {
+                        this.selectedNip = '';
+                    }
+                },
+
+                selectEmployee(emp) {
+                    this.selectedNip = emp.nip;
+                    this.employeeSearch = `${emp.name} (NIP: ${emp.nip})`;
+                    this.employeeError = '';
+                    this.isOpen = false;
+                },
+
+                selectHighlighted() {
+                    if (this.filteredEmployees.length > 0 && this.highlightIndex >= 0 && this.highlightIndex < this.filteredEmployees.length) {
+                        this.selectEmployee(this.filteredEmployees[this.highlightIndex]);
+                    } else if (this.filteredEmployees.length > 0) {
+                        this.selectEmployee(this.filteredEmployees[0]);
+                    }
+                },
+
+                highlightNext() {
+                    if (!this.isOpen) {
+                        this.isOpen = true;
+                        this.highlightIndex = 0;
+                        return;
+                    }
+                    if (this.highlightIndex < this.filteredEmployees.length - 1) {
+                        this.highlightIndex++;
+                    }
+                },
+
+                highlightPrev() {
+                    if (this.highlightIndex > 0) {
+                        this.highlightIndex--;
+                    }
+                },
+
+                closeDropdown() {
+                    this.isOpen = false;
+                    if (!this.employeeSearch || this.employeeSearch.trim() === '') {
+                        this.selectedNip = '';
+                        return;
+                    }
+                    const exact = this.employees.find(e => 
+                        e.nip.toLowerCase() === this.employeeSearch.trim().toLowerCase() ||
+                        e.name.toLowerCase() === this.employeeSearch.trim().toLowerCase()
+                    );
+                    if (exact) {
+                        this.selectEmployee(exact);
+                    } else if (!this.selectedNip) {
+                        this.employeeSearch = '';
+                    }
+                },
+
+                handleSubmit(event) {
+                    if (!this.selectedNip && this.filteredEmployees.length > 0) {
+                        const exact = this.employees.find(e => 
+                            e.nip.toLowerCase() === this.employeeSearch.trim().toLowerCase() ||
+                            e.name.toLowerCase() === this.employeeSearch.trim().toLowerCase()
+                        );
+                        if (exact) {
+                            this.selectEmployee(exact);
+                        } else if (this.filteredEmployees.length === 1) {
+                            this.selectEmployee(this.filteredEmployees[0]);
+                        }
+                    }
+
+                    if (!this.selectedNip || this.selectedNip.trim() === '') {
+                        event.preventDefault();
+                        this.employeeError = 'Silakan pilih salah satu pegawai dari hasil pencarian.';
+                        this.$refs.employeeSearchInput?.focus();
+                        return;
+                    }
+                }
+            };
+        }
+    </script>
 </x-layouts.app>
