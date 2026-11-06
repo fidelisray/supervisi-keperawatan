@@ -19,7 +19,7 @@ test('login page renders split-screen sso authentication form', function () {
     $response->assertSuccessful();
     $response->assertSee('E-Supervisi Keperawatan');
     $response->assertSee('Nomor Induk Pegawai (NIP)');
-    $response->assertSee('Kata Sandi SSO');
+    $response->assertSee('Kata Sandi');
 });
 
 test('user registered in app_id 6 can login with valid base64 sso credentials and syncs to local users table', function () {

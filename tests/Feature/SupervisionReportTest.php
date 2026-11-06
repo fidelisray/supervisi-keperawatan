@@ -38,11 +38,14 @@ test('supervision create page renders master rooms, multi-collaborator picker, a
 
     $response->assertSuccessful();
     $response->assertSee('Logbook Supervisi Ruang Perawatan');
+    $response->assertSee('Formulir Logbook Supervisi');
     $response->assertSee('Kolaborator Supervisi (Dapat Lebih dari Satu)');
     $response->assertSee('Keluar Sesi SSO');
     $response->assertSee('FRANSISKUS');
     $response->assertSee('Anastasia Naning Sudiar, S.Kep.Ners');
     $response->assertDontSee('Pegawai Aplikasi Lain');
+    $response->assertDontSee('Dinas Shift');
+    $response->assertDontSee('Shift Pagi');
 });
 
 test('can store a new supervision report with multiple collaborators and without explicit shift input', function () {
@@ -106,7 +109,8 @@ test('collaborator and creator can view, edit logbook, and update incident statu
     $this->actingAs($this->collaborator)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
-        ->assertSee('ICU (Intensive Care Unit)');
+        ->assertSee('ICU (Intensive Care Unit)')
+        ->assertDontSee('Shift Pagi');
 
     // Collaborator can update incident status
     $this->actingAs($this->collaborator)

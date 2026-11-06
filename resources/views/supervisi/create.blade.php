@@ -13,14 +13,14 @@
                     <ol class="inline-flex items-center space-x-1">
                         <li>Supervisi Keperawatan</li>
                         <li><span class="mx-1 text-slate-400">/</span></li>
-                        <li class="text-blue-700 font-semibold">Formulir Logbook Shift</li>
+                        <li class="text-blue-700 font-semibold">Formulir Logbook Supervisi</li>
                     </ol>
                 </nav>
                 <h1 class="text-2xl font-bold tracking-tight text-slate-900">
                     Logbook Supervisi Ruang Perawatan
                 </h1>
                 <p class="text-sm text-slate-600 mt-0.5">
-                    Catat kondisi operasional bangsal dan laporkan kejadian/insiden selama dinas shift berlangsung.
+                    Catat kondisi operasional bangsal dan laporkan kejadian/insiden selama dinas supervisi berlangsung.
                 </p>
             </div>
 
@@ -47,7 +47,7 @@
         >
             @csrf
 
-            <!-- Section 1: Konteks Ruangan & Shift Operasional -->
+            <!-- Section 1: Konteks Ruangan Operasional -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
                 <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                     <div class="flex items-center space-x-2.5">
@@ -55,7 +55,7 @@
                             1
                         </div>
                         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                            Data Operasional Ruangan & Dinas Shift
+                            Data Operasional Ruangan
                         </h2>
                     </div>
                     <span class="text-xs text-slate-500 font-medium">*Wajib diisi</span>
@@ -261,7 +261,7 @@
                         </div>
                         <div>
                             <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                                Kejadian di Ruangan Selama Dinas Shift
+                                Kejadian di Ruangan Selama Supervisi
                             </h2>
                             <p class="text-xs text-slate-500">
                                 Laporkan insiden berdasarkan poin masalahnya (Complain, Fasilitas, JKN &ge; 6 Hari, Lain-lain).
@@ -412,7 +412,7 @@
                 </div>
             </div>
 
-            <!-- Section 3: Catatan Umum / Handover Shift -->
+            <!-- Section 3: Catatan Umum / Handover -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
                 <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center space-x-2.5">
                     <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs">
@@ -426,7 +426,7 @@
                     <textarea 
                         name="general_notes" 
                         rows="3" 
-                        placeholder="Tuliskan catatan evaluasi supervisor atau pesan penting untuk shift berikutnya (opsional)..."
+                        placeholder="Tuliskan catatan evaluasi supervisor atau pesan penting (opsional)..."
                         class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                     >{{ old('general_notes') }}</textarea>
                 </div>

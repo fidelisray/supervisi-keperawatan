@@ -56,9 +56,12 @@
         <div class="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
             <div class="bg-blue-900 text-white p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
+                    {{-- Badge Shift disembunyikan sesuai arahan operasional (tidak dihapus agar dapat diaktifkan kembali jika dibutuhkan) --}}
+                    {{--
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-amber-400 text-slate-900 uppercase tracking-wider">
                         Shift {{ ucfirst($report->shift) }}
                     </span>
+                    --}}
                     <h2 class="text-2xl font-bold mt-2 tracking-tight">{{ $report->room_name }}</h2>
                     <p class="text-xs text-blue-200 mt-0.5">
                         Tanggal: <strong>{{ $report->report_date->translatedFormat('l, d F Y') }}</strong>

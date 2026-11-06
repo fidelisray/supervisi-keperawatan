@@ -109,7 +109,6 @@ class SupervisionReportController extends Controller
             'rooms' => $rooms,
             'nurses' => $nurses,
             'incidentCategories' => $incidentCategories,
-            'shifts' => $this->availableShifts(),
             'defaultShift' => $this->resolveDefaultShift(),
             'defaultSupervisor' => $request->user()?->name ?? '',
             'today' => now()->format('Y-m-d'),
@@ -197,7 +196,6 @@ class SupervisionReportController extends Controller
             'rooms' => $rooms,
             'nurses' => $nurses,
             'incidentCategories' => $incidentCategories,
-            'shifts' => $this->availableShifts(),
         ]);
     }
 
