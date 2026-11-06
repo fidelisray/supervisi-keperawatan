@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\ReadOnlyModel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
@@ -64,5 +65,19 @@ class Employee extends Model
     public function getRouteKeyName(): string
     {
         return 'nip';
+    }
+
+    /**
+     * Scope a query to only include employees with nursing titles/degrees.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNurses(Builder $query): Builder
+    {
+        return $query->where(function (Builder $sub): void {
+            $sub->where('nama', 'like', '%S.Kep.Ners%')
+                ->orWhere('nama', 'like', '%AMK%');
+        });
     }
 }

@@ -42,6 +42,7 @@ class RoleManagementController extends Controller
             ->all();
 
         $unregisteredEmployees = Employee::query()
+            ->nurses()
             ->whereNotIn('nip', $registeredNips)
             ->orderBy('nama')
             ->limit(500)

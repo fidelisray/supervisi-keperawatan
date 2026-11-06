@@ -115,3 +115,29 @@ test('RefAppRoleSeeder initializes dedicated tables from tb_approles and ref_app
         ->and(AppRole::where('app_id', 6)->count())->toBe(3)
         ->and(AppRole::where('nip', '9000000001')->exists())->toBeFalse();
 });
+
+test('admin roles index only pulls unregistered employees who have nursing titles', function () {
+    DB::connection('sqlsrv')->table('tb_employees')->insert([
+        [
+            'nip' => '7788990001',
+            'nama' => 'Sri Rahayu, AMK',
+            'status_karyawan' => 'AKTIF',
+        ],
+        [
+            'nip' => '7788990002',
+            'nama' => 'Bambang Sudarsono, S.E.',
+            'status_karyawan' => 'AKTIF',
+        ],
+    ]);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $response->assertSuccessful();
+
+    // S.Kep.Ners nurse and AMK nurse must be present
+    $response->assertSee('Cicilia Rumini, S.Kep.Ners');
+    $response->assertSee('Sri Rahayu, AMK');
+
+    // Non-nurse employee (S.E.) must NOT be present
+    $response->assertDontSee('Bambang Sudarsono, S.E.');
+});
