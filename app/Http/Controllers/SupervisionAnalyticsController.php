@@ -13,6 +13,8 @@ class SupervisionAnalyticsController extends Controller
 {
     public function index(Request $request): View
     {
+        abort_unless($request->user()?->hasPermission('view_analytics'), 403);
+
         $user = $request->user();
 
         $reportsQuery = SupervisionReport::query()

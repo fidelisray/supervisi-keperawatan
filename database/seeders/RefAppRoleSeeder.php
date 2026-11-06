@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\AppRole;
 use App\Models\RefAppRole;
+use App\Models\RolePermission;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -71,6 +72,12 @@ class RefAppRoleSeeder extends Seeder
                     ]
                 );
             }
+        }
+
+        // 3. Initialize default permissions for Role 0 and Role 1 in ref_master_nurse_supervision_role_permissions
+        if ($schema->hasTable('ref_master_nurse_supervision_role_permissions')) {
+            RefAppRole::syncPermissions(AppRole::ROLE_ADMIN, array_keys(RolePermission::AVAILABLE_PERMISSIONS));
+            RefAppRole::syncPermissions(AppRole::ROLE_SUPERVISOR, RolePermission::DEFAULT_SUPERVISOR_PERMISSIONS);
         }
     }
 }

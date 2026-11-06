@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\ScopedToAppSixModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -109,16 +110,85 @@ class RefAppRole extends Model
         return $roles;
     }
 
+    public function permissions(): HasMany
+    {
+        return $this->hasMany(RolePermission::class, 'role_id', 'role_id')
+            ->where('app_id', AppRole::APP_ID);
+    }
+
+    /**
+     * Get active permission keys for a given role ID.
+     *
+     * @return list<string>
+     */
+    public static function permissionKeysForRole(int $roleId): array
+    {
+        if ($roleId === AppRole::ROLE_ADMIN) {
+            return array_keys(RolePermission::AVAILABLE_PERMISSIONS);
+        }
+
+        $cacheKey = "supervisi.role_permissions.role_{$roleId}";
+
+        try {
+            return Cache::remember($cacheKey, now()->addHour(), function () use ($roleId): array {
+                $keys = RolePermission::query()
+                    ->where('app_id', AppRole::APP_ID)
+                    ->where('role_id', $roleId)
+                    ->pluck('permission_key')
+                    ->all();
+
+                if (empty($keys) && $roleId === AppRole::ROLE_SUPERVISOR) {
+                    return RolePermission::DEFAULT_SUPERVISOR_PERMISSIONS;
+                }
+
+                return $keys;
+            });
+        } catch (Throwable) {
+            if ($roleId === AppRole::ROLE_SUPERVISOR) {
+                return RolePermission::DEFAULT_SUPERVISOR_PERMISSIONS;
+            }
+
+            return [];
+        }
+    }
+
+    /**
+     * Sync permissions for a role ID.
+     *
+     * @param  list<string>  $permissionKeys
+     */
+    public static function syncPermissions(int $roleId, array $permissionKeys): void
+    {
+        $validKeys = array_intersect($permissionKeys, array_keys(RolePermission::AVAILABLE_PERMISSIONS));
+
+        RolePermission::query()
+            ->where('app_id', AppRole::APP_ID)
+            ->where('role_id', $roleId)
+            ->delete();
+
+        foreach ($validKeys as $key) {
+            RolePermission::create([
+                'app_id' => AppRole::APP_ID,
+                'role_id' => $roleId,
+                'permission_key' => $key,
+            ]);
+        }
+
+        self::clearRoleCache($roleId);
+    }
+
     public static function clearRoleCache(?int $roleId = null): void
     {
         if ($roleId !== null) {
             Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$roleId}");
+            Cache::forget("supervisi.role_permissions.role_{$roleId}");
 
             return;
         }
 
         foreach (array_keys(self::availableRoles()) as $id) {
             Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$id}");
+            Cache::forget("supervisi.role_permissions.role_{$id}");
         }
     }
 }

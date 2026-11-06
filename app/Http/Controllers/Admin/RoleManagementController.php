@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppRole;
 use App\Models\Employee;
 use App\Models\RefAppRole;
+use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -48,10 +49,17 @@ class RoleManagementController extends Controller
             ->limit(500)
             ->get(['nip', 'nama']);
 
+        $rolePermissionsMap = [];
+        foreach (array_keys($availableRoles) as $rId) {
+            $rolePermissionsMap[(int) $rId] = RefAppRole::permissionKeysForRole((int) $rId);
+        }
+
         return view('admin.roles.index', [
             'availableRoles' => $availableRoles,
             'appRoles' => $appRoles,
             'unregisteredEmployees' => $unregisteredEmployees,
+            'groupedPermissions' => RolePermission::groupedPermissions(),
+            'rolePermissionsMap' => $rolePermissionsMap,
         ]);
     }
 
@@ -60,6 +68,8 @@ class RoleManagementController extends Controller
         $validated = $request->validate([
             'role_id' => ['required', 'integer', 'min:0', 'max:99'],
             'role_name' => ['required', 'string', 'max:100'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(RolePermission::AVAILABLE_PERMISSIONS))],
         ]);
 
         $roleId = (int) $validated['role_id'];
@@ -75,10 +85,33 @@ class RoleManagementController extends Controller
             ]
         );
 
+        if ($roleId > 1 && isset($validated['permissions'])) {
+            RefAppRole::syncPermissions($roleId, $validated['permissions']);
+        }
+
         RefAppRole::clearRoleCache($roleId);
 
         return redirect()->route('admin.roles.index')
             ->with('success', "Definisi role [{$roleId} - {$roleName}] untuk aplikasi Supervisi Keperawatan berhasil disimpan.");
+    }
+
+    public function updateRolePermissions(Request $request, int $roleId): RedirectResponse
+    {
+        if ($roleId <= 1) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Hak akses role bawaan sistem (Administrator & Supervisor Keperawatan) terlindungi dan tidak dapat diubah.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(RolePermission::AVAILABLE_PERMISSIONS))],
+        ]);
+
+        RefAppRole::syncPermissions($roleId, $validated['permissions'] ?? []);
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', 'Hak akses (permission) untuk role ['.$roleId.' - '.RefAppRole::resolveRoleName($roleId).'] berhasil diperbarui.');
     }
 
     public function destroyRole(Request $request, int $roleId): RedirectResponse
@@ -99,6 +132,11 @@ class RoleManagementController extends Controller
                 'role_id' => "Role ini masih digunakan oleh {$usersCount} pegawai. Silakan pindahkan role pegawai terkait terlebih dahulu.",
             ]);
         }
+
+        RolePermission::query()
+            ->where('app_id', AppRole::APP_ID)
+            ->where('role_id', $roleId)
+            ->delete();
 
         RefAppRole::query()
             ->forSupervisiApp()

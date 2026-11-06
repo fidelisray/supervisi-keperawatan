@@ -99,7 +99,7 @@ class SupervisionReport extends Model
      */
     public function isAccessibleBy(User $user): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->hasPermission('view_all_reports')) {
             return true;
         }
 
@@ -130,7 +130,7 @@ class SupervisionReport extends Model
      */
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->hasPermission('view_all_reports')) {
             return $query;
         }
 

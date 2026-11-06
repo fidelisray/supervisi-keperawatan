@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->middleware(EnsureUserIsAdmin::class)->group(function () {
         Route::get('/roles', [RoleManagementController::class, 'index'])->name('roles.index');
         Route::post('/roles/definitions', [RoleManagementController::class, 'storeRole'])->name('roles.store-definition');
+        Route::put('/roles/definitions/{roleId}/permissions', [RoleManagementController::class, 'updateRolePermissions'])->name('roles.update-permissions');
         Route::delete('/roles/definitions/{roleId}', [RoleManagementController::class, 'destroyRole'])->name('roles.destroy-definition');
         Route::post('/roles/users', [RoleManagementController::class, 'assignUserRole'])->name('roles.assign-user');
         Route::patch('/roles/users/{appRole}', [RoleManagementController::class, 'updateUserRole'])->name('roles.update-user');

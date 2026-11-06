@@ -2,6 +2,7 @@
 
 use App\Models\AppRole;
 use App\Models\RefAppRole;
+use App\Models\RolePermission;
 use App\Models\User;
 use Database\Seeders\RefAppRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -140,4 +141,115 @@ test('admin roles index only pulls unregistered employees who have nursing title
 
     // Non-nurse employee (S.E.) must NOT be present
     $response->assertDontSee('Bambang Sudarsono, S.E.');
+});
+
+test('administrator can define custom role with specific permissions and update permissions later', function () {
+    // 1. Create role 2 with permissions 'view_all_reports' and 'view_analytics'
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 2,
+            'role_name' => 'AUDITOR MUTU',
+            'permissions' => ['view_all_reports', 'view_analytics'],
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RolePermission::where('role_id', 2)->pluck('permission_key')->all())
+        ->toEqualCanonicalizing(['view_all_reports', 'view_analytics'])
+        ->and(RefAppRole::permissionKeysForRole(2))
+        ->toEqualCanonicalizing(['view_all_reports', 'view_analytics']);
+
+    // 2. Update role 2 permissions via update-permissions endpoint
+    $this->actingAs($this->admin)
+        ->put(route('admin.roles.update-permissions', 2), [
+            'permissions' => ['view_all_reports', 'manage_roles'],
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RolePermission::where('role_id', 2)->pluck('permission_key')->all())
+        ->toEqualCanonicalizing(['view_all_reports', 'manage_roles'])
+        ->and(RefAppRole::permissionKeysForRole(2))
+        ->toEqualCanonicalizing(['view_all_reports', 'manage_roles']);
+});
+
+test('user assigned custom role receives corresponding granular permissions and access boundaries', function () {
+    // Define role 2 with only view_all_reports and view_analytics
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 2,
+        'role_name' => 'AUDITOR KLINIS',
+    ]);
+    RefAppRole::syncPermissions(2, ['view_all_reports', 'view_analytics']);
+
+    $auditorUser = User::factory()->create([
+        'nip' => '9988776655',
+        'name' => 'Auditor Klinis Test',
+        'app_roles' => 2,
+    ]);
+
+    expect($auditorUser->hasPermission('view_all_reports'))->toBeTrue()
+        ->and($auditorUser->hasPermission('view_analytics'))->toBeTrue()
+        ->and($auditorUser->hasPermission('create_report'))->toBeFalse()
+        ->and($auditorUser->hasPermission('edit_report'))->toBeFalse()
+        ->and($auditorUser->hasPermission('manage_roles'))->toBeFalse();
+
+    // Can access analytics
+    $this->actingAs($auditorUser)
+        ->get(route('supervisi.analytics'))
+        ->assertSuccessful();
+
+    // Can access index
+    $this->actingAs($auditorUser)
+        ->get(route('supervisi.index'))
+        ->assertSuccessful();
+
+    // Forbidden from create and store report
+    $this->actingAs($auditorUser)
+        ->get(route('supervisi.create'))
+        ->assertForbidden();
+
+    $this->actingAs($auditorUser)
+        ->post(route('supervisi.store'), [
+            'report_date' => now()->toDateString(),
+            'room_name' => 'ANGELA',
+            'patient_count' => 10,
+            'nurse_count' => 2,
+        ])
+        ->assertForbidden();
+
+    // Forbidden from admin role management
+    $this->actingAs($auditorUser)
+        ->get(route('admin.roles.index'))
+        ->assertForbidden();
+});
+
+test('system default roles 0 and 1 are protected from manual permission override', function () {
+    $this->actingAs($this->admin)
+        ->put(route('admin.roles.update-permissions', 0), [
+            'permissions' => ['create_report'],
+        ])
+        ->assertSessionHasErrors('role_id');
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.roles.update-permissions', 1), [
+            'permissions' => ['create_report'],
+        ])
+        ->assertSessionHasErrors('role_id');
+});
+
+test('deleting custom role also cleans up its associated role permissions', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 5,
+        'role_name' => 'ROLE SEMENTARA',
+    ]);
+    RefAppRole::syncPermissions(5, ['create_report', 'view_analytics']);
+
+    expect(RolePermission::where('role_id', 5)->count())->toBe(2);
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.roles.destroy-definition', 5))
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RefAppRole::where('role_id', 5)->exists())->toBeFalse()
+        ->and(RolePermission::where('role_id', 5)->count())->toBe(0);
 });

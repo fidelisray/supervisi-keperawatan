@@ -180,6 +180,53 @@ abstract class TestCase extends BaseTestCase
             ]);
         }
 
+        if (! $schema->hasTable('ref_master_nurse_supervision_role_permissions')) {
+            $schema->create('ref_master_nurse_supervision_role_permissions', function (Blueprint $table) {
+                $table->id();
+                $table->integer('app_id')->default(6);
+                $table->integer('role_id');
+                $table->string('permission_key', 50);
+                $table->timestamps();
+            });
+
+            $adminPermissions = [
+                'create_report',
+                'view_all_reports',
+                'edit_report',
+                'update_incident_status',
+                'view_analytics',
+                'manage_roles',
+                'manage_incident_categories',
+            ];
+
+            foreach ($adminPermissions as $perm) {
+                DB::connection('sqlsrv')->table('ref_master_nurse_supervision_role_permissions')->insert([
+                    'app_id' => 6,
+                    'role_id' => 0,
+                    'permission_key' => $perm,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $supervisorPermissions = [
+                'create_report',
+                'edit_report',
+                'update_incident_status',
+                'view_analytics',
+            ];
+
+            foreach ($supervisorPermissions as $perm) {
+                DB::connection('sqlsrv')->table('ref_master_nurse_supervision_role_permissions')->insert([
+                    'app_id' => 6,
+                    'role_id' => 1,
+                    'permission_key' => $perm,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
         if (! $schema->hasTable('tb_master_nurse_supervision_approles')) {
             $schema->create('tb_master_nurse_supervision_approles', function (Blueprint $table) {
                 $table->id();

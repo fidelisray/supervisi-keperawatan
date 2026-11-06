@@ -25,12 +25,14 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5">
-                <a 
-                    href="{{ route('supervisi.edit', $report) }}" 
-                    class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 transition shadow-2xs"
-                >
-                    Edit Logbook
-                </a>
+                @if(auth()->user()?->hasPermission('edit_report'))
+                    <a 
+                        href="{{ route('supervisi.edit', $report) }}" 
+                        class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 transition shadow-2xs"
+                    >
+                        Edit Logbook
+                    </a>
+                @endif
 
                 <button 
                     type="button" 
@@ -43,12 +45,14 @@
                     Cetak Laporan
                 </button>
 
-                <a 
-                    href="{{ route('supervisi.create') }}" 
-                    class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs"
-                >
-                    + Input Laporan Baru
-                </a>
+                @if(auth()->user()?->hasPermission('create_report'))
+                    <a 
+                        href="{{ route('supervisi.create') }}" 
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs"
+                    >
+                        + Input Laporan Baru
+                    </a>
+                @endif
             </div>
         </div>
 
@@ -147,13 +151,15 @@
                                             {{ $incident->status === 'resolved' ? 'Selesai' : ($incident->status === 'escalated' ? 'Butuh Eskalasi' : 'Sedang Ditangani') }}
                                         </span>
 
-                                        <button
-                                            type="button"
-                                            @click="openStatusUpdate = !openStatusUpdate"
-                                            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition cursor-pointer"
-                                        >
-                                            Update Tindak Lanjut
-                                        </button>
+                                        @if(auth()->user()?->hasPermission('update_incident_status'))
+                                            <button
+                                                type="button"
+                                                @click="openStatusUpdate = !openStatusUpdate"
+                                                class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition cursor-pointer"
+                                            >
+                                                Update Tindak Lanjut
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -179,38 +185,40 @@
                                         </div>
                                     @endif
 
-                                    <!-- Inline Follow-up Status Update Form -->
-                                    <div x-show="openStatusUpdate" x-cloak class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                        <form method="POST" action="{{ route('supervisi.incidents.update-status', [$report, $incident]) }}" class="space-y-3">
-                                            @csrf
-                                            @method('PATCH')
+                                    @if(auth()->user()?->hasPermission('update_incident_status'))
+                                        <!-- Inline Follow-up Status Update Form -->
+                                        <div x-show="openStatusUpdate" x-cloak class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                            <form method="POST" action="{{ route('supervisi.incidents.update-status', [$report, $incident]) }}" class="space-y-3">
+                                                @csrf
+                                                @method('PATCH')
 
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Status Penanganan Baru</label>
-                                                    <select name="status" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900">
-                                                        <option value="in_progress" {{ $incident->status === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani (In Progress)</option>
-                                                        <option value="resolved" {{ $incident->status === 'resolved' ? 'selected' : '' }}>Selesai Ditangani (Resolved)</option>
-                                                        <option value="escalated" {{ $incident->status === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi Supervisor</option>
-                                                    </select>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Status Penanganan Baru</label>
+                                                        <select name="status" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900">
+                                                            <option value="in_progress" {{ $incident->status === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani (In Progress)</option>
+                                                            <option value="resolved" {{ $incident->status === 'resolved' ? 'selected' : '' }}>Selesai Ditangani (Resolved)</option>
+                                                            <option value="escalated" {{ $incident->status === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi Supervisor</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div>
-                                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Catatan Tindak Lanjut / Evaluasi</label>
-                                                <textarea name="action_taken" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900" placeholder="Tuliskan perkembangan penanganan insiden ini...">{{ $incident->action_taken }}</textarea>
-                                            </div>
+                                                <div>
+                                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Catatan Tindak Lanjut / Evaluasi</label>
+                                                    <textarea name="action_taken" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900" placeholder="Tuliskan perkembangan penanganan insiden ini...">{{ $incident->action_taken }}</textarea>
+                                                </div>
 
-                                            <div class="flex justify-end gap-2">
-                                                <button type="button" @click="openStatusUpdate = false" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">
-                                                    Batal
-                                                </button>
-                                                <button type="submit" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
-                                                    Simpan Status Insiden
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
+                                                <div class="flex justify-end gap-2">
+                                                    <button type="button" @click="openStatusUpdate = false" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">
+                                                        Batal
+                                                    </button>
+                                                    <button type="submit" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
+                                                        Simpan Status Insiden
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach

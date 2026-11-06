@@ -33,6 +33,28 @@ class User extends Authenticatable
         return (int) $this->app_roles === AppRole::ROLE_ADMIN;
     }
 
+    /**
+     * Determine whether the user has a specific permission.
+     */
+    public function hasPermission(string $permissionKey): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return in_array($permissionKey, $this->permissions(), true);
+    }
+
+    /**
+     * Get all active permission keys for the user's role.
+     *
+     * @return list<string>
+     */
+    public function permissions(): array
+    {
+        return RefAppRole::permissionKeysForRole((int) $this->app_roles);
+    }
+
     public function roleLabel(): string
     {
         return RefAppRole::resolveRoleName((int) $this->app_roles);

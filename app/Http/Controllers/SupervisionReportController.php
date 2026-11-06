@@ -95,6 +95,8 @@ class SupervisionReportController extends Controller
      */
     public function create(Request $request): View
     {
+        abort_unless($request->user()?->hasPermission('create_report'), 403);
+
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
             ->operationalNurses()
@@ -120,6 +122,8 @@ class SupervisionReportController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->hasPermission('create_report'), 403);
+
         $validated = $this->validateReportPayload($request);
         $collaboratorsString = $this->extractCollaboratorsString($request);
 
@@ -167,7 +171,7 @@ class SupervisionReportController extends Controller
      */
     public function edit(Request $request, SupervisionReport $supervisionReport): View
     {
-        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+        abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
         $supervisionReport->load(['incidents.incidentCategory']);
 
@@ -204,7 +208,7 @@ class SupervisionReportController extends Controller
      */
     public function update(Request $request, SupervisionReport $supervisionReport): RedirectResponse
     {
-        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+        abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
         $validated = $this->validateReportPayload($request);
         $collaboratorsString = $this->extractCollaboratorsString($request);
@@ -236,7 +240,7 @@ class SupervisionReportController extends Controller
         SupervisionReport $supervisionReport,
         Incident $incident
     ): RedirectResponse {
-        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+        abort_unless($request->user()?->hasPermission('update_incident_status') && $supervisionReport->isAccessibleBy($request->user()), 403);
         abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
 
         $validated = $request->validate([

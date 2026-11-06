@@ -16,9 +16,9 @@
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900">
                         Monitoring Supervisi Ruang Perawatan
                     </h1>
-                    @if(auth()->user()?->isAdmin())
+                    @if(auth()->user()?->hasPermission('view_all_reports'))
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-                            Cakupan: Seluruh Rumah Sakit (Admin)
+                            Cakupan: Seluruh Rumah Sakit
                         </span>
                     @else
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
@@ -32,21 +32,25 @@
             </div>
 
             <div class="flex items-center space-x-3">
-                <a 
-                    href="{{ route('supervisi.analytics') }}" 
-                    class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs"
-                >
-                    Grafik Insiden
-                </a>
-                <a 
-                    href="{{ route('supervisi.create') }}" 
-                    class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                    <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Input Logbook Baru
-                </a>
+                @if(auth()->user()?->hasPermission('view_analytics'))
+                    <a 
+                        href="{{ route('supervisi.analytics') }}" 
+                        class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs"
+                    >
+                        Grafik Insiden
+                    </a>
+                @endif
+                @if(auth()->user()?->hasPermission('create_report'))
+                    <a 
+                        href="{{ route('supervisi.create') }}" 
+                        class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                        <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Input Logbook Baru
+                    </a>
+                @endif
             </div>
         </div>
 
@@ -138,14 +142,14 @@
                     <input type="date" id="date_to" name="date_to" value="{{ request('date_to') }}" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
                 </div>
 
-                @if(auth()->user()?->isAdmin())
+                @if(auth()->user()?->hasPermission('view_all_reports'))
                     <div class="lg:col-span-2">
                         <label for="supervisor" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Supervisor</label>
                         <input type="text" id="supervisor" name="supervisor" list="filter_nurse_list" value="{{ request('supervisor') }}" placeholder="Nama supervisor..." class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
                     </div>
                 @endif
 
-                <div class="{{ auth()->user()?->isAdmin() ? 'lg:col-span-2' : 'lg:col-span-3' }}">
+                <div class="{{ auth()->user()?->hasPermission('view_all_reports') ? 'lg:col-span-2' : 'lg:col-span-3' }}">
                     <label for="collaborator" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Kolaborator</label>
                     <input type="text" id="collaborator" name="collaborator" list="filter_nurse_list" value="{{ request('collaborator') }}" placeholder="Nama kolaborator..." class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
                 </div>
@@ -156,7 +160,7 @@
                     @endforeach
                 </datalist>
 
-                <div class="{{ auth()->user()?->isAdmin() ? 'lg:col-span-1' : 'lg:col-span-2' }} flex items-center gap-2">
+                <div class="{{ auth()->user()?->hasPermission('view_all_reports') ? 'lg:col-span-1' : 'lg:col-span-2' }} flex items-center gap-2">
                     <button type="submit" class="w-full px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer">
                         Filter
                     </button>
@@ -277,12 +281,14 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-right whitespace-nowrap space-x-1.5">
-                                        <a 
-                                            href="{{ route('supervisi.edit', $report) }}" 
-                                            class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
-                                        >
-                                            Edit
-                                        </a>
+                                        @if(auth()->user()?->hasPermission('edit_report'))
+                                            <a 
+                                                href="{{ route('supervisi.edit', $report) }}" 
+                                                class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+                                            >
+                                                Edit
+                                            </a>
+                                        @endif
                                         <a 
                                             href="{{ route('supervisi.show', $report) }}" 
                                             class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition"

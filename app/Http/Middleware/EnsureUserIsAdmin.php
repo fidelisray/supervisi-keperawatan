@@ -13,10 +13,24 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user()?->isAdmin()) {
-            abort(403, 'Akses ditolak. Halaman ini hanya dapat diakses oleh Administrator.');
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
         }
 
-        return $next($request);
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
+        if ($request->routeIs('admin.roles.*') && $user->hasPermission('manage_roles')) {
+            return $next($request);
+        }
+
+        if ($request->routeIs('admin.incident-categories.*') && $user->hasPermission('manage_incident_categories')) {
+            return $next($request);
+        }
+
+        abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk mengakses modul ini.');
     }
 }
