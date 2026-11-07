@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SupervisionAnalyticsController extends Controller
 {
@@ -395,6 +396,158 @@ class SupervisionAnalyticsController extends Controller
             'room' => $room,
             'total' => $mapped->count(),
             'incidents' => $mapped,
+        ]);
+    }
+
+    /**
+     * Ekspor data gabungan laporan supervisi dan butir insiden ke berkas CSV ramah Excel.
+     * Menggunakan StreamedResponse dan UTF-8 BOM dengan delimiter titik koma (;).
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        abort_unless($request->user()?->hasPermission('view_analytics'), 403);
+
+        $user = $request->user();
+        $scope = (string) $request->string('scope')->trim();
+
+        $reportsQuery = SupervisionReport::query()->accessibleBy($user);
+
+        if ($scope !== 'all') {
+            $preset = (string) $request->string('preset')->trim();
+            $dateFrom = (string) $request->string('date_from')->trim();
+            $dateTo = (string) $request->string('date_to')->trim();
+
+            if ($preset !== '') {
+                [$dateFrom, $dateTo] = match ($preset) {
+                    'today' => [now()->toDateString(), now()->toDateString()],
+                    'last_7_days' => [now()->subDays(6)->toDateString(), now()->toDateString()],
+                    'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
+                    'last_month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
+                    default => [$dateFrom, $dateTo],
+                };
+            }
+
+            $room = (string) $request->string('room')->trim();
+            $status = (string) $request->string('status')->trim();
+            $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+
+            $reportsQuery
+                ->when($room !== '', fn (Builder $q) => $q->where('room_name', $room))
+                ->when($dateFrom !== '', fn (Builder $q) => $q->whereDate('report_date', '>=', $dateFrom))
+                ->when($dateTo !== '', fn (Builder $q) => $q->whereDate('report_date', '<=', $dateTo))
+                ->when($categoryId !== null, function (Builder $q) use ($categoryId): void {
+                    $q->whereHas('incidents', fn ($sub) => $sub->where('category', $categoryId));
+                })
+                ->when($status !== '' && $status !== 'all', function (Builder $q) use ($status): void {
+                    $q->whereHas('incidents', fn ($sub) => $sub->where('status', $status));
+                });
+        }
+
+        $filename = sprintf(
+            'supervisi_keperawatan_%s_%s.csv',
+            $scope === 'all' ? 'semua_data' : 'terfilter',
+            now()->format('Ymd_His')
+        );
+
+        return response()->streamDownload(function () use ($reportsQuery, $request, $scope): void {
+            $handle = fopen('php://output', 'w');
+
+            // UTF-8 BOM untuk kompatibilitas otomatis Microsoft Excel Windows
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            $headers = [
+                'No',
+                'ID Logbook',
+                'Tanggal Supervisi',
+                'Shift',
+                'Ruangan',
+                'Jumlah Pasien',
+                'Jumlah Perawat',
+                'Supervisor (Pembuat)',
+                'Perawat Jaga / Kolaborator',
+                'Catatan Umum Logbook',
+                'Status Logbook',
+                'ID Insiden',
+                'Waktu Insiden',
+                'Kategori Insiden',
+                'Uraian Masalah / Kejadian',
+                'Tindakan Dilakukan',
+                'Status Penanganan Insiden',
+            ];
+            fputcsv($handle, $headers, ';');
+
+            $rowNumber = 1;
+            $categoryId = ($scope !== 'all' && $request->filled('category_id')) ? (int) $request->input('category_id') : null;
+            $status = ($scope !== 'all' && $request->filled('status')) ? (string) $request->string('status') : '';
+
+            $reportsQuery
+                ->with(['incidents' => function ($q) use ($categoryId, $status): void {
+                    $q->when($categoryId !== null, fn ($sub) => $sub->where('category', $categoryId))
+                        ->when($status !== '' && $status !== 'all', fn ($sub) => $sub->where('status', $status))
+                        ->with('incidentCategory');
+                }])
+                ->orderBy('report_date')
+                ->orderBy('id')
+                ->chunk(100, function ($reports) use ($handle, &$rowNumber): void {
+                    foreach ($reports as $report) {
+                        $incidents = $report->incidents;
+
+                        if ($incidents->isEmpty()) {
+                            fputcsv($handle, [
+                                $rowNumber++,
+                                $report->id,
+                                $report->report_date?->format('d/m/Y') ?? '-',
+                                ucfirst((string) $report->shift),
+                                $report->room_name,
+                                $report->patient_count,
+                                $report->nurse_count,
+                                $report->supervisor_name,
+                                $report->nurse_in_charge ?: '-',
+                                $report->general_notes ?: '-',
+                                ucfirst((string) $report->status),
+                                '-',
+                                '-',
+                                'Nihil / Tidak Ada Insiden',
+                                'Tidak ada kejadian khusus yang dilaporkan',
+                                '-',
+                                '-',
+                            ], ';');
+                        } else {
+                            foreach ($incidents as $incident) {
+                                $statusLabel = match ($incident->status) {
+                                    'resolved' => 'Selesai Ditangani',
+                                    'in_progress' => 'Sedang Ditangani',
+                                    'escalated' => 'Perlu Eskalasi',
+                                    default => ucfirst((string) $incident->status),
+                                };
+
+                                fputcsv($handle, [
+                                    $rowNumber++,
+                                    $report->id,
+                                    $report->report_date?->format('d/m/Y') ?? '-',
+                                    ucfirst((string) $report->shift),
+                                    $report->room_name,
+                                    $report->patient_count,
+                                    $report->nurse_count,
+                                    $report->supervisor_name,
+                                    $report->nurse_in_charge ?: '-',
+                                    $report->general_notes ?: '-',
+                                    ucfirst((string) $report->status),
+                                    $incident->id,
+                                    $incident->incident_time ? date('H:i', strtotime($incident->incident_time)) : '-',
+                                    $incident->categoryLabel(),
+                                    $incident->description ?: '-',
+                                    $incident->action_taken ?: '-',
+                                    $statusLabel,
+                                ], ';');
+                            }
+                        }
+                    }
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 }

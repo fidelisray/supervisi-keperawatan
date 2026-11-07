@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [SupervisionReportController::class, 'index'])->name('index');
         Route::get('/analytics', [SupervisionAnalyticsController::class, 'index'])->name('analytics');
         Route::get('/analytics/drilldown', [SupervisionAnalyticsController::class, 'drilldown'])->name('analytics.drilldown');
+        Route::get('/analytics/export', [SupervisionAnalyticsController::class, 'export'])->name('analytics.export');
         Route::get('/create', [SupervisionReportController::class, 'create'])->name('create');
         Route::post('/', [SupervisionReportController::class, 'store'])->name('store');
         Route::get('/{supervisionReport}', [SupervisionReportController::class, 'show'])->name('show');

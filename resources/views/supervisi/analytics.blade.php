@@ -40,14 +40,14 @@
             <div class="flex items-center space-x-2 print:hidden">
                 <button 
                     type="button"
-                    @click="window.print()"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs cursor-pointer"
-                    title="Cetak format ringkas untuk laporan rapat komite"
+                    @click="exportModalOpen = true"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition shadow-2xs cursor-pointer"
+                    title="Unduh data gabungan laporan supervisi & insiden ke Excel/CSV"
                 >
-                    <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    <svg class="w-4 h-4 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>Cetak Laporan</span>
+                    <span>Ekspor ke Excel / CSV</span>
                 </button>
 
                 <a 
@@ -591,6 +591,138 @@
                 </div>
             </div>
         </div>
+        <!-- Modal Pilihan Ekspor ke Excel / CSV -->
+        <div 
+            x-show="exportModalOpen" 
+            x-cloak
+            class="fixed inset-0 z-50 overflow-y-auto" 
+            aria-labelledby="modal-title" 
+            role="dialog" 
+            aria-modal="true"
+        >
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <!-- Background overlay -->
+                <div 
+                    x-show="exportModalOpen"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    @click="exportModalOpen = false"
+                    class="fixed inset-0 bg-slate-950/60 backdrop-blur-2xs transition-opacity" 
+                    aria-hidden="true"
+                ></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <!-- Modal Panel -->
+                <div 
+                    x-show="exportModalOpen"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-200"
+                >
+                    <!-- Header -->
+                    <div class="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 id="modal-title" class="text-sm font-bold text-slate-900">
+                                    Ekspor Data Supervisi ke Excel / CSV
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    Format berkas ramah Microsoft Excel (Pemisah Titik Koma &amp; UTF-8 BOM)
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            @click="exportModalOpen = false"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition cursor-pointer"
+                        >
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Content Options -->
+                    <div class="p-6 space-y-4">
+                        <p class="text-xs text-slate-600">
+                            Pilih cakupan data laporan supervisi dan butir insiden yang ingin Anda unduh:
+                        </p>
+
+                        <!-- Opsi 1: Sesuai Filter Aktif -->
+                        <a 
+                            href="{{ route('supervisi.analytics.export', array_merge(request()->query(), ['scope' => 'filtered'])) }}"
+                            @click="exportModalOpen = false"
+                            class="block p-4 rounded-xl border-2 border-emerald-500/80 bg-emerald-50/40 hover:bg-emerald-50 hover:border-emerald-600 transition group"
+                        >
+                            <div class="flex items-start justify-between">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-emerald-900 group-hover:text-emerald-950">
+                                            1. Ekspor Data Sesuai Filter Aktif
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-200 text-emerald-800">
+                                            Direkomendasikan
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-emerald-800/80 leading-relaxed">
+                                        Mengunduh data yang sedang ditampilkan pada halaman ini sesuai pilihan ruangan, kategori masalah, status, atau rentang tanggal yang Anda terapkan.
+                                    </p>
+                                </div>
+                                <svg class="w-5 h-5 text-emerald-600 group-hover:translate-x-0.5 transition-transform shrink-0 ml-3 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </div>
+                        </a>
+
+                        <!-- Opsi 2: Seluruh Riwayat -->
+                        <a 
+                            href="{{ route('supervisi.analytics.export', ['scope' => 'all']) }}"
+                            @click="exportModalOpen = false"
+                            class="block p-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition group"
+                        >
+                            <div class="flex items-start justify-between">
+                                <div class="space-y-1">
+                                    <span class="text-xs font-bold text-slate-900 group-hover:text-blue-700">
+                                        2. Ekspor Semua Riwayat Data
+                                    </span>
+                                    <p class="text-xs text-slate-500 leading-relaxed">
+                                        Mengunduh seluruh rekaman data logbook dan butir insiden yang berhak Anda akses dari awal tanpa batasan filter halaman aktif.
+                                    </p>
+                                </div>
+                                <svg class="w-5 h-5 text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0 ml-3 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+                        <button 
+                            type="button" 
+                            @click="exportModalOpen = false"
+                            class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition shadow-2xs cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Chart.js Alpine Dashboard Controller Script -->
@@ -599,6 +731,7 @@
             return {
                 chartData: chartData,
                 drilldownUrl: drilldownUrl,
+                exportModalOpen: false,
                 drawerOpen: false,
                 drawerLoading: false,
                 drawerTitle: '',
