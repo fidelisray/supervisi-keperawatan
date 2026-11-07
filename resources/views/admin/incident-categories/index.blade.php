@@ -21,6 +21,12 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold" role="alert">
+                {{ session('success') }}
+            </div>
+        @endif
+
         @if($errors->any())
             <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
                 <p class="font-bold">Terdapat kesalahan validasi:</p>

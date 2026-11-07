@@ -695,7 +695,7 @@
             'installation' => $r->instalasi ? 'Instalasi ' . $r->instalasi : '',
         ])->values();
 
-        $nursesJson = $nurses->map(fn ($n) => [
+        $nursesJson = $nurses->filter(fn ($n) => ! empty($n->description))->map(fn ($n) => [
             'name' => $n->description,
             'nip' => $n->nip,
         ])->values();
@@ -757,7 +757,7 @@
                     const q = (this.collaboratorSearch || '').trim().toLowerCase();
                     if (!q) return this.nurses;
                     return this.nurses.filter(n => 
-                        n.name.toLowerCase().includes(q) || 
+                        (n.name && n.name.toLowerCase().includes(q)) || 
                         (n.nip && n.nip.toLowerCase().includes(q))
                     );
                 },
