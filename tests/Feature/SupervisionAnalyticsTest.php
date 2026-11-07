@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('analytics page renders incident distribution and dynamic bar chart scoped to creator, collaborator, and admin', function () {
+test('analytics page renders incident distribution and charts scoped to creator, collaborator, and admin', function () {
     $creatorSupervisor = User::factory()->create([
         'nip' => '1672010896',
         'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
@@ -46,32 +46,23 @@ test('analytics page renders incident distribution and dynamic bar chart scoped 
         'status' => 'resolved',
     ]);
 
-    // Creator supervisor sees their report data and the interactive Dynamic Bar Chart
+    // Creator supervisor sees their report data, categories, and analytical sections
     $response = $this->actingAs($creatorSupervisor)->get(route('supervisi.analytics'));
     $response->assertSuccessful();
-    $response->assertSee('Analisis & Grafik Kejadian Ruangan');
-    $response->assertSee('Cakupan: Logbook Saya & Kolaborator');
-    $response->assertSee('Grafik Batang (Bar Chart) Dinamis Supervisi');
-    $response->assertSee('Semua Data');
-    $response->assertSee('Berdasarkan Incidents');
-    $response->assertSee('Berdasarkan Ruangan');
+    $response->assertSee('Analisis &amp; Grafik Kejadian Ruangan', false);
+    $response->assertSee('Cakupan: Logbook Saya &amp; Kolaborator', false);
+    $response->assertSee('Distribusi Kategori Masalah');
+    $response->assertSee('Status Tindak Lanjut Insiden');
+    $response->assertSee('Tren Kejadian &amp; Laporan Logbook Harian', false);
+    $response->assertSee('Frekuensi Insiden &amp; Rekap per Ruangan / Bangsal', false);
     $response->assertSee('FRANSISKUS');
     $response->assertSee('Complain');
-
-    /*
-    // [GLOBAL VISIBILITY LOGIC - Aktifkan blok ini saat seluruh supervisor dapat melihat data analitik seluruh rumah sakit]
-    $this->actingAs($otherSupervisor)
-        ->get(route('supervisi.analytics'))
-        ->assertSuccessful()
-        ->assertSee('Cakupan: Seluruh Rumah Sakit')
-        ->assertSee('FRANSISKUS');
-    */
 
     // Unrelated supervisor does not see FRANSISKUS in their analytics table
     $this->actingAs($otherSupervisor)
         ->get(route('supervisi.analytics'))
         ->assertSuccessful()
-        ->assertSee('Cakupan: Logbook Saya & Kolaborator')
+        ->assertSee('Cakupan: Logbook Saya &amp; Kolaborator', false)
         ->assertSee('Belum ada data ruangan pada periode ini.');
 
     // Admin sees all hospital analytics
@@ -80,4 +71,108 @@ test('analytics page renders incident distribution and dynamic bar chart scoped 
         ->assertSuccessful()
         ->assertSee('Cakupan: Seluruh Rumah Sakit')
         ->assertSee('FRANSISKUS');
+});
+
+test('analytics page correctly applies room and status filters', function () {
+    $supervisor = User::factory()->create([
+        'nip' => '1672010896',
+        'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+        'app_roles' => 1,
+    ]);
+
+    $report1 = SupervisionReport::create([
+        'report_date' => '2026-11-05',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 2,
+        'supervisor_name' => $supervisor->name,
+        'nurse_in_charge' => 'Perawat 1',
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report1->id,
+        'category' => 1,
+        'incident_time' => '09:00',
+        'description' => 'Insiden Fransiskus Selesai',
+        'action_taken' => 'Tindakan 1',
+        'status' => 'resolved',
+    ]);
+
+    $report2 = SupervisionReport::create([
+        'report_date' => '2026-11-06',
+        'shift' => 'sore',
+        'room_name' => 'TERESIA',
+        'patient_count' => 8,
+        'nurse_count' => 2,
+        'supervisor_name' => $supervisor->name,
+        'nurse_in_charge' => 'Perawat 2',
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report2->id,
+        'category' => 2,
+        'incident_time' => '15:00',
+        'description' => 'Insiden Teresia Pending',
+        'action_taken' => 'Tindakan 2',
+        'status' => 'in_progress',
+    ]);
+
+    // Filter by room=FRANSISKUS
+    $resRoom = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['room' => 'FRANSISKUS']));
+    $resRoom->assertSuccessful();
+    $resRoom->assertSee('FRANSISKUS');
+    $resRoom->assertDontSee('TERESIA');
+
+    // Filter by status=resolved
+    $resStatus = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['status' => 'resolved']));
+    $resStatus->assertSuccessful();
+    $resStatus->assertSee('FRANSISKUS');
+    $resStatus->assertDontSee('TERESIA');
+});
+
+test('analytics drilldown endpoint returns json incident list scoped to user', function () {
+    $supervisor = User::factory()->create([
+        'nip' => '1672010896',
+        'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+        'app_roles' => 1,
+    ]);
+
+    $report = SupervisionReport::create([
+        'report_date' => '2026-11-05',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 14,
+        'nurse_count' => 3,
+        'supervisor_name' => $supervisor->name,
+        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report->id,
+        'category' => 1,
+        'incident_time' => '10:00',
+        'description' => 'Keluhan diet lambat',
+        'action_taken' => 'Koordinasi gizi',
+        'status' => 'resolved',
+    ]);
+
+    $response = $this->actingAs($supervisor)->getJson(route('supervisi.analytics.drilldown', [
+        'room' => 'FRANSISKUS',
+    ]));
+
+    $response->assertSuccessful();
+    $response->assertJson([
+        'success' => true,
+        'room' => 'FRANSISKUS',
+        'total' => 1,
+    ]);
+    $response->assertJsonFragment([
+        'description' => 'Keluhan diet lambat',
+        'room_name' => 'FRANSISKUS',
+        'status' => 'resolved',
+    ]);
 });
