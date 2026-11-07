@@ -102,11 +102,11 @@
             </div>
 
             <!-- Detailed Multi-dimension Filters Form -->
-            <form method="GET" action="{{ route('supervisi.analytics') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+            <form method="GET" action="{{ route('supervisi.analytics') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
                 <input type="hidden" name="preset" value="{{ request('preset') }}">
 
                 <!-- Filter Ruangan -->
-                <div class="lg:col-span-3">
+                <div class="sm:col-span-1 lg:col-span-3">
                     <label for="room" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Ruangan / Bangsal</label>
                     <select id="room" name="room" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="">Semua Ruangan</option>
@@ -119,7 +119,7 @@
                 </div>
 
                 <!-- Filter Kategori Insiden -->
-                <div class="lg:col-span-3">
+                <div class="sm:col-span-1 lg:col-span-2">
                     <label for="category_id" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Kategori Masalah</label>
                     <select id="category_id" name="category_id" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="">Semua Kategori</option>
@@ -132,7 +132,7 @@
                 </div>
 
                 <!-- Filter Status Penanganan -->
-                <div class="lg:col-span-2">
+                <div class="sm:col-span-1 lg:col-span-2">
                     <label for="status" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Status Tindak Lanjut</label>
                     <select id="status" name="status" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="all">Semua Status</option>
@@ -143,7 +143,7 @@
                 </div>
 
                 <!-- Rentang Tanggal -->
-                <div class="lg:col-span-2">
+                <div class="sm:col-span-1 lg:col-span-2">
                     <label for="date_from" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Dari Tanggal</label>
                     <input 
                         type="date" 
@@ -154,23 +154,25 @@
                     >
                 </div>
 
-                <div class="lg:col-span-2">
+                <div class="sm:col-span-1 lg:col-span-2">
                     <label for="date_to" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Sampai Tanggal</label>
-                    <div class="flex items-center gap-2">
-                        <input 
-                            type="date" 
-                            id="date_to" 
-                            name="date_to" 
-                            value="{{ $dateTo }}" 
-                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                        >
-                        <button 
-                            type="submit" 
-                            class="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs whitespace-nowrap"
-                        >
-                            Terapkan
-                        </button>
-                    </div>
+                    <input 
+                        type="date" 
+                        id="date_to" 
+                        name="date_to" 
+                        value="{{ $dateTo }}" 
+                        class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    >
+                </div>
+
+                <!-- Tombol Aksi Terapkan -->
+                <div class="sm:col-span-2 lg:col-span-1">
+                    <button 
+                        type="submit" 
+                        class="w-full h-[38px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs whitespace-nowrap"
+                    >
+                        Terapkan
+                    </button>
                 </div>
             </form>
         </div>
