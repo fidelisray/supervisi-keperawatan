@@ -1,0 +1,66 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: 172.17.12.17:5051/fidelisray/supervisi-keperawatan/supervisi-keperawatan-app:latest
+        container_name: supervisi-keperawatan-app
+        restart: unless-stopped
+        working_dir: /var/www/html
+        env_file:
+            - .env.production
+        volumes:
+            - app_storage:/var/www/html/storage
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - supervisi-keperawatan-network
+
+    nginx:
+        image: nginx:alpine
+        container_name: supervisi-keperawatan-nginx
+        restart: unless-stopped
+        ports:
+            - "${APP_PORT:-2693}:80"
+        volumes:
+            - .:/var/www/html:ro
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+        depends_on:
+            - app
+        networks:
+            - supervisi-keperawatan-network
+
+    postgres:
+        image: postgres:17-alpine
+        container_name: supervisi-keperawatan-postgres
+        restart: unless-stopped
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-nurse_supervisi-keperawatanon_auth}
+            POSTGRES_USER: ${DB_USERNAME:-postgres}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-nurse_supervisi-keperawatanon_auth}",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - supervisi-keperawatan-network
+
+volumes:
+    postgres_data:
+        driver: local
+    app_storage:
+        driver: local
+
+networks:
+    supervisi-keperawatan-network:
+        driver: bridge
