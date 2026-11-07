@@ -16,13 +16,18 @@
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900">
                         Monitoring Supervisi Ruang Perawatan
                     </h1>
+                    {{-- [GLOBAL VISIBILITY LOGIC - Badge cakupan ketika seluruh pengguna melihat semua logbook rumah sakit]
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                        Cakupan: Seluruh Rumah Sakit
+                    </span>
+                    --}}
                     @if(auth()->user()?->hasPermission('view_all_reports'))
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
                             Cakupan: Seluruh Rumah Sakit
                         </span>
                     @else
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                            Cakupan: Logbook Saya & Kolaborator
+                            Cakupan: Logbook Saya &amp; Kolaborator
                         </span>
                     @endif
                 </div>
@@ -142,6 +147,12 @@
                     <input type="date" id="date_to" name="date_to" value="{{ request('date_to') }}" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
                 </div>
 
+                {{-- [GLOBAL VISIBILITY LOGIC - Filter supervisor ditampilkan untuk semua pengguna]
+                <div class="lg:col-span-2">
+                    <label for="supervisor" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Supervisor</label>
+                    <input type="text" id="supervisor" name="supervisor" list="filter_nurse_list" value="{{ request('supervisor') }}" placeholder="Nama supervisor..." class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
+                </div>
+                --}}
                 @if(auth()->user()?->hasPermission('view_all_reports'))
                     <div class="lg:col-span-2">
                         <label for="supervisor" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Supervisor</label>
@@ -281,6 +292,7 @@
                                     </td>
 
                                     <td class="px-6 py-4 text-right whitespace-nowrap space-x-1.5">
+                                        {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('edit_report') && $report->canBeModifiedBy(auth()->user())) --}}
                                         @if(auth()->user()?->hasPermission('edit_report'))
                                             <a 
                                                 href="{{ route('supervisi.edit', $report) }}" 

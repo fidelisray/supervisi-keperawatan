@@ -25,6 +25,20 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5">
+                {{-- [GLOBAL VISIBILITY LOGIC - Batasi tombol Edit Logbook hanya untuk pembuat, kolaborator, atau Admin]
+                @if(auth()->user()?->hasPermission('edit_report') && $report->canBeModifiedBy(auth()->user()))
+                    <a 
+                        href="{{ route('supervisi.edit', $report) }}" 
+                        class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 transition shadow-2xs"
+                    >
+                        Edit Logbook
+                    </a>
+                @elseif(auth()->check() && ! $report->canBeModifiedBy(auth()->user()))
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+                        Mode Baca Saja
+                    </span>
+                @endif
+                --}}
                 @if(auth()->user()?->hasPermission('edit_report'))
                     <a 
                         href="{{ route('supervisi.edit', $report) }}" 
@@ -151,6 +165,7 @@
                                             {{ $incident->status === 'resolved' ? 'Selesai' : ($incident->status === 'escalated' ? 'Butuh Eskalasi' : 'Sedang Ditangani') }}
                                         </span>
 
+                                        {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
                                         @if(auth()->user()?->hasPermission('update_incident_status'))
                                             <button
                                                 type="button"
@@ -185,6 +200,7 @@
                                         </div>
                                     @endif
 
+                                    {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
                                     @if(auth()->user()?->hasPermission('update_incident_status'))
                                         <!-- Inline Follow-up Status Update Form -->
                                         <div x-show="openStatusUpdate" x-cloak class="p-4 rounded-xl bg-slate-50 border border-slate-200">

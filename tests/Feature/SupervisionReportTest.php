@@ -84,7 +84,7 @@ test('can store a new supervision report with multiple collaborators and without
     $response->assertRedirect(route('supervisi.show', $report));
 });
 
-test('collaborator and creator can view, edit logbook, and update incident status while unrelated supervisor is forbidden', function () {
+test('collaborator, creator, and admin can view, edit logbook, and update incident status while unrelated supervisor is forbidden', function () {
     $report = SupervisionReport::create([
         'report_date' => now()->toDateString(),
         'shift' => 'pagi',
@@ -106,11 +106,13 @@ test('collaborator and creator can view, edit logbook, and update incident statu
         'status' => 'in_progress',
     ]);
 
-    // Collaborator can view and edit
+    // Collaborator can view and see edit / update controls
     $this->actingAs($this->collaborator)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
         ->assertSee('ICU (Intensive Care Unit)')
+        ->assertSee('Edit Logbook')
+        ->assertSee('Update Tindak Lanjut')
         ->assertDontSee('Shift Pagi');
 
     // Collaborator can update incident status
@@ -149,7 +151,28 @@ test('collaborator and creator can view, edit logbook, and update incident statu
 
     $latestIncident = $report->fresh()->incidents()->first();
 
-    // Unrelated supervisor cannot view, edit, or update incident
+    /*
+    // [GLOBAL VISIBILITY LOGIC - Aktifkan blok pengujian ini saat semua user terdaftar diizinkan melihat riwayat & detail logbook]
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.index'))
+        ->assertSuccessful()
+        ->assertSee('ICU (Intensive Care Unit)');
+
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful()
+        ->assertSee('ICU (Intensive Care Unit)')
+        ->assertSee('Mode Baca Saja')
+        ->assertDontSee('Edit Logbook')
+        ->assertDontSee('Update Tindak Lanjut');
+    */
+
+    // Unrelated supervisor does not see the report in index and is forbidden from viewing, editing, or updating it
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.index'))
+        ->assertSuccessful()
+        ->assertDontSee('ICU (Intensive Care Unit)');
+
     $this->actingAs($this->otherSupervisor)
         ->get(route('supervisi.show', $report))
         ->assertForbidden();
@@ -159,15 +182,36 @@ test('collaborator and creator can view, edit logbook, and update incident statu
         ->assertForbidden();
 
     $this->actingAs($this->otherSupervisor)
-        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
-            'status' => 'resolved',
+        ->put(route('supervisi.update', $report), [
+            'report_date' => now()->toDateString(),
+            'room_name' => 'ICU (Intensive Care Unit)',
+            'patient_count' => 9,
+            'nurse_count' => 4,
+            'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
         ])
         ->assertForbidden();
 
-    // Admin has full access to all reports
+    $this->actingAs($this->otherSupervisor)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'in_progress',
+        ])
+        ->assertForbidden();
+
+    // Admin has full view, edit, and incident status update access to all reports
     $this->actingAs($this->admin)
         ->get(route('supervisi.show', $report))
-        ->assertSuccessful();
+        ->assertSuccessful()
+        ->assertSee('Edit Logbook')
+        ->assertSee('Update Tindak Lanjut');
+
+    $this->actingAs($this->admin)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'escalated',
+            'action_taken' => 'Dievaluasi oleh Administrator.',
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($latestIncident->fresh()->status)->toBe('escalated');
 });
 
 test('store requires mandatory room and at least one collaborator', function () {

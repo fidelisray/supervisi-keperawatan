@@ -38,7 +38,13 @@ class SupervisionReportController extends Controller
             ->when($request->filled('date_to'), function (Builder $query) use ($request): void {
                 $query->whereDate('report_date', '<=', (string) $request->string('date_to'));
             })
-            ->when($user->isAdmin() && $request->filled('supervisor'), function (Builder $query) use ($request): void {
+            /*
+            // [GLOBAL VISIBILITY LOGIC - Aktifkan blok ini jika semua pengguna dapat memfilter berdasarkan nama supervisor]
+            ->when($request->filled('supervisor'), function (Builder $query) use ($request): void {
+                $query->where('supervisor_name', 'like', '%'.trim((string) $request->string('supervisor')).'%');
+            })
+            */
+            ->when(($user->isAdmin() || $user->hasPermission('view_all_reports')) && $request->filled('supervisor'), function (Builder $query) use ($request): void {
                 $query->where('supervisor_name', 'like', '%'.trim((string) $request->string('supervisor')).'%');
             })
             ->when($request->filled('collaborator'), function (Builder $query) use ($request): void {
@@ -171,6 +177,14 @@ class SupervisionReportController extends Controller
      */
     public function edit(Request $request, SupervisionReport $supervisionReport): View
     {
+        /*
+        // [GLOBAL VISIBILITY LOGIC - Gunakan canBeModifiedBy() ketika isAccessibleBy() dibuka untuk semua user]
+        abort_unless(
+            $request->user()?->hasPermission('edit_report')
+            && $supervisionReport->canBeModifiedBy($request->user()),
+            403
+        );
+        */
         abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
         $supervisionReport->load(['incidents.incidentCategory']);
@@ -208,6 +222,14 @@ class SupervisionReportController extends Controller
      */
     public function update(Request $request, SupervisionReport $supervisionReport): RedirectResponse
     {
+        /*
+        // [GLOBAL VISIBILITY LOGIC - Gunakan canBeModifiedBy() ketika isAccessibleBy() dibuka untuk semua user]
+        abort_unless(
+            $request->user()?->hasPermission('edit_report')
+            && $supervisionReport->canBeModifiedBy($request->user()),
+            403
+        );
+        */
         abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
         $validated = $this->validateReportPayload($request);
@@ -240,6 +262,14 @@ class SupervisionReportController extends Controller
         SupervisionReport $supervisionReport,
         Incident $incident
     ): RedirectResponse {
+        /*
+        // [GLOBAL VISIBILITY LOGIC - Gunakan canBeModifiedBy() ketika isAccessibleBy() dibuka untuk semua user]
+        abort_unless(
+            $request->user()?->hasPermission('update_incident_status')
+            && $supervisionReport->canBeModifiedBy($request->user()),
+            403
+        );
+        */
         abort_unless($request->user()?->hasPermission('update_incident_status') && $supervisionReport->isAccessibleBy($request->user()), 403);
         abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
 

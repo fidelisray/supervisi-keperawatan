@@ -96,10 +96,47 @@ class SupervisionReport extends Model
 
     /**
      * Determine whether the given user can view, edit, or update incidents on this report.
+     *
+     * Note: Scoped visibility is active (Admin / view_all_reports, Creator, or Collaborator).
+     * The Global Visibility logic is preserved in comments below for easy switching.
      */
     public function isAccessibleBy(User $user): bool
     {
+        /*
+        // [GLOBAL VISIBILITY LOGIC - Aktifkan blok ini jika seluruh pengguna terdaftar boleh melihat detail semua logbook]
+        return trim((string) $user->nip) !== '' || trim((string) $user->name) !== '';
+        */
+
         if ($user->isAdmin() || $user->hasPermission('view_all_reports')) {
+            return true;
+        }
+
+        $userName = trim((string) $user->name);
+
+        if ($userName === '') {
+            return false;
+        }
+
+        if (strcasecmp(trim((string) $this->supervisor_name), $userName) === 0) {
+            return true;
+        }
+
+        foreach ($this->collaboratorList() as $collaborator) {
+            if (strcasecmp($collaborator, $userName) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine whether the given user is authorized to modify this report
+     * or update its incident follow-up statuses (Creator, Collaborator, or Administrator).
+     */
+    public function canBeModifiedBy(User $user): bool
+    {
+        if ($user->isAdmin()) {
             return true;
         }
 
@@ -125,11 +162,19 @@ class SupervisionReport extends Model
     /**
      * Scope query to reports accessible by the given user (Admin sees all; Supervisor sees own or collaborated).
      *
+     * Note: Scoped visibility is active for both logbook history and incident analytics.
+     * The Global Visibility logic is preserved in comments below for easy switching.
+     *
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
     public function scopeAccessibleBy(Builder $query, User $user): Builder
     {
+        /*
+        // [GLOBAL VISIBILITY LOGIC - Aktifkan blok ini jika daftar logbook & grafik analitik menampilkan seluruh data rumah sakit untuk semua user]
+        return $query;
+        */
+
         if ($user->isAdmin() || $user->hasPermission('view_all_reports')) {
             return $query;
         }
