@@ -90,7 +90,6 @@
                             Data Operasional Ruangan
                         </h2>
                     </div>
-                    <span class="text-xs text-slate-500 font-medium">*Wajib diisi</span>
                 </div>
 
                 <div class="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -439,7 +438,7 @@
                         3
                     </div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                        Catatan Khusus Supervisi / Pesan Operan (Handover)
+                        Catatan Khusus Supervisi &amp; Handover
                     </h2>
                 </div>
                 <div class="p-6">
@@ -527,8 +526,8 @@
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Status Penanganan</label>
                                     <select x-model="modalData.status" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
-                                        <option value="in_progress">Sedang Ditangani (In Progress)</option>
-                                        <option value="resolved">Selesai Ditangani (Resolved)</option>
+                                        <option value="in_progress">Sedang Ditangani</option>
+                                        <option value="resolved">Selesai Ditangani</option>
                                         <option value="escalated">Perlu Eskalasi Supervisor</option>
                                     </select>
                                 </div>

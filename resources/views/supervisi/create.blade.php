@@ -58,7 +58,6 @@
                             Data Operasional Ruangan
                         </h2>
                     </div>
-                    <span class="text-xs text-slate-500 font-medium">*Wajib diisi</span>
                 </div>
 
                 <div class="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -327,7 +326,7 @@
                                 Kejadian di Ruangan Selama Supervisi
                             </h2>
                             <p class="text-xs text-slate-500">
-                                Laporkan insiden berdasarkan poin masalahnya (Complain, Fasilitas, JKN &ge; 6 Hari, Lain-lain).
+                                Catat insiden atau permasalahan yang ditemukan selama dinas supervisi.
                             </p>
                         </div>
                     </div>
@@ -482,7 +481,7 @@
                         3
                     </div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
-                        Catatan Khusus Supervisi / Pesan Operan (Handover)
+                        Catatan Khusus Supervisi &amp; Handover
                     </h2>
                 </div>
                 <div class="p-6">
@@ -629,8 +628,8 @@
                                         x-model="modalData.status"
                                         class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition"
                                     >
-                                        <option value="in_progress">Sedang Ditangani (In Progress)</option>
-                                        <option value="resolved">Selesai Ditangani (Resolved)</option>
+                                        <option value="in_progress">Sedang Ditangani</option>
+                                        <option value="resolved">Selesai Ditangani</option>
                                         <option value="escalated">Perlu Eskalasi Supervisor</option>
                                     </select>
                                 </div>

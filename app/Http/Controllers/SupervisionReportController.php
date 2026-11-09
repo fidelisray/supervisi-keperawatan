@@ -299,7 +299,7 @@ class SupervisionReportController extends Controller
 
         return $request->validate([
             'report_date' => ['required', 'date'],
-            'shift' => ['nullable', 'in:pagi,sore,malam'],
+            'shift' => ['nullable', 'in:pagi,siang/sore,sore,malam'],
             'room_name' => ['required', 'string', 'max:255'],
             'patient_count' => ['required', 'integer', 'min:0'],
             'nurse_count' => ['required', 'integer', 'min:0'],
@@ -359,9 +359,9 @@ class SupervisionReportController extends Controller
     private function availableShifts(): array
     {
         return [
-            'pagi' => 'Shift Pagi (07:00 - 14:00)',
-            'sore' => 'Shift Sore (14:00 - 21:00)',
-            'malam' => 'Shift Malam (21:00 - 07:00)',
+            'pagi' => 'Shift Pagi (07:00 - 13:59)',
+            'siang/sore' => 'Shift Siang/Sore (14:00 - 20:59)',
+            'malam' => 'Shift Malam (21:00 - 06:59)',
         ];
     }
 
@@ -371,7 +371,7 @@ class SupervisionReportController extends Controller
 
         return match (true) {
             $currentHour >= 7 && $currentHour < 14 => 'pagi',
-            $currentHour >= 14 && $currentHour < 21 => 'sore',
+            $currentHour >= 14 && $currentHour < 21 => 'siang/sore',
             default => 'malam',
         };
     }

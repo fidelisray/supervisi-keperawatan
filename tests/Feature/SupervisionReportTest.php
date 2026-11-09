@@ -222,3 +222,53 @@ test('store requires mandatory room and at least one collaborator', function () 
 
     $response->assertSessionHasErrors(['report_date', 'room_name', 'patient_count', 'nurse_count']);
 });
+
+test('application timezone is configured to Asia/Jakarta', function () {
+    expect(config('app.timezone'))->toBe('Asia/Jakarta');
+});
+
+test('shifts resolve accurately for pagi, siang/sore, and malam based on Asia/Jakarta time', function () {
+    // 08:00 WIB -> pagi (07:00 - 13:59)
+    $this->travelTo(Carbon\Carbon::parse('2026-11-09 08:00:00', 'Asia/Jakarta'));
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
+    $response->assertSuccessful();
+    $response->assertSee('value="pagi"', false);
+
+    // 14:30 WIB -> siang/sore (14:00 - 20:59)
+    $this->travelTo(Carbon\Carbon::parse('2026-11-09 14:30:00', 'Asia/Jakarta'));
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
+    $response->assertSuccessful();
+    $response->assertSee('value="siang/sore"', false);
+
+    // 22:00 WIB -> malam (21:00 - 06:59)
+    $this->travelTo(Carbon\Carbon::parse('2026-11-09 22:00:00', 'Asia/Jakarta'));
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
+    $response->assertSuccessful();
+    $response->assertSee('value="malam"', false);
+
+    // 03:00 WIB -> malam (21:00 - 06:59)
+    $this->travelTo(Carbon\Carbon::parse('2026-11-10 03:00:00', 'Asia/Jakarta'));
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
+    $response->assertSuccessful();
+    $response->assertSee('value="malam"', false);
+});
+
+test('validation accepts siang/sore as well as backward-compatible sore', function () {
+    $basePayload = [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 2,
+        'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+    ];
+
+    $response1 = $this->actingAs($this->supervisor)->post(route('supervisi.store'), array_merge($basePayload, [
+        'shift' => 'siang/sore',
+    ]));
+    $response1->assertSessionHasNoErrors();
+
+    $response2 = $this->actingAs($this->supervisor)->post(route('supervisi.store'), array_merge($basePayload, [
+        'shift' => 'sore',
+    ]));
+    $response2->assertSessionHasNoErrors();
+});

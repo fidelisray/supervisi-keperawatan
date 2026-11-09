@@ -46,7 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libicu-dev \
     libonig-dev \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+ENV TZ=Asia/Jakarta
 
 # Install Microsoft ODBC Driver 18 for SQL Server (required for sqlsrv & pdo_sqlsrv)
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \

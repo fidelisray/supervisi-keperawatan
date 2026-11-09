@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Incident;
+use App\Models\IncidentCategory;
 use App\Models\SupervisionReport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -308,4 +309,47 @@ test('analytics export endpoint respects filtered scope vs all scope', function 
     $contentAll = $resAll->streamedContent();
     expect($contentAll)->toContain('FRANSISKUS');
     expect($contentAll)->toContain('TERESIA');
+});
+
+test('analytics assigns slate gray hex color to Lain-Lain category in chart and legend', function () {
+    $admin = User::factory()->create([
+        'nip' => '5508150824',
+        'name' => 'Purwanto Ali',
+        'app_roles' => 0,
+    ]);
+
+    $categoryLain = IncidentCategory::firstOrCreate(
+        ['incident_category' => 'Lain-Lain'],
+        ['description' => 'Kategori lain-lain', 'is_active' => 'true', 'created_by' => $admin->nip]
+    );
+
+    $report = SupervisionReport::create([
+        'report_date' => '2026-11-05',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 2,
+        'supervisor_name' => $admin->name,
+        'nurse_in_charge' => 'Perawat 1',
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report->id,
+        'category' => $categoryLain->id,
+        'incident_time' => '10:00',
+        'description' => 'Insiden lainnya di bangsal',
+        'action_taken' => 'Tindak lanjut',
+        'status' => 'resolved',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('supervisi.analytics'));
+    $response->assertSuccessful();
+
+    $categoryStats = $response->viewData('categoryStats');
+    expect($categoryStats)->toHaveKey($categoryLain->id)
+        ->and($categoryStats[$categoryLain->id]['hex_color'])->toBe('#64748b');
+
+    $chartPayload = $response->viewData('chartPayload');
+    expect($chartPayload['category']['colors'])->toContain('#64748b');
 });

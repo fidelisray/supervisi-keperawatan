@@ -11,6 +11,8 @@ services:
             - "${APP_PORT:-2693}:80"
         env_file:
             - .env.production
+        environment:
+            TZ: Asia/Jakarta
         volumes:
             - app_storage:/var/www/html/storage
         security_opt:
@@ -37,6 +39,7 @@ services:
         # ports:
         #     - "127.0.0.1:5432:5432"
         environment:
+            TZ: Asia/Jakarta
             POSTGRES_DB: ${DB_DATABASE}
             POSTGRES_USER: ${DB_USERNAME}
             POSTGRES_PASSWORD: ${DB_PASSWORD}

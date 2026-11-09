@@ -212,8 +212,8 @@
                                                     <div>
                                                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Status Penanganan Baru</label>
                                                         <select name="status" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900">
-                                                            <option value="in_progress" {{ $incident->status === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani (In Progress)</option>
-                                                            <option value="resolved" {{ $incident->status === 'resolved' ? 'selected' : '' }}>Selesai Ditangani (Resolved)</option>
+                                                            <option value="in_progress" {{ $incident->status === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani</option>
+                                                            <option value="resolved" {{ $incident->status === 'resolved' ? 'selected' : '' }}>Selesai Ditangani</option>
                                                             <option value="escalated" {{ $incident->status === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi Supervisor</option>
                                                         </select>
                                                     </div>

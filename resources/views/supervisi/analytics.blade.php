@@ -640,11 +640,8 @@
                                 </div>
                                 <div>
                                     <h3 id="modal-title" class="text-sm font-bold text-slate-900">
-                                        Ekspor Data Supervisi ke Excel / CSV
+                                        Ekspor Laporan Supervisi
                                     </h3>
-                                    <p class="text-xs text-slate-500 mt-0.5">
-                                        Format berkas ramah Microsoft Excel (Pemisah Titik Koma &amp; UTF-8 BOM)
-                                    </p>
                                 </div>
                             </div>
                             <button 
@@ -661,7 +658,7 @@
                         <!-- Content Options -->
                         <div class="p-6 space-y-4">
                             <p class="text-xs text-slate-600">
-                                Pilih cakupan data laporan supervisi dan butir insiden yang ingin Anda unduh:
+                                Pilih cakupan data laporan yang ingin diunduh:
                             </p>
 
                             <!-- Opsi 1: Sesuai Filter Aktif -->
@@ -674,14 +671,14 @@
                                     <div class="space-y-1">
                                         <div class="flex items-center gap-2">
                                             <span class="text-xs font-bold text-emerald-900 group-hover:text-emerald-950">
-                                                1. Ekspor Data Sesuai Filter Aktif
+                                                Data Sesuai Filter Aktif
                                             </span>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-200 text-emerald-800">
                                                 Direkomendasikan
                                             </span>
                                         </div>
                                         <p class="text-xs text-emerald-800/80 leading-relaxed">
-                                            Mengunduh data yang sedang ditampilkan pada halaman ini sesuai pilihan ruangan, kategori masalah, status, atau rentang tanggal yang Anda terapkan.
+                                            Unduh data laporan dan butir kejadian sesuai filter ruangan, kategori, atau rentang tanggal yang sedang aktif.
                                         </p>
                                     </div>
                                     <svg class="w-5 h-5 text-emerald-600 group-hover:translate-x-0.5 transition-transform shrink-0 ml-3 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -699,10 +696,10 @@
                                 <div class="flex items-start justify-between">
                                     <div class="space-y-1">
                                         <span class="text-xs font-bold text-slate-900 group-hover:text-blue-700">
-                                            2. Ekspor Semua Riwayat Data
+                                            Semua Riwayat Data
                                         </span>
                                         <p class="text-xs text-slate-500 leading-relaxed">
-                                            Mengunduh seluruh rekaman data logbook dan butir insiden yang berhak Anda akses dari awal tanpa batasan filter halaman aktif.
+                                            Unduh seluruh arsip rekaman logbook dan butir kejadian tanpa batasan filter halaman.
                                         </p>
                                     </div>
                                     <svg class="w-5 h-5 text-slate-400 group-hover:translate-x-0.5 transition-transform shrink-0 ml-3 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

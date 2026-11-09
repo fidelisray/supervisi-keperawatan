@@ -54,25 +54,18 @@
             <!-- Hospital Branding -->
             <div class="p-5 border-b border-slate-800 bg-slate-950/60 flex-shrink-0 space-y-3">
                 <!-- White Logo Card -->
-                <div class="bg-white rounded-xl p-3 shadow-xs border border-slate-800/60 flex items-center justify-center">
+                <div class="bg-white rounded-xl p-3.5 shadow-xs border border-slate-800/60 flex items-center justify-center">
                     <img 
                         src="{{ Vite::asset('resources/images/logo.png') }}" 
                         alt="Logo RS St. Elisabeth Semarang" 
-                        class="h-8 w-auto max-w-full object-contain"
+                        class="h-14 w-auto max-w-full object-contain"
                     >
                 </div>
 
-                <div class="px-1 flex items-center justify-between">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/60">
+                <div class="w-full">
+                    <span class="flex items-center justify-center w-full px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/60 text-center">
                         Supervisi Keperawatan
                     </span>
-                    <span class="text-[10px] text-slate-400 font-mono">Semarang</span>
-                </div>
-
-                <div class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800">
-                    <p class="text-[11px] text-slate-300 italic font-medium leading-tight text-center">
-                        &ldquo;Pancaran Cintanya Menyembuhkan Derita Sesama&rdquo;
-                    </p>
                 </div>
             </div>
 

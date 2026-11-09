@@ -101,11 +101,12 @@ class SupervisionAnalyticsController extends Controller
             'farmasi' => '#8b5cf6',
             'pasien' => '#2563eb', // blue-600
             'pelayanan' => '#0284c7', // sky-600
+            'lain' => '#64748b', // slate-500 (abu-abu)
         ];
 
         $fallbackPalette = [
-            '#2563eb', '#0d9488', '#d97706', '#e11d48', '#8b5cf6',
-            '#0284c7', '#059669', '#ea580c', '#64748b', '#475569',
+            '#2563eb', '#0d9488', '#d97706', '#64748b', '#8b5cf6',
+            '#0284c7', '#059669', '#ea580c', '#334155', '#475569',
         ];
 
         $categoryStats = [];
