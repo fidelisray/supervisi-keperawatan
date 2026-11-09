@@ -26,17 +26,31 @@ class SupervisionReportController extends Controller
         $user = $request->user();
         $today = Carbon::today();
 
+        $preset = (string) $request->string('preset')->trim();
+        $dateFrom = (string) $request->string('date_from')->trim();
+        $dateTo = (string) $request->string('date_to')->trim();
+
+        if ($preset !== '') {
+            [$dateFrom, $dateTo] = match ($preset) {
+                'today' => [now()->toDateString(), now()->toDateString()],
+                'last_7_days' => [now()->subDays(6)->toDateString(), now()->toDateString()],
+                'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
+                'last_month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
+                default => [$dateFrom, $dateTo],
+            };
+        }
+
         $accessibleReportsQuery = SupervisionReport::query()->accessibleBy($user);
 
         $filteredQuery = (clone $accessibleReportsQuery)
             ->when($request->filled('room'), function (Builder $query) use ($request): void {
                 $query->where('room_name', (string) $request->string('room'));
             })
-            ->when($request->filled('date_from'), function (Builder $query) use ($request): void {
-                $query->whereDate('report_date', '>=', (string) $request->string('date_from'));
+            ->when($dateFrom !== '', function (Builder $query) use ($dateFrom): void {
+                $query->whereDate('report_date', '>=', $dateFrom);
             })
-            ->when($request->filled('date_to'), function (Builder $query) use ($request): void {
-                $query->whereDate('report_date', '<=', (string) $request->string('date_to'));
+            ->when($dateTo !== '', function (Builder $query) use ($dateTo): void {
+                $query->whereDate('report_date', '<=', $dateTo);
             })
             /*
             // [GLOBAL VISIBILITY LOGIC - Aktifkan blok ini jika semua pengguna dapat memfilter berdasarkan nama supervisor]
@@ -93,6 +107,8 @@ class SupervisionReportController extends Controller
             'resolvedIncidentsCount' => $resolvedIncidentsCount,
             'rooms' => $rooms,
             'nurses' => $nurses,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
         ]);
     }
 

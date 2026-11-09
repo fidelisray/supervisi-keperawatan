@@ -272,3 +272,49 @@ test('validation accepts siang/sore as well as backward-compatible sore', functi
     ]));
     $response2->assertSessionHasNoErrors();
 });
+
+test('supervision index supports quick date presets and renders reset semua filter link when filters are active', function () {
+    $this->travelTo(Carbon\Carbon::parse('2026-11-09 10:00:00', 'Asia/Jakarta'));
+
+    SupervisionReport::create([
+        'report_date' => '2026-11-09',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'status' => 'submitted',
+    ]);
+
+    SupervisionReport::create([
+        'report_date' => '2026-10-15',
+        'shift' => 'pagi',
+        'room_name' => 'ANGELA',
+        'patient_count' => 8,
+        'nurse_count' => 2,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'status' => 'submitted',
+    ]);
+
+    $unfiltered = $this->actingAs($this->supervisor)->get(route('supervisi.index'));
+    $unfiltered->assertSuccessful()
+        ->assertSee('Rentang Cepat:')
+        ->assertDontSee('Reset Semua Filter');
+
+    $todayFiltered = $this->actingAs($this->supervisor)->get(route('supervisi.index', ['preset' => 'today']));
+    $todayFiltered->assertSuccessful()
+        ->assertSee('Reset Semua Filter')
+        ->assertSee('value="2026-11-09"', false)
+        ->assertSee('09/11/2026')
+        ->assertDontSee('15/10/2026');
+
+    $lastMonthFiltered = $this->actingAs($this->supervisor)->get(route('supervisi.index', ['preset' => 'last_month']));
+    $lastMonthFiltered->assertSuccessful()
+        ->assertSee('Reset Semua Filter')
+        ->assertSee('value="2026-10-01"', false)
+        ->assertSee('value="2026-10-31"', false)
+        ->assertSee('15/10/2026')
+        ->assertDontSee('09/11/2026');
+});

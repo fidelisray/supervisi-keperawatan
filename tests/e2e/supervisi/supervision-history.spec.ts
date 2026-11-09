@@ -35,9 +35,25 @@ test.describe('Supervisi Keperawatan - Riwayat Laporan & Filter Monitoring', () 
     // Verifikasi URL mengandung query string room
     await expect(page).toHaveURL(/.*room=.*/);
 
-    // Verifikasi tombol Reset filter muncul dan dapat diklik
-    const resetLink = page.getByRole('link', { name: /Reset/i });
+    // Verifikasi tombol Reset Semua Filter muncul di dalam batas kontainer Filter Bar (tanpa overflow) dan dapat diklik
+    const filterCard = page.locator('form[method="GET"]').locator('..');
+    const filterButton = page.getByRole('button', { name: /Filter/i });
+    const resetLink = page.getByRole('link', { name: /Reset Semua Filter/i });
     await expect(resetLink).toBeVisible();
+
+    const cardBox = await filterCard.boundingBox();
+    const buttonBox = await filterButton.boundingBox();
+    const resetBox = await resetLink.boundingBox();
+
+    expect(cardBox).not.toBeNull();
+    expect(buttonBox).not.toBeNull();
+    expect(resetBox).not.toBeNull();
+
+    if (cardBox && buttonBox && resetBox) {
+      expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+      expect(resetBox.x + resetBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+    }
+
     await resetLink.click();
 
     // URL kembali bersih tanpa parameter filter
