@@ -2,6 +2,7 @@
 .github
 .env
 .env.*
+!.env.example
 !.env.production
 .codegraph
 node_modules
@@ -12,6 +13,7 @@ storage/framework/views/*
 storage/logs/*
 !storage/logs/.gitkeep
 public/hot
+public/build
 public/storage
 tests
 phpunit.xml

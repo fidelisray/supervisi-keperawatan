@@ -1,5 +1,5 @@
 services:
-    app:
+    spv-nurse-app:
         build:
             context: .
             dockerfile: Dockerfile
@@ -7,53 +7,53 @@ services:
         container_name: supervisi-keperawatan-app
         restart: unless-stopped
         working_dir: /var/www/html
+        ports:
+            - "${APP_PORT:-2693}:80"
         env_file:
             - .env.production
         volumes:
             - app_storage:/var/www/html/storage
+        security_opt:
+            - no-new-privileges:true
+        healthcheck:
+            test: ["CMD-SHELL", "test -f /tmp/app_healthy || exit 1"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
         depends_on:
-            postgres:
+            spv-nurse-postgres:
                 condition: service_healthy
         networks:
             - supervisi-keperawatan-network
 
-    nginx:
-        image: nginx:alpine
-        container_name: supervisi-keperawatan-nginx
-        restart: unless-stopped
-        ports:
-            - "${APP_PORT:-2693}:80"
-        volumes:
-            - .:/var/www/html:ro
-            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-        depends_on:
-            - app
-        networks:
-            - supervisi-keperawatan-network
-
-    postgres:
+    spv-nurse-postgres:
         image: postgres:17-alpine
         container_name: supervisi-keperawatan-postgres
         restart: unless-stopped
         ports:
-            - "5432:5432"
+            - "127.0.0.1:5432:5432"
         environment:
-            POSTGRES_DB: ${DB_DATABASE:-nurse_supervisi-keperawatanon_auth}
-            POSTGRES_USER: ${DB_USERNAME:-postgres}
-            POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+            POSTGRES_DB: ${DB_DATABASE}
+            POSTGRES_USER: ${DB_USERNAME}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
         volumes:
             - postgres_data:/var/lib/postgresql/data
+        security_opt:
+            - no-new-privileges:true
         healthcheck:
             test:
                 [
                     "CMD-SHELL",
-                    "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-nurse_supervisi-keperawatanon_auth}",
+                    "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}",
                 ]
             interval: 5s
             timeout: 5s
             retries: 5
         networks:
-            - supervisi-keperawatan-network
+            supervisi-keperawatan-network:
+                aliases:
+                    - postgres
 
 volumes:
     postgres_data:
