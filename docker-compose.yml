@@ -31,8 +31,11 @@ services:
         image: postgres:17-alpine
         container_name: supervisi-keperawatan-postgres
         restart: unless-stopped
-        ports:
-            - "127.0.0.1:5432:5432"
+        # SECURITY: Port 5432 TIDAK di-expose ke host di production guna mencegah bentrok
+        # dengan PostgreSQL lokal dan menutup celah akses dari luar jaringan.
+        # spv-nurse-app terhubung secara internal via Docker network 'supervisi-keperawatan-network'.
+        # ports:
+        #     - "127.0.0.1:5432:5432"
         environment:
             POSTGRES_DB: ${DB_DATABASE}
             POSTGRES_USER: ${DB_USERNAME}

@@ -53,6 +53,13 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "db:fresh-auth": [
+            "@php artisan migrate:fresh --database=pgsql --path=database/migrations/pgsql --seed"
+        ],
+        "db:migrate-all": [
+            "@php artisan migrate --database=pgsql --path=database/migrations/pgsql",
+            "@php artisan migrate --database=sqlsrv --path=database/migrations/sqlsrv"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
