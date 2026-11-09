@@ -58,7 +58,11 @@ class SsoAuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('supervisi.create'));
+        $defaultRoute = $user->hasPermission('create_report')
+            ? route('supervisi.create')
+            : route('supervisi.index');
+
+        return redirect()->intended($defaultRoute);
     }
 
     public function logout(Request $request): RedirectResponse

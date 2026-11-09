@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\PreventBackHistory;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->web(append: [
+            PreventBackHistory::class,
+        ]);
+        $middleware->redirectUsersTo(fn (Request $request): string => $request->user()?->hasPermission('create_report')
+            ? route('supervisi.create')
+            : route('supervisi.index'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

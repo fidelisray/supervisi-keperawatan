@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\RefAppRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -13,13 +14,58 @@ test('guest user is redirected to login page when accessing supervision routes',
         ->assertRedirect(route('login'));
 });
 
-test('login page renders split-screen sso authentication form', function () {
+test('login page renders split-screen sso authentication form with autocomplete disabled and no-store cache headers', function () {
     $response = $this->get(route('login'));
 
     $response->assertSuccessful();
     $response->assertSee('E-Supervisi Keperawatan');
     $response->assertSee('Nomor Induk Pegawai (NIP)');
     $response->assertSee('Kata Sandi');
+    $response->assertSee('autocomplete="off"', false);
+
+    $cacheControl = (string) $response->headers->get('Cache-Control');
+    expect($cacheControl)
+        ->toContain('no-store')
+        ->toContain('no-cache')
+        ->toContain('must-revalidate')
+        ->toContain('max-age=0')
+        ->and($response->headers->get('Pragma'))->toBe('no-cache');
+});
+
+test('authenticated user pressing back or visiting login page is redirected away from login and protected pages send no-store headers', function () {
+    $supervisor = User::factory()->create([
+        'nip' => '1672010896',
+        'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+        'app_roles' => 1,
+    ]);
+
+    $loginResponse = $this->actingAs($supervisor)->get(route('login'));
+    $loginResponse->assertRedirect(route('supervisi.create'));
+
+    $protectedResponse = $this->actingAs($supervisor)->get(route('supervisi.create'));
+    $protectedResponse->assertSuccessful();
+    expect((string) $protectedResponse->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('no-cache');
+});
+
+test('authenticated user without create_report permission is redirected to supervisi index when visiting login', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 2,
+        'role_name' => 'AUDITOR KLINIS',
+    ]);
+    RefAppRole::syncPermissions(2, ['view_all_reports']);
+
+    $auditor = User::factory()->create([
+        'nip' => '9988776655',
+        'name' => 'Auditor Klinis Test',
+        'app_roles' => 2,
+    ]);
+
+    $this->actingAs($auditor)
+        ->get(route('login'))
+        ->assertRedirect(route('supervisi.index'));
 });
 
 test('user registered in app_id 6 can login with valid base64 sso credentials and syncs to local users table', function () {

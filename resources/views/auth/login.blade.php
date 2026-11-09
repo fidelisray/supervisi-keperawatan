@@ -71,7 +71,37 @@
 
         {{-- Right Panel: Login Form --}}
         <main class="lg:col-span-7 flex items-center justify-center p-6 sm:p-12 bg-slate-50">
-            <div class="w-full max-w-md" x-data="{ showPassword: false, submitting: false }">
+            <div
+                class="w-full max-w-md"
+                x-data="{
+                    showPassword: false,
+                    submitting: false,
+                    resetSensitiveState(clearNip = false) {
+                        this.showPassword = false;
+                        this.submitting = false;
+                        if (this.$refs.passwordInput) {
+                            this.$refs.passwordInput.value = '';
+                        }
+                        if (clearNip && this.$refs.nipInput) {
+                            this.$refs.nipInput.value = '';
+                        }
+                    }
+                }"
+                x-init="
+                    resetSensitiveState(false);
+                    window.addEventListener('pageshow', (event) => {
+                        const navEntry = performance.getEntriesByType?.('navigation')?.[0];
+                        const isBackForward = event.persisted || navEntry?.type === 'back_forward';
+                        resetSensitiveState(isBackForward);
+                        if (event.persisted) {
+                            window.location.reload();
+                        }
+                    });
+                    window.addEventListener('pagehide', () => {
+                        resetSensitiveState(true);
+                    });
+                "
+            >
                 <div class="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
                     <div class="mb-6">
                         <h2 class="text-xl font-bold text-slate-900 tracking-tight">
@@ -96,7 +126,8 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('login.store') }}" @submit="submitting = true"
+                    <form method="POST" action="{{ route('login.store') }}" autocomplete="off"
+                        @submit="showPassword = false; submitting = true"
                         class="space-y-5">
                         @csrf
 
@@ -104,8 +135,8 @@
                             <label for="nip" class="block text-sm font-medium text-slate-700 mb-1.5">
                                 Nomor Induk Pegawai (NIP)
                             </label>
-                            <input type="text" id="nip" name="nip" value="{{ old('nip') }}" required
-                                autofocus autocomplete="username" inputmode="numeric" placeholder="Contoh: 1927181027"
+                            <input x-ref="nipInput" type="text" id="nip" name="nip" value="{{ old('nip') }}" required
+                                autofocus autocomplete="off" inputmode="numeric" placeholder="Contoh: 1927181027"
                                 class="w-full min-h-11 px-3.5 py-2.5 rounded-lg border {{ $errors->has('nip') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
                         </div>
 
@@ -114,8 +145,8 @@
                                 Kata Sandi
                             </label>
                             <div class="relative">
-                                <input :type="showPassword ? 'text' : 'password'" id="password" name="password"
-                                    required autocomplete="current-password" placeholder="Masukkan password"
+                                <input x-ref="passwordInput" :type="showPassword ? 'text' : 'password'" id="password" name="password"
+                                    required autocomplete="off" placeholder="Masukkan password"
                                     class="w-full min-h-11 pl-3.5 pr-12 py-2.5 rounded-lg border {{ $errors->has('password') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
                                 <button type="button" @click="showPassword = !showPassword"
                                     :aria-pressed="showPassword.toString()"

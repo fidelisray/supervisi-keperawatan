@@ -41,4 +41,32 @@ test.describe('SSO Authentication Flow', () => {
     await expect(page).toHaveURL(/.*login/);
     await expect(page.locator('input#nip')).toBeVisible();
   });
+
+  test('mencegah pengguna kembali ke halaman login dan mengekspos kredensial saat menekan tombol Back setelah login berhasil', async ({ page }) => {
+    const loginResponse = await page.goto('/login');
+    expect(loginResponse?.headers()['cache-control']).toContain('no-store');
+
+    const nipInput = page.locator('input#nip');
+    const passwordInput = page.locator('input#password');
+
+    await expect(nipInput).toHaveAttribute('autocomplete', 'off');
+    await expect(passwordInput).toHaveAttribute('autocomplete', 'off');
+
+    await nipInput.fill('1672010896');
+    await passwordInput.fill('123456');
+
+    // Simulasikan pengguna sempat menampilkan kata sandi sebelum menekan tombol masuk
+    await page.getByRole('button', { name: /Tampilkan kata sandi/i }).click();
+    await expect(passwordInput).toHaveAttribute('type', 'text');
+
+    await page.getByRole('button', { name: /Masuk ke Sistem|Masuk ke Aplikasi/i }).click();
+    await page.waitForURL((url) => !url.pathname.includes('/login'));
+
+    // Tekan tombol Back di browser setelah berhasil login
+    await page.goBack();
+
+    // Pengguna tidak boleh kembali melihat form login maupun kredensial yang diketik sebelumnya
+    await expect(page).not.toHaveURL(/.*\/login/);
+    await expect(page.locator('input#password')).toHaveCount(0);
+  });
 });
