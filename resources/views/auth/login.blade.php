@@ -27,37 +27,39 @@
         <!-- Left Panel: Hospital Identity -->
         <aside
             class="lg:col-span-5 bg-slate-900 text-slate-100 flex flex-col justify-between p-8 sm:p-12 border-b lg:border-b-0 lg:border-r border-slate-800">
-            <div>
-                <div class="flex items-center gap-3.5">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold text-lg tracking-wider shadow-xs">
-                        SE
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-widest text-teal-400">
-                            RS. St. Elisabeth Semarang
-                        </p>
-                        <h1 class="text-lg font-bold text-white tracking-tight">
-                            E-Supervisi Keperawatan
-                        </h1>
-                    </div>
+            <div class="my-auto py-6 flex flex-col items-center text-center">
+                <!-- Centered Branding Header -->
+                <div class="flex flex-col items-center">
+                    <img 
+                        src="{{ Vite::asset('resources/images/web-icon.webp') }}" 
+                        alt="Logo RS St. Elisabeth Semarang" 
+                        class="w-32 h-32 object-contain rounded-2xl shadow-sm mb-4"
+                    >
+                    <p class="text-sm font-semibold uppercase tracking-widest text-teal-400">
+                        RS. St. Elisabeth Semarang
+                    </p>
+                    <h1 class="text-2xl font-extrabold text-white tracking-tight mt-1">
+                        E-Supervisi Keperawatan
+                    </h1>
                 </div>
 
-                <div class="mt-10 lg:mt-16 space-y-4">
-                    <span
-                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-950 text-teal-300 border border-teal-800">
-                        Supervisi Keperawatan RS. St. Elisabeth Semarang
-                    </span>
+                <div class="mt-8 lg:mt-12 space-y-4 max-w-md mx-auto">
+                    <div>
+                        <span
+                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-950 text-teal-300 border border-teal-800">
+                            Supervisi Keperawatan RS. St. Elisabeth Semarang
+                        </span>
+                    </div>
                     <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug">
-                        Pencatatan Logbook & Monitoring Mutu Asuhan Keperawatan
+                        Pencatatan Logbook &amp; Monitoring Mutu Asuhan Keperawatan
                     </h2>
-                    <p class="text-sm text-slate-300 leading-relaxed max-w-md">
+                    <p class="text-sm text-slate-300 leading-relaxed">
                         Gunakan Nomor Induk Pegawai (NIP) dan kata sandi yang telah terdaftar.
                     </p>
                 </div>
             </div>
 
-            <div class="mt-10 pt-6 border-t border-slate-800/90 space-y-2">
+            <div class="pt-6 border-t border-slate-800/90 space-y-2">
                 <p class="text-xs font-medium italic text-slate-300">
                     "Pancaran Cintanya Menyembuhkan Derita Sesama"
                 </p>
