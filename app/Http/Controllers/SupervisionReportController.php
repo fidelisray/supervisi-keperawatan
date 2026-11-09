@@ -320,7 +320,7 @@ class SupervisionReportController extends Controller
             'patient_count' => ['required', 'integer', 'min:0'],
             'nurse_count' => ['required', 'integer', 'min:0'],
             'supervisor_name' => ['nullable', 'string', 'max:255'],
-            'collaborators' => ['nullable', 'array'],
+            'collaborators' => ['nullable', 'array', 'max:2'],
             'collaborators.*' => ['nullable', 'string', 'max:255'],
             'nurse_in_charge' => ['nullable', 'string', 'max:255'],
             'general_notes' => ['nullable', 'string', 'max:2000'],
@@ -330,6 +330,10 @@ class SupervisionReportController extends Controller
             'incidents.*.description' => ['required_with:incidents', 'string'],
             'incidents.*.action_taken' => ['nullable', 'string'],
             'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
+        ], [
+            'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+            'collaborators.*.max' => 'Nama kolaborator maksimal 255 karakter.',
+            'nurse_in_charge.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
         ]);
     }
 
@@ -343,10 +347,12 @@ class SupervisionReportController extends Controller
             $formatted = SupervisionReport::formatCollaborators($request->input('nurse_in_charge'));
         }
 
-        if ($formatted === '') {
+        $collaboratorCount = $formatted === '' ? 0 : count(explode(' | ', $formatted));
+
+        if ($collaboratorCount > 2) {
             throw ValidationException::withMessages([
-                'collaborators' => 'Minimal satu kolaborator perawat wajib dipilih.',
-                'nurse_in_charge' => 'Minimal satu kolaborator perawat wajib dipilih.',
+                'collaborators' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+                'nurse_in_charge' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             ]);
         }
 

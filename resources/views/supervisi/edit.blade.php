@@ -257,13 +257,13 @@
                                         class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                                     >
                                 </div>
-                                <button
+                                {{-- <button
                                     type="button"
                                     @click="selectHighlightedCollaborator()"
                                     class="inline-flex items-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition shadow-2xs shrink-0 cursor-pointer"
                                 >
                                     + Tambah Kolaborator
-                                </button>
+                                </button> --}}
                             </div>
 
                             <!-- Collaborators Dropdown Result List -->
@@ -309,7 +309,7 @@
                                     <span x-text="collab"></span>
                                     <button
                                         type="button"
-                                        @click="removeCollaborator(cIndex)"
+                                        @click.stop="removeCollaborator(cIndex)"
                                         class="text-teal-600 hover:text-rose-600 focus:outline-none cursor-pointer"
                                         :aria-label="'Hapus kolaborator ' + collab"
                                     >
@@ -320,6 +320,12 @@
                         </div>
 
                         <p x-show="collaboratorError" x-cloak class="text-xs text-rose-600 mt-1.5 font-medium" x-text="collaboratorError"></p>
+                        @error('collaborators')
+                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
+                        @error('nurse_in_charge')
+                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -684,14 +690,17 @@
                         this.collaboratorError = `"${value}" sudah ada dalam daftar kolaborator.`;
                         return;
                     }
+                    if (this.collaborators.length >= 2) {
+                        this.collaboratorError = 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.';
+                        this.collaboratorSearch = '';
+                        this.isCollaboratorOpen = false;
+                        return;
+                    }
                     this.collaborators.push(value);
                     this.collaboratorSearch = '';
                     this.collaboratorError = '';
                     this.isCollaboratorOpen = false;
                     this.collaboratorHighlightIndex = 0;
-                    this.$nextTick(() => {
-                        this.$refs.collaboratorSearchInput?.focus();
-                    });
                 },
 
                 selectHighlightedCollaborator() {
@@ -712,9 +721,8 @@
 
                 removeCollaborator(index) {
                     this.collaborators.splice(index, 1);
-                    this.$nextTick(() => {
-                        this.$refs.collaboratorSearchInput?.focus();
-                    });
+                    this.collaboratorError = '';
+                    this.isCollaboratorOpen = false;
                 },
 
                 openModal() {
@@ -795,7 +803,7 @@
                 },
 
                 submitForm(event) {
-                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '') {
+                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '' && this.collaborators.length < 2) {
                         const found = this.filteredNurses.find(n => !this.collaborators.includes(n.name));
                         if (found) {
                             this.addCollaboratorDirect(found.name);
@@ -806,8 +814,8 @@
                         document.getElementById('room_search_input')?.focus();
                         return;
                     }
-                    if (this.collaborators.length === 0) {
-                        this.collaboratorError = 'Minimal satu kolaborator wajib dipilih.';
+                    if (this.collaborators.length > 2) {
+                        this.collaboratorError = 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.';
                         this.$refs.collaboratorSearchInput?.focus();
                         return;
                     }

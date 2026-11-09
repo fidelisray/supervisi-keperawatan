@@ -109,11 +109,13 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-2 px-3 py-1">
                     <span class="text-slate-400 font-bold uppercase tracking-wider shrink-0">Kolaborator:</span>
-                    @foreach($report->collaboratorList() as $collabName)
+                    @forelse($report->collaboratorList() as $collabName)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-900 border border-teal-200 font-semibold">
                             {{ $collabName }}
                         </span>
-                    @endforeach
+                    @empty
+                        <span class="text-slate-500 italic">Tanpa kolaborator</span>
+                    @endforelse
                 </div>
             </div>
 

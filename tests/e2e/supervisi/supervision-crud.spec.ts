@@ -13,19 +13,34 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await roomInput.fill('FRANSISKUS');
     await roomInput.press('Enter');
 
-    // 2. Tambah Kolaborator Perawat
+    // 2. Tambah Kolaborator Perawat (uji batas maksimal 2 & hapus chip tanpa membuka dropdown)
     const collabInput = page.locator('input#collaborator_search_input');
+    const collabDropdownOption = page.locator('button[x-on\\:click^="addCollaboratorDirect"], button[\\@click^="addCollaboratorDirect"]').first();
+
+    // Tambah kolaborator ke-1
     await collabInput.click();
     await collabInput.fill('Cicilia');
-    // Tekan tombol Tambah Kolaborator atau Enter
-    const addCollabBtn = page.getByRole('button', { name: /\+ Tambah Kolaborator/i });
-    await addCollabBtn.click();
-
-    // Verifikasi kolaborator berhasil ditambahkan (1 dipilih)
+    await collabInput.press('Enter');
     await expect(page.getByText('1 dipilih')).toBeVisible();
 
-    // Tutup dropdown kolaborator jika masih aktif
-    await page.keyboard.press('Escape');
+    // Tambah kolaborator ke-2
+    await collabInput.click();
+    await collabInput.fill('Anastasia');
+    await collabInput.press('Enter');
+    await expect(page.getByText('2 dipilih')).toBeVisible();
+
+    // Coba tambah kolaborator ke-3 -> harus ditolak dengan pesan peringatan & tetap 2 dipilih
+    await collabInput.click();
+    await collabInput.fill('Florentina');
+    await collabInput.press('Enter');
+    await expect(page.getByText('Maksimal hanya 2 kolaborator yang dapat ditambahkan.')).toBeVisible();
+    await expect(page.getByText('2 dipilih')).toBeVisible();
+
+    // Hapus salah satu chip kolaborator dengan klik tombol "x" -> dropdown tidak boleh terbuka otomatis
+    const removeChipBtn = page.locator('button[aria-label^="Hapus kolaborator"]').first();
+    await removeChipBtn.click();
+    await expect(page.getByText('1 dipilih')).toBeVisible();
+    await expect(collabDropdownOption).toBeHidden();
 
     // 3. Tambahkan Butir Kejadian / Masalah via Modal
     const openModalBtn = page.getByRole('button', { name: /Tambah Kejadian Baru|\+ Tambah Kejadian/i }).first();

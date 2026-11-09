@@ -214,13 +214,97 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
     expect($latestIncident->fresh()->status)->toBe('escalated');
 });
 
-test('store requires mandatory room and at least one collaborator', function () {
+test('store requires mandatory room, date, patient count, and nurse count while collaborators are optional', function () {
     $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
         'report_date' => '',
         'room_name' => '',
     ]);
 
     $response->assertSessionHasErrors(['report_date', 'room_name', 'patient_count', 'nurse_count']);
+    $response->assertSessionDoesntHaveErrors(['collaborators', 'nurse_in_charge']);
+});
+
+test('can store and update supervision report without any collaborators and display tanpa kolaborator on detail page', function () {
+    $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 8,
+        'nurse_count' => 2,
+        'collaborators' => [],
+        'nurse_in_charge' => '',
+        'general_notes' => 'Supervisi mandiri tanpa kolaborator.',
+    ]);
+
+    $report = SupervisionReport::where('general_notes', 'Supervisi mandiri tanpa kolaborator.')->first();
+    expect($report)->not->toBeNull()
+        ->and($report->nurse_in_charge)->toBe('')
+        ->and($report->collaboratorList())->toBe([]);
+
+    $response->assertRedirect(route('supervisi.show', $report));
+
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful()
+        ->assertSee('Tanpa kolaborator');
+
+    // Update report also works with zero collaborators
+    $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 9,
+        'nurse_count' => 3,
+        'collaborators' => [],
+        'nurse_in_charge' => '',
+        'general_notes' => 'Diperbarui tetap tanpa kolaborator.',
+    ]);
+
+    $updateResponse->assertRedirect(route('supervisi.show', $report));
+    expect($report->fresh()->collaboratorList())->toBe([]);
+});
+
+test('rejects storing or updating supervision report with more than 2 collaborators', function () {
+    $storeResponse = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'collaborators' => [
+            'Anastasia Naning Sudiar, S.Kep.Ners',
+            'Cicilia Rumini, S.Kep.Ners',
+            'Florentina Hardini, S.Kep.Ners',
+        ],
+    ]);
+
+    $storeResponse->assertSessionHasErrors([
+        'collaborators' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+    ]);
+
+    $report = SupervisionReport::create([
+        'report_date' => '2026-11-09',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'status' => 'submitted',
+    ]);
+
+    $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'collaborators' => [
+            'Anastasia Naning Sudiar, S.Kep.Ners',
+            'Cicilia Rumini, S.Kep.Ners',
+            'Florentina Hardini, S.Kep.Ners',
+        ],
+    ]);
+
+    $updateResponse->assertSessionHasErrors([
+        'collaborators' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+    ]);
 });
 
 test('application timezone is configured to Asia/Jakarta', function () {
