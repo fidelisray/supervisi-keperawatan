@@ -30,8 +30,7 @@
                     @endif
                 </div>
                 <p class="text-sm text-slate-600 mt-0.5 print:text-xs">
-                    {{-- Rekapitulasi distribusi masalah, status penyelesaian tindak lanjut, dan frekuensi kejadian per ruangan. --}}
-                    Rekapitulasi distribusi masalah, tren laporan harian, dan frekuensi kejadian per ruangan.
+                    Rekapitulasi distribusi masalah, status penyelesaian tindak lanjut, dan frekuensi kejadian per ruangan.
                 </p>
                 <p class="hidden print:block text-xs text-slate-500 mt-1 font-mono">
                     Dicetak pada: {{ now()->translatedFormat('d F Y, H:i') }} WIB &middot; RS St. Elisabeth Semarang
@@ -120,8 +119,7 @@
                 </div>
 
                 <!-- Filter Kategori Insiden -->
-                {{-- <div class="sm:col-span-1 lg:col-span-2"> --}}
-                <div class="sm:col-span-1 lg:col-span-3">
+                <div class="sm:col-span-1 lg:col-span-2">
                     <label for="category_id" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Kategori Masalah</label>
                     <select id="category_id" name="category_id" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
                         <option value="">Semua Kategori</option>
@@ -133,7 +131,6 @@
                     </select>
                 </div>
 
-                {{--
                 <!-- Filter Status Penanganan -->
                 <div class="sm:col-span-1 lg:col-span-2">
                     <label for="status" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Status Tindak Lanjut</label>
@@ -144,7 +141,6 @@
                         <option value="escalated" {{ $selectedStatus === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi</option>
                     </select>
                 </div>
-                --}}
 
                 <!-- Rentang Tanggal -->
                 <div class="sm:col-span-1 lg:col-span-2">
@@ -170,8 +166,7 @@
                 </div>
 
                 <!-- Tombol Aksi Terapkan -->
-                {{-- <div class="sm:col-span-2 lg:col-span-1"> --}}
-                <div class="sm:col-span-2 lg:col-span-2">
+                <div class="sm:col-span-2 lg:col-span-1">
                     <button 
                         type="submit" 
                         class="w-full h-[38px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition cursor-pointer shadow-xs whitespace-nowrap"
@@ -183,8 +178,7 @@
         </div>
 
         <!-- Top Summary KPIs -->
-        {{-- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Total Laporan -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
@@ -213,7 +207,6 @@
                 </div>
             </div>
 
-            {{--
             <!-- Tingkat Penyelesaian -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
@@ -241,14 +234,12 @@
                     </svg>
                 </div>
             </div>
-            --}}
         </div>
 
         <!-- Section 1: Distribusi Proporsi (Kategori & Status Masalah) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <!-- Donut Chart: Proporsi Kategori Masalah -->
-            {{-- <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 space-y-4"> --}}
-            <div class="lg:col-span-12 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 space-y-4">
+            <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
                         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900">
@@ -295,7 +286,6 @@
                 @endif
             </div>
 
-            {{--
             <!-- Doughnut Chart: Status Penanganan -->
             <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -340,7 +330,6 @@
                     </div>
                 @endif
             </div>
-            --}}
         </div>
 
         <!-- Section 2: Tren Waktu Harian (Line / Area Chart) -->
@@ -407,12 +396,10 @@
                         <span class="w-3 h-3 rounded-xs bg-rose-500 inline-block"></span>
                         Complain
                     </span>
-                    {{--
                     <span class="inline-flex items-center gap-1.5 font-medium">
                         <span class="w-3 h-3 rounded-xs bg-emerald-500 inline-block"></span>
                         Selesai
                     </span>
-                    --}}
                 </div>
             </div>
 
@@ -438,8 +425,8 @@
                                 <th class="px-4 py-3 text-center">Logbook</th>
                                 <th class="px-4 py-3 text-center">Total Insiden</th>
                                 <th class="px-4 py-3 text-center">Complain</th>
-                                {{-- <th class="px-4 py-3 text-center">Selesai</th> --}}
-                                {{-- <th class="px-4 py-3 text-center">Tindak Lanjut</th> --}}
+                                <th class="px-4 py-3 text-center">Selesai</th>
+                                <th class="px-4 py-3 text-center">Tindak Lanjut</th>
                                 <th class="px-4 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
@@ -453,8 +440,8 @@
                                     <td class="px-4 py-3.5 text-center font-mono">{{ $roomStat['reports_count'] }}</td>
                                     <td class="px-4 py-3.5 text-center font-mono font-bold text-slate-900">{{ $roomStat['incidents_count'] }}</td>
                                     <td class="px-4 py-3.5 text-center font-mono text-rose-600 font-semibold">{{ $roomStat['complain_count'] }}</td>
-                                    {{-- <td class="px-4 py-3.5 text-center font-mono text-emerald-600 font-semibold">{{ $roomStat['resolved_count'] }}</td> --}}
-                                    {{-- <td class="px-4 py-3.5 text-center font-mono text-amber-600 font-semibold">{{ $roomStat['pending_count'] }}</td> --}}
+                                    <td class="px-4 py-3.5 text-center font-mono text-emerald-600 font-semibold">{{ $roomStat['resolved_count'] }}</td>
+                                    <td class="px-4 py-3.5 text-center font-mono text-amber-600 font-semibold">{{ $roomStat['pending_count'] }}</td>
                                     <td class="px-4 py-3.5 text-right">
                                         <button 
                                             type="button"
@@ -556,7 +543,6 @@
                                                     :class="item.category_badge"
                                                     x-text="item.category_name"
                                                 ></span>
-                                                {{--
                                                 <span 
                                                     class="text-[11px] font-mono font-bold px-2 py-0.5 rounded"
                                                     :class="{
@@ -566,7 +552,6 @@
                                                     }"
                                                     x-text="item.status_label"
                                                 ></span>
-                                                --}}
                                             </div>
 
                                             <div>
@@ -756,7 +741,7 @@
                 init() {
                     this.$nextTick(() => {
                         this.initCategoryChart();
-                        // this.initStatusChart();
+                        this.initStatusChart();
                         this.initTrendChart();
                         this.initRoomChart();
                     });
@@ -972,14 +957,12 @@
                                     backgroundColor: '#f43f5e',
                                     borderRadius: 4
                                 },
-                                /*
                                 {
                                     label: 'Selesai Ditangani',
                                     data: rooms.resolved,
                                     backgroundColor: '#10b981',
                                     borderRadius: 4
                                 }
-                                */
                             ]
                         },
                         options: {

@@ -9,11 +9,11 @@ test.describe('Analisis & Grafik Supervisi Keperawatan', () => {
     // 1. Verifikasi Header & Indikator Halaman
     await expect(page.getByRole('heading', { name: /Analisis & Grafik Kejadian Ruangan/i })).toBeVisible();
 
-    // 2. Verifikasi Kartu Metrik Ringkasan Eksekutif
+    // 2. Verifikasi 4 Kartu Metrik Ringkasan Eksekutif
     await expect(page.getByText('Total Logbook')).toBeVisible();
     await expect(page.getByText('Total Butir Insiden')).toBeVisible();
-    // await expect(page.getByText('Tingkat Penyelesaian')).toBeVisible();
-    // await expect(page.getByText('Perlu Tindak Lanjut')).toBeVisible();
+    await expect(page.getByText('Tingkat Penyelesaian')).toBeVisible();
+    await expect(page.getByText('Perlu Tindak Lanjut')).toBeVisible();
 
     // 3. Verifikasi Filter Controls
     await expect(page.getByRole('combobox', { name: /Ruangan \/ Bangsal/i })).toBeVisible();

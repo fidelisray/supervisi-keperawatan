@@ -29,7 +29,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{supervisionReport}/pdf', [SupervisionReportController::class, 'exportPdf'])->name('pdf');
         Route::get('/{supervisionReport}/edit', [SupervisionReportController::class, 'edit'])->name('edit');
         Route::put('/{supervisionReport}', [SupervisionReportController::class, 'update'])->name('update');
-        // Route::patch('/{supervisionReport}/incidents/{incident}', [SupervisionReportController::class, 'updateIncidentStatus'])->name('incidents.update-status');
+        Route::patch('/{supervisionReport}/incidents/{incident}', [SupervisionReportController::class, 'updateIncidentStatus'])->name('incidents.update-status');
     });
 
     Route::prefix('admin')->name('admin.')->middleware(EnsureUserIsAdmin::class)->group(function () {

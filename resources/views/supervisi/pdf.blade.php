@@ -405,11 +405,9 @@
                 <tr>
                     <th style="width: 5%; text-align: center;">No</th>
                     <th style="width: 22%;">Kategori &amp; Waktu</th>
-                    {{-- <th style="width: 34%;">Uraian Masalah / Kronologi</th> --}}
-                    {{-- <th style="width: 25%;">Tindak Lanjut &amp; Penanganan</th> --}}
-                    {{-- <th style="width: 14%; text-align: center;">Status</th> --}}
-                    <th style="width: 42%;">Uraian Masalah / Kronologi</th>
-                    <th style="width: 31%;">Tindak Lanjut &amp; Penanganan</th>
+                    <th style="width: 34%;">Uraian Masalah / Kronologi</th>
+                    <th style="width: 25%;">Tindak Lanjut &amp; Penanganan</th>
+                    <th style="width: 14%; text-align: center;">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -426,7 +424,6 @@
                         </td>
                         <td style="white-space: pre-line;">{{ $incident->description }}</td>
                         <td style="white-space: pre-line;">{{ $incident->action_taken ?: '-' }}</td>
-                        {{--
                         <td style="text-align: center;">
                             @if ($incident->status === 'resolved')
                                 <span class="status-badge status-resolved">Selesai</span>
@@ -436,7 +433,6 @@
                                 <span class="status-badge status-in-progress">Sedang Ditangani</span>
                             @endif
                         </td>
-                        --}}
                     </tr>
                 @endforeach
             </tbody>

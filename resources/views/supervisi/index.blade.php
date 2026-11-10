@@ -59,9 +59,8 @@
             </div>
         </div>
 
-        <!-- Statistics Metrics Cards -->
-        {{-- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- 4 Statistics Metrics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
                 <div class="flex items-center justify-between">
                     <div>
@@ -107,7 +106,6 @@
                 </div>
             </div>
 
-            {{--
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
                 <div class="flex items-center justify-between">
                     <div>
@@ -122,7 +120,6 @@
                     </div>
                 </div>
             </div>
-            --}}
         </div>
 
         <!-- Filter Bar -->

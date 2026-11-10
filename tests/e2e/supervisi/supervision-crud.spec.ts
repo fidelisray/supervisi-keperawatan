@@ -88,7 +88,6 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await expect(page.getByText('FRANSISKUS')).toBeVisible();
     await expect(page.getByText('[E2E-TEST] Lampu ruang tindakan perlu penggantian.')).toBeVisible();
 
-    /*
     // 7. Update Status Insiden: Transisi dari Sedang Ditangani -> Selesai Ditangani
     const updateStatusBtn = page.getByRole('button', { name: /Update Tindak Lanjut/i });
     await updateStatusBtn.scrollIntoViewIfNeeded();
@@ -103,7 +102,6 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
 
     // Verifikasi badge status berubah menjadi Selesai
     await expect(page.getByText(/Selesai/i).first()).toBeVisible();
-    */
 
     // 8. Verifikasi Navigation Blocking pada halaman Edit Logbook (/supervisi/{id}/edit)
     const editLogbookLink = page.getByRole('link', { name: /Edit Logbook/i });

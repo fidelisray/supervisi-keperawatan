@@ -60,8 +60,7 @@ return new class extends Migration
                 $table->string('incident_time')->nullable();
                 $table->text('description');
                 $table->text('action_taken')->nullable();
-                // $table->string('status')->default('in_progress');
-                $table->string('status')->nullable();
+                $table->string('status')->default('in_progress');
                 $table->timestamps();
 
                 $table->index(['supervision_report_id', 'category']);
@@ -88,8 +87,7 @@ return new class extends Migration
                 $table->string('incident_time')->nullable();
                 $table->text('description');
                 $table->text('action_taken')->nullable();
-                // $table->string('status')->default('in_progress');
-                $table->string('status')->nullable();
+                $table->string('status')->default('in_progress');
                 $table->timestamps();
 
                 $table->index(['supervision_report_id', 'category']);

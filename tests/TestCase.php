@@ -340,8 +340,7 @@ abstract class TestCase extends BaseTestCase
                 $table->string('incident_time')->nullable();
                 $table->text('description');
                 $table->text('action_taken')->nullable();
-                // $table->string('status')->default('in_progress');
-                $table->string('status')->nullable();
+                $table->string('status')->default('in_progress');
                 $table->timestamps();
             });
         }

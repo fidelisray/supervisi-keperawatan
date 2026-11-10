@@ -163,7 +163,6 @@
                                         @endif
                                     </div>
 
-                                    {{--
                                     <div class="flex items-center gap-2">
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold
                                             @if($incident->status === 'resolved') bg-emerald-50 text-emerald-700 border border-emerald-200
@@ -174,7 +173,7 @@
                                             {{ $incident->status === 'resolved' ? 'Selesai' : ($incident->status === 'escalated' ? 'Butuh Eskalasi' : 'Sedang Ditangani') }}
                                         </span>
 
-                                        [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user()))
+                                        {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
                                         @if(auth()->user()?->hasPermission('update_incident_status'))
                                             <button
                                                 type="button"
@@ -185,7 +184,6 @@
                                             </button>
                                         @endif
                                     </div>
-                                    --}}
                                 </div>
 
                                 <div class="pl-8 space-y-3">
@@ -210,8 +208,7 @@
                                         </div>
                                     @endif
 
-                                    {{--
-                                    [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user()))
+                                    {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
                                     @if(auth()->user()?->hasPermission('update_incident_status'))
                                         <!-- Inline Follow-up Status Update Form -->
                                         <div x-show="openStatusUpdate" x-cloak class="p-4 rounded-xl bg-slate-50 border border-slate-200">
@@ -246,7 +243,6 @@
                                             </form>
                                         </div>
                                     @endif
-                                    --}}
                                 </div>
                             </div>
                         @endforeach

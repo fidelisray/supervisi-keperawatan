@@ -53,7 +53,7 @@ test('analytics page renders incident distribution and charts scoped to creator,
     $response->assertSee('Analisis &amp; Grafik Kejadian Ruangan', false);
     $response->assertSee('Cakupan: Logbook Saya &amp; Kolaborator', false);
     $response->assertSee('Distribusi Kategori Masalah');
-    // $response->assertSee('Status Tindak Lanjut Insiden');
+    $response->assertSee('Status Tindak Lanjut Insiden');
     $response->assertSee('Tren Kejadian &amp; Laporan Logbook Harian', false);
     $response->assertSee('Frekuensi Insiden &amp; Rekap per Ruangan / Bangsal', false);
     $response->assertSee('FRANSISKUS');
@@ -127,13 +127,11 @@ test('analytics page correctly applies room and status filters', function () {
     $resRoom->assertSee('FRANSISKUS');
     $resRoom->assertDontSee('TERESIA');
 
-    /*
     // Filter by status=resolved
     $resStatus = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['status' => 'resolved']));
     $resStatus->assertSuccessful();
     $resStatus->assertSee('FRANSISKUS');
     $resStatus->assertDontSee('TERESIA');
-    */
 });
 
 test('analytics drilldown endpoint returns json incident list scoped to user', function () {

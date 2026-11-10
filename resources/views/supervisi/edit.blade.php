@@ -19,7 +19,7 @@
             'incident_time' => $inc->incident_time ?? '',
             'description' => $inc->description,
             'action_taken' => $inc->action_taken ?? '',
-            // 'status' => $inc->status,
+            'status' => $inc->status,
         ])->values()->all());
         $categoryMeta = $incidentCategories->mapWithKeys(fn ($cat) => [
             $cat->id => [
@@ -380,13 +380,11 @@
                                             </span>
                                         </template>
 
-                                        {{-- Status Badge (Dinonaktifkan sementara)
                                         <span 
                                             class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold"
                                             :class="getStatusStyle(item.status)"
                                             x-text="getStatusLabel(item.status)"
                                         ></span>
-                                        --}}
                                     </div>
 
                                     <div>
@@ -432,7 +430,7 @@
                                 <input type="hidden" :name="'incidents[' + index + '][incident_time]'" :value="item.incident_time">
                                 <input type="hidden" :name="'incidents[' + index + '][description]'" :value="item.description">
                                 <input type="hidden" :name="'incidents[' + index + '][action_taken]'" :value="item.action_taken">
-                                {{-- <input type="hidden" :name="'incidents[' + index + '][status]'" :value="item.status"> --}}
+                                <input type="hidden" :name="'incidents[' + index + '][status]'" :value="item.status">
                             </div>
                         </template>
                     </div>
@@ -526,13 +524,11 @@
                                 <p class="text-[11px] text-slate-500 mt-1.5" x-show="getCategoryDescription(modalData.category)" x-text="getCategoryDescription(modalData.category)"></p>
                             </div>
 
-                            {{-- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"> --}}
-                            <div class="grid grid-cols-1 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Perkiraan Jam Kejadian</label>
                                     <input type="time" x-model="modalData.incident_time" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
                                 </div>
-                                {{-- Status Penanganan (Dinonaktifkan sementara)
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Status Penanganan</label>
                                     <select x-model="modalData.status" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
@@ -541,7 +537,6 @@
                                         <option value="escalated">Perlu Eskalasi Supervisor</option>
                                     </select>
                                 </div>
-                                --}}
                             </div>
 
                             <div>
@@ -673,7 +668,7 @@
                     incident_time: '',
                     description: '',
                     action_taken: '',
-                    // status: 'in_progress'
+                    status: 'in_progress'
                 },
 
                 initialStateSnapshot: '',
@@ -936,7 +931,7 @@
                         incident_time: `${hours}:${minutes}`,
                         description: '',
                         action_taken: '',
-                        // status: 'in_progress'
+                        status: 'in_progress'
                     };
                     this.showIncidentModal = true;
                 },
@@ -984,7 +979,6 @@
                     return categoryMeta[catId]?.style || 'bg-slate-100 text-slate-800 border border-slate-300';
                 },
 
-                /*
                 getStatusLabel(status) {
                     const labels = {
                         'in_progress': 'Sedang Ditangani',
@@ -1002,7 +996,6 @@
                     };
                     return styles[status] || styles['in_progress'];
                 },
-                */
 
                 submitForm(event) {
                     // if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '' && this.collaborators.length < 2) {
