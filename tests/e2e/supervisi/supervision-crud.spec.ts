@@ -42,7 +42,7 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await expect(collabDropdownOption).toBeHidden();
 
     // 3. Tambahkan Butir Kejadian / Masalah via Modal
-    const openModalBtn = page.getByRole('button', { name: /Tambah Kejadian Baru|\+ Tambah Kejadian/i }).first();
+    const openModalBtn = page.getByRole('button', { name: /Tambah Kejadian Baru|Tambah Kejadian/i }).first();
     await openModalBtn.click({ force: true });
 
     const modalHeading = page.getByRole('heading', { name: /Tambah Kejadian Ruangan/i });

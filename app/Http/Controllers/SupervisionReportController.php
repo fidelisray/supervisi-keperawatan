@@ -199,10 +199,7 @@ class SupervisionReportController extends Controller
 
         $supervisionReport->load(['incidents.incidentCategory']);
 
-        $logoPath = resource_path('images/web-icon.webp');
-        $logoBase64 = is_file($logoPath)
-            ? 'data:image/webp;base64,'.base64_encode((string) file_get_contents($logoPath))
-            : null;
+        $logoBase64 = $this->resolvePdfLogo();
 
         $pdf = Pdf::loadView('supervisi.pdf', [
             'report' => $supervisionReport,
@@ -435,5 +432,42 @@ class SupervisionReportController extends Controller
             $currentHour >= 14 && $currentHour < 21 => 'siang/sore',
             default => 'malam',
         };
+    }
+
+    private function resolvePdfLogo(): ?string
+    {
+        $logoPath = resource_path('images/web-icon.webp');
+
+        if (! is_file($logoPath)) {
+            return null;
+        }
+
+        $cacheDir = storage_path('framework/cache');
+        if (! is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+
+        $cacheFile = $cacheDir.'/pdf-logo-web-icon.png';
+
+        if (! file_exists($cacheFile) || filemtime($cacheFile) < filemtime($logoPath)) {
+            $src = @imagecreatefromwebp($logoPath);
+            if ($src) {
+                $w = imagesx($src);
+                $h = imagesy($src);
+                $targetW = 200;
+                $targetH = (int) round(($h / max($w, 1)) * $targetW);
+                $thumb = imagecreatetruecolor($targetW, $targetH);
+                imagealphablending($thumb, false);
+                imagesavealpha($thumb, true);
+                imagecopyresampled($thumb, $src, 0, 0, 0, 0, $targetW, $targetH, $w, $h);
+                imagepng($thumb, $cacheFile);
+            }
+        }
+
+        if (file_exists($cacheFile)) {
+            return 'data:image/png;base64,'.base64_encode((string) file_get_contents($cacheFile));
+        }
+
+        return 'data:image/webp;base64,'.base64_encode((string) file_get_contents($logoPath));
     }
 }

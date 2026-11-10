@@ -352,7 +352,7 @@
                         @click="openModal()"
                         class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer"
                     >
-                        + Tambah Kejadian
+                        Tambah Kejadian
                     </button>
                 </div>
 
