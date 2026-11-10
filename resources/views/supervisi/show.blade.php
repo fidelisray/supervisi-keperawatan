@@ -48,16 +48,17 @@
                     </a>
                 @endif
 
-                <button 
-                    type="button" 
-                    onclick="window.print()" 
+                <a 
+                    href="{{ route('supervisi.pdf', $report) }}" 
+                    target="_blank"
+                    rel="noopener noreferrer"
                     class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs cursor-pointer"
                 >
                     <svg class="w-4 h-4 mr-1.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
                     Cetak Laporan
-                </button>
+                </a>
 
                 @if(auth()->user()?->hasPermission('create_report'))
                     <a 
@@ -107,9 +108,14 @@
                     <span class="text-slate-400 font-bold uppercase tracking-wider shrink-0">Supervisor Pengawas:</span>
                     <span class="font-bold text-slate-900">{{ $report->supervisor_name }}</span>
                 </div>
+                @php
+                    $collaborators = $report->nurse_in_charge ?? [];
+                @endphp
                 <div class="flex flex-wrap items-center gap-2 px-3 py-1">
-                    <span class="text-slate-400 font-bold uppercase tracking-wider shrink-0">Kolaborator:</span>
-                    @forelse($report->collaboratorList() as $collabName)
+                    <span class="text-slate-400 font-bold uppercase tracking-wider shrink-0">
+                        {{ count($collaborators) > 0 ? 'Kolaborator ('.count($collaborators).'):' : 'Kolaborator:' }}
+                    </span>
+                    @forelse($collaborators as $collabName)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-900 border border-teal-200 font-semibold">
                             {{ $collabName }}
                         </span>

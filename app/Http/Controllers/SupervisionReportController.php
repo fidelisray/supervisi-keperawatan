@@ -7,6 +7,7 @@ use App\Models\Incident;
 use App\Models\IncidentCategory;
 use App\Models\Room;
 use App\Models\SupervisionReport;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class SupervisionReportController extends Controller
 {
@@ -186,6 +188,35 @@ class SupervisionReportController extends Controller
         return view('supervisi.show', [
             'report' => $supervisionReport,
         ]);
+    }
+
+    /**
+     * Generate and stream a formal A4 PDF document for the specified supervision report.
+     */
+    public function exportPdf(Request $request, SupervisionReport $supervisionReport): Response
+    {
+        abort_unless($supervisionReport->isAccessibleBy($request->user()), 403);
+
+        $supervisionReport->load(['incidents.incidentCategory']);
+
+        $logoPath = resource_path('images/logo.png');
+        $logoBase64 = is_file($logoPath)
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            : null;
+
+        $pdf = Pdf::loadView('supervisi.pdf', [
+            'report' => $supervisionReport,
+            'logoBase64' => $logoBase64,
+            'printedAt' => now(),
+            'printedBy' => $request->user()?->name ?: '-',
+        ])->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'Laporan-Supervisi-RPT-%s.pdf',
+            str_pad((string) $supervisionReport->id, 5, '0', STR_PAD_LEFT)
+        );
+
+        return $pdf->stream($filename);
     }
 
     /**

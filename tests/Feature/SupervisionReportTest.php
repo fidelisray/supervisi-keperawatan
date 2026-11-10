@@ -458,3 +458,42 @@ test('supervision index supports quick date presets and renders reset semua filt
         ->assertSee('15/10/2026')
         ->assertDontSee('09/11/2026');
 });
+
+test('authorized user can stream supervision report pdf while unauthorized user receives 403', function () {
+    $report = SupervisionReport::create([
+        'report_date' => '2026-11-10',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 14,
+        'nurse_count' => 4,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners', 'Agustina Sri Wahyuni, S.Kep.Ners'],
+        'general_notes' => 'Handover berjalan lancar dan dokumentasi lengkap.',
+        'status' => 'submitted',
+    ]);
+
+    $report->incidents()->create([
+        'category' => 1,
+        'incident_time' => '09:15',
+        'description' => 'Keluarga pasien menanyakan jadwal visite dokter.',
+        'action_taken' => 'Koordinasi dengan DPJP dan edukasi keluarga.',
+        'status' => 'resolved',
+    ]);
+
+    // 1. Halaman detail menampilkan tombol Cetak Laporan berupa link ke route supervisi.pdf (bukan window.print)
+    $showResponse = $this->actingAs($this->supervisor)->get(route('supervisi.show', $report));
+    $showResponse->assertSuccessful()
+        ->assertSee(route('supervisi.pdf', $report), false)
+        ->assertDontSee('window.print()', false);
+
+    // 2. Endpoint PDF mengembalikan binary PDF yang valid untuk supervisor pembuat
+    $pdfResponse = $this->actingAs($this->supervisor)->get(route('supervisi.pdf', $report));
+    $pdfResponse->assertSuccessful();
+    expect($pdfResponse->headers->get('Content-Type'))->toContain('application/pdf');
+    expect($pdfResponse->getContent())->toStartWith('%PDF-');
+
+    // 3. Supervisor lain yang tidak terlibat ditolak dengan 403 Forbidden
+    $this->actingAs($this->otherSupervisor)
+        ->get(route('supervisi.pdf', $report))
+        ->assertForbidden();
+});

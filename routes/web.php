@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/create', [SupervisionReportController::class, 'create'])->name('create');
         Route::post('/', [SupervisionReportController::class, 'store'])->name('store');
         Route::get('/{supervisionReport}', [SupervisionReportController::class, 'show'])->name('show');
+        Route::get('/{supervisionReport}/pdf', [SupervisionReportController::class, 'exportPdf'])->name('pdf');
         Route::get('/{supervisionReport}/edit', [SupervisionReportController::class, 'edit'])->name('edit');
         Route::put('/{supervisionReport}', [SupervisionReportController::class, 'update'])->name('update');
         Route::patch('/{supervisionReport}/incidents/{incident}', [SupervisionReportController::class, 'updateIncidentStatus'])->name('incidents.update-status');

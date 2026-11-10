@@ -119,5 +119,18 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     // Klik "Tinggalkan Tanpa Menyimpan" -> berpindah kembali ke halaman detail
     await page.getByRole('button', { name: /Tinggalkan Tanpa Menyimpan/i }).click();
     await expect(page).toHaveURL(/.*supervisi\/\d+$/);
+
+    // 9. Verifikasi tombol "Cetak Laporan" mengarah ke endpoint PDF dan menghasilkan dokumen application/pdf
+    const cetakLaporanLink = page.getByRole('link', { name: /Cetak Laporan/i });
+    await expect(cetakLaporanLink).toBeVisible();
+    await expect(cetakLaporanLink).toHaveAttribute('target', '_blank');
+    const pdfHref = await cetakLaporanLink.getAttribute('href');
+    expect(pdfHref).toMatch(/\/supervisi\/\d+\/pdf$/);
+
+    const pdfResponse = await page.request.get(pdfHref!);
+    expect(pdfResponse.status()).toBe(200);
+    expect(pdfResponse.headers()['content-type']).toContain('application/pdf');
+    const pdfBody = await pdfResponse.body();
+    expect(pdfBody.subarray(0, 5).toString()).toBe('%PDF-');
   });
 });
