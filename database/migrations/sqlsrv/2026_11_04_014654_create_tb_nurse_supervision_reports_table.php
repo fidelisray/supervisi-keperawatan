@@ -27,7 +27,8 @@ return new class extends Migration
                 $table->unsignedInteger('patient_count')->default(0);
                 $table->unsignedInteger('nurse_count')->default(0);
                 $table->string('supervisor_name');
-                $table->string('nurse_in_charge');
+                // $table->string('nurse_in_charge');
+                $table->json('nurse_in_charge')->nullable();
                 $table->text('general_notes')->nullable();
                 $table->string('status')->default('submitted'); // draft, submitted, verified
                 $table->timestamps();
@@ -45,4 +46,3 @@ return new class extends Migration
         Schema::connection('sqlsrv')->dropIfExists('tb_nurse_supervision_reports');
     }
 };
-

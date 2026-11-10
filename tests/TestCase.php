@@ -325,7 +325,7 @@ abstract class TestCase extends BaseTestCase
                 $table->unsignedInteger('patient_count')->default(0);
                 $table->unsignedInteger('nurse_count')->default(0);
                 $table->string('supervisor_name');
-                $table->string('nurse_in_charge');
+                $table->json('nurse_in_charge')->nullable();
                 $table->text('general_notes')->nullable();
                 $table->string('status')->default('submitted');
                 $table->timestamps();

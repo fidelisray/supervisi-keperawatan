@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,23 @@ class SupervisionReport extends Model
     }
 
     /**
+     * Cast and normalize nurse_in_charge as a JSON array of collaborator strings
+     * while remaining backward-compatible with legacy pipe-separated strings.
+     *
+     * @return Attribute<list<string>, array<int, mixed>|string|null>
+     */
+    protected function nurseInCharge(): Attribute
+    {
+        return Attribute::make(
+            get: fn (mixed $value): array => self::formatCollaborators($value),
+            set: fn (mixed $value): string => json_encode(
+                self::formatCollaborators($value),
+                JSON_UNESCAPED_UNICODE
+            ) ?: '[]',
+        );
+    }
+
+    /**
      * @return HasMany<Incident, $this>
      */
     public function incidents(): HasMany
@@ -51,47 +69,80 @@ class SupervisionReport extends Model
     }
 
     /**
-     * Parse the stored collaborator string into a clean list of collaborator names.
+     * Return the normalized list of collaborator names for this report.
      *
      * @return list<string>
      */
     public function collaboratorList(): array
     {
-        $raw = trim((string) $this->nurse_in_charge);
-
-        if ($raw === '') {
-            return [];
-        }
-
-        $parts = array_map('trim', explode('|', $raw));
-
-        return array_values(array_filter($parts, fn (string $name): bool => $name !== ''));
+        return self::formatCollaborators($this->nurse_in_charge);
     }
 
     /**
-     * Format an array or string of collaborator names for storage in nurse_in_charge.
+     * Format the collaborator list into a display string (e.g., for CSV exports or JSON responses).
+     */
+    public function collaboratorsDisplayString(string $separator = ' | ', string $emptyFallback = '-'): string
+    {
+        $list = $this->collaboratorList();
+
+        if ($list === []) {
+            return $emptyFallback;
+        }
+
+        return implode($separator, $list);
+    }
+
+    /**
+     * Normalize an array, JSON array string, or legacy pipe-separated string of collaborator names
+     * into a clean array of unique strings.
      *
      * @param  array<int, mixed>|string|null  $collaborators
+     * @return list<string>
      */
-    public static function formatCollaborators(array|string|null $collaborators): string
+    public static function formatCollaborators(array|string|null $collaborators): array
     {
         if (is_string($collaborators)) {
-            $collaborators = explode('|', $collaborators);
+            $trimmed = trim($collaborators);
+
+            if ($trimmed === '') {
+                return [];
+            }
+
+            if (str_starts_with($trimmed, '[')) {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    $collaborators = $decoded;
+                } else {
+                    $collaborators = explode('|', $trimmed);
+                }
+            } else {
+                $collaborators = explode('|', $trimmed);
+            }
         }
 
         if (! is_array($collaborators)) {
-            return '';
+            return [];
         }
 
         $cleaned = [];
         foreach ($collaborators as $item) {
+            if (is_array($item)) {
+                foreach (self::formatCollaborators($item) as $nestedName) {
+                    if (! in_array($nestedName, $cleaned, true)) {
+                        $cleaned[] = $nestedName;
+                    }
+                }
+
+                continue;
+            }
+
             $name = trim((string) $item);
             if ($name !== '' && ! in_array($name, $cleaned, true)) {
                 $cleaned[] = $name;
             }
         }
 
-        return implode(' | ', $cleaned);
+        return $cleaned;
     }
 
     /**

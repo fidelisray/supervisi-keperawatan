@@ -246,7 +246,7 @@
                         </div>
 
                         <!-- Hidden Form Inputs for Submitting Collaborators -->
-                        <input type="hidden" name="nurse_in_charge" :value="collaborators.join(' | ')">
+                        <input type="hidden" name="nurse_in_charge" :value="JSON.stringify(collaborators)">
                         <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
                             <input type="hidden" :name="'collaborators[' + cIndex + ']'" :value="collab">
                         </template>
@@ -807,12 +807,14 @@
                         this.collaboratorError = `"${value}" sudah ada dalam daftar kolaborator.`;
                         return;
                     }
+                    /*
                     if (this.collaborators.length >= 2) {
                         this.collaboratorError = 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.';
                         this.collaboratorSearch = '';
                         this.isCollaboratorOpen = false;
                         return;
                     }
+                    */
                     this.collaborators.push(value);
                     this.collaboratorSearch = '';
                     this.collaboratorError = '';
@@ -948,7 +950,8 @@
                 },
 
                 submitForm(event) {
-                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '' && this.collaborators.length < 2) {
+                    // if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '' && this.collaborators.length < 2) {
+                    if (this.collaboratorSearch && this.collaboratorSearch.trim() !== '') {
                         const found = this.filteredNurses.find(n => !this.collaborators.includes(n.name));
                         if (found) {
                             this.addCollaboratorDirect(found.name);
@@ -959,11 +962,13 @@
                         document.getElementById('room_search_input')?.focus();
                         return;
                     }
+                    /*
                     if (this.collaborators.length > 2) {
                         this.collaboratorError = 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.';
                         this.$refs.collaboratorSearchInput?.focus();
                         return;
                     }
+                    */
                     this.$nextTick(() => {
                         event.target.submit();
                     });

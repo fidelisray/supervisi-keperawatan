@@ -13,13 +13,13 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await roomInput.fill('FRANSISKUS');
     await roomInput.press('Enter');
 
-    // 2. Tambah Kolaborator Perawat (uji batas maksimal 2 & hapus chip tanpa membuka dropdown)
+    // 2. Tambah Kolaborator Perawat (tanpa batas maksimal & hapus chip tanpa membuka dropdown)
     const collabInput = page.locator('input#collaborator_search_input');
     const collabDropdownOption = page.locator('button[x-on\\:click^="addCollaboratorDirect"], button[\\@click^="addCollaboratorDirect"]').first();
 
     // Tambah kolaborator ke-1
     await collabInput.click();
-    await collabInput.fill('Cicilia');
+    await collabInput.fill('Cicilia Ismiati');
     await collabInput.press('Enter');
     await expect(page.getByText('1 dipilih')).toBeVisible();
 
@@ -29,17 +29,16 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await collabInput.press('Enter');
     await expect(page.getByText('2 dipilih')).toBeVisible();
 
-    // Coba tambah kolaborator ke-3 -> harus ditolak dengan pesan peringatan & tetap 2 dipilih
+    // Tambah kolaborator ke-3 -> berhasil ditambahkan karena tidak ada batas maksimal
     await collabInput.click();
-    await collabInput.fill('Florentina');
+    await collabInput.fill('Cicilia Rumini');
     await collabInput.press('Enter');
-    await expect(page.getByText('Maksimal hanya 2 kolaborator yang dapat ditambahkan.')).toBeVisible();
-    await expect(page.getByText('2 dipilih')).toBeVisible();
+    await expect(page.getByText('3 dipilih')).toBeVisible();
 
     // Hapus salah satu chip kolaborator dengan klik tombol "x" -> dropdown tidak boleh terbuka otomatis
     const removeChipBtn = page.locator('button[aria-label^="Hapus kolaborator"]').first();
     await removeChipBtn.click();
-    await expect(page.getByText('1 dipilih')).toBeVisible();
+    await expect(page.getByText('2 dipilih')).toBeVisible();
     await expect(collabDropdownOption).toBeHidden();
 
     // 3. Tambahkan Butir Kejadian / Masalah via Modal

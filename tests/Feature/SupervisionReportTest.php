@@ -237,7 +237,7 @@ test('can store and update supervision report without any collaborators and disp
 
     $report = SupervisionReport::where('general_notes', 'Supervisi mandiri tanpa kolaborator.')->first();
     expect($report)->not->toBeNull()
-        ->and($report->nurse_in_charge)->toBe('')
+        ->and($report->nurse_in_charge)->toBe([])
         ->and($report->collaboratorList())->toBe([]);
 
     $response->assertRedirect(route('supervisi.show', $report));
@@ -259,9 +259,12 @@ test('can store and update supervision report without any collaborators and disp
     ]);
 
     $updateResponse->assertRedirect(route('supervisi.show', $report));
-    expect($report->fresh()->collaboratorList())->toBe([]);
+    expect($report->fresh()->nurse_in_charge)->toBe([])
+        ->and($report->fresh()->collaboratorList())->toBe([]);
 });
 
+/*
+// [COLLABORATOR LIMIT TEST - Aktifkan pengujian ini jika pembatasan maksimal 2 kolaborator diberlakukan kembali]
 test('rejects storing or updating supervision report with more than 2 collaborators', function () {
     $storeResponse = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
         'report_date' => '2026-11-09',
@@ -305,6 +308,59 @@ test('rejects storing or updating supervision report with more than 2 collaborat
     $updateResponse->assertSessionHasErrors([
         'collaborators' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
     ]);
+});
+*/
+
+test('can store and update supervision report with unlimited collaborators as a string array exceeding 255 characters', function () {
+    $manyCollaborators = [
+        'Anastasia Naning Sudiar, S.Kep.Ners',
+        'Christina Kristiani, S.Kep.Ners',
+        'Cicilia Ismiati, S.Kep.Ners',
+        'Cicilia Rumini, S.Kep.Ners',
+        'Cicilia Sri Ningsih, S.Kep.Ners',
+        'Clara Asih, S.Kep.Ners',
+        'Dwi Nur Nopiyanti, S.Kep.Ners',
+        'Desy Indra Purwaningsih, AMK',
+        'Erma Rahmayanti Nilawati, S.Kep.Ners',
+        'Ester Widya Febrianti, S.Tr.Keb, Bdn',
+        'Fajar Wahyu Dwi Astuti, S.Kep.Ners',
+        'Florentina Hardini, S.Kep.Ners',
+    ];
+
+    $storeResponse = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 14,
+        'nurse_count' => 6,
+        'collaborators' => $manyCollaborators,
+        'general_notes' => 'Supervisi kolaboratif lintas perawat.',
+    ]);
+
+    $storeResponse->assertSessionHasNoErrors();
+
+    $report = SupervisionReport::where('general_notes', 'Supervisi kolaboratif lintas perawat.')->first();
+    expect($report)->not->toBeNull()
+        ->and($report->nurse_in_charge)->toBe($manyCollaborators)
+        ->and($report->collaboratorList())->toBe($manyCollaborators);
+
+    $storeResponse->assertRedirect(route('supervisi.show', $report));
+
+    // Update report with a subset of 5 collaborators
+    $updatedCollaborators = array_slice($manyCollaborators, 0, 5);
+    $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
+        'report_date' => '2026-11-09',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 15,
+        'nurse_count' => 5,
+        'collaborators' => $updatedCollaborators,
+        'general_notes' => 'Supervisi kolaboratif diperbarui.',
+    ]);
+
+    $updateResponse->assertSessionHasNoErrors()
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($report->fresh()->nurse_in_charge)->toBe($updatedCollaborators)
+        ->and($report->fresh()->collaboratorList())->toBe($updatedCollaborators);
 });
 
 test('application timezone is configured to Asia/Jakarta', function () {

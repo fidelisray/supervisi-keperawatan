@@ -147,12 +147,12 @@ class SupervisionReportController extends Controller
         abort_unless($request->user()?->hasPermission('create_report'), 403);
 
         $validated = $this->validateReportPayload($request);
-        $collaboratorsString = $this->extractCollaboratorsString($request);
+        $collaboratorsList = $this->extractCollaboratorsList($request);
 
         $supervisorName = $request->user()?->name ?: ($validated['supervisor_name'] ?? '');
         $shift = $validated['shift'] ?? $this->resolveDefaultShift();
 
-        $report = DB::connection('sqlsrv')->transaction(function () use ($validated, $supervisorName, $collaboratorsString, $shift) {
+        $report = DB::connection('sqlsrv')->transaction(function () use ($validated, $supervisorName, $collaboratorsList, $shift) {
             $report = SupervisionReport::create([
                 'report_date' => $validated['report_date'],
                 'shift' => $shift,
@@ -160,7 +160,7 @@ class SupervisionReportController extends Controller
                 'patient_count' => $validated['patient_count'],
                 'nurse_count' => $validated['nurse_count'],
                 'supervisor_name' => $supervisorName,
-                'nurse_in_charge' => $collaboratorsString,
+                'nurse_in_charge' => $collaboratorsList,
                 'general_notes' => $validated['general_notes'] ?? null,
                 'status' => 'submitted',
             ]);
@@ -249,16 +249,16 @@ class SupervisionReportController extends Controller
         abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
         $validated = $this->validateReportPayload($request);
-        $collaboratorsString = $this->extractCollaboratorsString($request);
+        $collaboratorsList = $this->extractCollaboratorsList($request);
 
-        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsString) {
+        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsList) {
             $supervisionReport->update([
                 'report_date' => $validated['report_date'],
                 'shift' => $validated['shift'] ?? $supervisionReport->shift,
                 'room_name' => $validated['room_name'],
                 'patient_count' => $validated['patient_count'],
                 'nurse_count' => $validated['nurse_count'],
-                'nurse_in_charge' => $collaboratorsString,
+                'nurse_in_charge' => $collaboratorsList,
                 'general_notes' => $validated['general_notes'] ?? null,
             ]);
 
@@ -320,9 +320,11 @@ class SupervisionReportController extends Controller
             'patient_count' => ['required', 'integer', 'min:0'],
             'nurse_count' => ['required', 'integer', 'min:0'],
             'supervisor_name' => ['nullable', 'string', 'max:255'],
-            'collaborators' => ['nullable', 'array', 'max:2'],
+            // 'collaborators' => ['nullable', 'array', 'max:2'],
+            'collaborators' => ['nullable', 'array'],
             'collaborators.*' => ['nullable', 'string', 'max:255'],
-            'nurse_in_charge' => ['nullable', 'string', 'max:255'],
+            // 'nurse_in_charge' => ['nullable', 'string', 'max:255'],
+            'nurse_in_charge' => ['nullable'],
             'general_notes' => ['nullable', 'string', 'max:2000'],
             'incidents' => ['nullable', 'array'],
             'incidents.*.category' => ['required_with:incidents', 'integer', Rule::in($validCategoryIds)],
@@ -331,13 +333,16 @@ class SupervisionReportController extends Controller
             'incidents.*.action_taken' => ['nullable', 'string'],
             'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
         ], [
-            'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+            // 'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             'collaborators.*.max' => 'Nama kolaborator maksimal 255 karakter.',
-            'nurse_in_charge.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
+            // 'nurse_in_charge.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
         ]);
     }
 
-    private function extractCollaboratorsString(Request $request): string
+    /**
+     * @return list<string>
+     */
+    private function extractCollaboratorsList(Request $request): array
     {
         $rawCollaborators = $request->input('collaborators');
 
@@ -347,7 +352,9 @@ class SupervisionReportController extends Controller
             $formatted = SupervisionReport::formatCollaborators($request->input('nurse_in_charge'));
         }
 
-        $collaboratorCount = $formatted === '' ? 0 : count(explode(' | ', $formatted));
+        /*
+        // [COLLABORATOR LIMIT LOGIC - Aktifkan blok ini jika pembatasan jumlah maksimal kolaborator diberlakukan kembali]
+        $collaboratorCount = count($formatted);
 
         if ($collaboratorCount > 2) {
             throw ValidationException::withMessages([
@@ -355,6 +362,7 @@ class SupervisionReportController extends Controller
                 'nurse_in_charge' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             ]);
         }
+        */
 
         return $formatted;
     }
