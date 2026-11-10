@@ -66,7 +66,7 @@ test('can store a new supervision report with multiple collaborators and without
                 'incident_time' => '09:30',
                 'description' => 'Keluarga pasien mengeluhkan pendingin ruangan (AC) kamar 204 kurang dingin.',
                 'action_taken' => 'Perawat menghubungi bagian teknisi sarpras.',
-                'status' => 'in_progress',
+                // 'status' => 'in_progress',
             ],
         ],
     ];
@@ -79,7 +79,8 @@ test('can store a new supervision report with multiple collaborators and without
         ->and($report->collaboratorList())->toBe([
             'Anastasia Naning Sudiar, S.Kep.Ners',
             'Cicilia Rumini, S.Kep.Ners',
-        ]);
+        ])
+        ->and($report->incidents()->first()->status)->toBeNull();
 
     $response->assertRedirect(route('supervisi.show', $report));
 });
@@ -112,9 +113,10 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ->assertSuccessful()
         ->assertSee('ICU (Intensive Care Unit)')
         ->assertSee('Edit Logbook')
-        ->assertSee('Update Tindak Lanjut')
+        // ->assertSee('Update Tindak Lanjut')
         ->assertDontSee('Shift Pagi');
 
+    /*
     // Collaborator can update incident status
     $this->actingAs($this->collaborator)
         ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
@@ -125,6 +127,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
 
     expect($incident->fresh()->status)->toBe('resolved')
         ->and($incident->fresh()->action_taken)->toBe('Alat sudah diganti unit cadangan.');
+    */
 
     // Collaborator can update full logbook
     $this->actingAs($this->collaborator)
@@ -141,7 +144,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
                     'incident_time' => '15:20',
                     'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
                     'action_taken' => 'Alat sudah diganti unit cadangan.',
-                    'status' => 'resolved',
+                    // 'status' => 'resolved',
                 ],
             ],
         ])
@@ -150,6 +153,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
     expect($report->fresh()->patient_count)->toBe(7);
 
     $latestIncident = $report->fresh()->incidents()->first();
+    expect($latestIncident->status)->toBeNull();
 
     /*
     // [GLOBAL VISIBILITY LOGIC - Aktifkan blok pengujian ini saat semua user terdaftar diizinkan melihat riwayat & detail logbook]
@@ -191,19 +195,22 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ])
         ->assertForbidden();
 
+    /*
     $this->actingAs($this->otherSupervisor)
         ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
             'status' => 'in_progress',
         ])
         ->assertForbidden();
+    */
 
     // Admin has full view, edit, and incident status update access to all reports
     $this->actingAs($this->admin)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
-        ->assertSee('Edit Logbook')
-        ->assertSee('Update Tindak Lanjut');
+        ->assertSee('Edit Logbook');
+    // ->assertSee('Update Tindak Lanjut');
 
+    /*
     $this->actingAs($this->admin)
         ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
             'status' => 'escalated',
@@ -212,6 +219,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ->assertRedirect(route('supervisi.show', $report));
 
     expect($latestIncident->fresh()->status)->toBe('escalated');
+    */
 });
 
 test('store requires mandatory room, date, patient count, and nurse count while collaborators are optional', function () {

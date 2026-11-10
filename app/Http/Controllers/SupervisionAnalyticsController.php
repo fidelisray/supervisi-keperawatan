@@ -55,17 +55,19 @@ class SupervisionAnalyticsController extends Controller
                 $query->whereHas('incidents', function (Builder $q) use ($categoryId): void {
                     $q->where('category', $categoryId);
                 });
-            })
-            ->when($status !== '' && $status !== 'all', function (Builder $query) use ($status): void {
-                $query->whereHas('incidents', function (Builder $q) use ($status): void {
-                    $q->where('status', $status);
-                });
             });
+        /*
+        ->when($status !== '' && $status !== 'all', function (Builder $query) use ($status): void {
+            $query->whereHas('incidents', function (Builder $q) use ($status): void {
+                $q->where('status', $status);
+            });
+        });
+        */
 
         $reports = $reportsQuery
-            ->with(['incidents' => function ($query) use ($categoryId, $status): void {
+            ->with(['incidents' => function ($query) use ($categoryId): void {
                 $query->when($categoryId !== null, fn ($q) => $q->where('category', $categoryId))
-                    ->when($status !== '' && $status !== 'all', fn ($q) => $q->where('status', $status))
+                    // ->when($status !== '' && $status !== 'all', fn ($q) => $q->where('status', $status))
                     ->with('incidentCategory');
             }])
             ->orderBy('report_date')
@@ -357,9 +359,11 @@ class SupervisionAnalyticsController extends Controller
             ->when($categoryId !== null, function (Builder $query) use ($categoryId): void {
                 $query->where('category', $categoryId);
             })
+            /*
             ->when($status !== '' && $status !== 'all', function (Builder $query) use ($status): void {
                 $query->where('status', $status);
             })
+            */
             ->with(['supervisionReport', 'incidentCategory'])
             ->latest('id')
             ->get();
@@ -438,10 +442,12 @@ class SupervisionAnalyticsController extends Controller
                 ->when($dateTo !== '', fn (Builder $q) => $q->whereDate('report_date', '<=', $dateTo))
                 ->when($categoryId !== null, function (Builder $q) use ($categoryId): void {
                     $q->whereHas('incidents', fn ($sub) => $sub->where('category', $categoryId));
-                })
-                ->when($status !== '' && $status !== 'all', function (Builder $q) use ($status): void {
-                    $q->whereHas('incidents', fn ($sub) => $sub->where('status', $status));
                 });
+            /*
+            ->when($status !== '' && $status !== 'all', function (Builder $q) use ($status): void {
+                $q->whereHas('incidents', fn ($sub) => $sub->where('status', $status));
+            });
+            */
         }
 
         $filename = sprintf(
@@ -473,18 +479,18 @@ class SupervisionAnalyticsController extends Controller
                 'Kategori Insiden',
                 'Uraian Masalah / Kejadian',
                 'Tindakan Dilakukan',
-                'Status Penanganan Insiden',
+                // 'Status Penanganan Insiden',
             ];
             fputcsv($handle, $headers, ';');
 
             $rowNumber = 1;
             $categoryId = ($scope !== 'all' && $request->filled('category_id')) ? (int) $request->input('category_id') : null;
-            $status = ($scope !== 'all' && $request->filled('status')) ? (string) $request->string('status') : '';
+            // $status = ($scope !== 'all' && $request->filled('status')) ? (string) $request->string('status') : '';
 
             $reportsQuery
-                ->with(['incidents' => function ($q) use ($categoryId, $status): void {
+                ->with(['incidents' => function ($q) use ($categoryId): void {
                     $q->when($categoryId !== null, fn ($sub) => $sub->where('category', $categoryId))
-                        ->when($status !== '' && $status !== 'all', fn ($sub) => $sub->where('status', $status))
+                        // ->when($status !== '' && $status !== 'all', fn ($sub) => $sub->where('status', $status))
                         ->with('incidentCategory');
                 }])
                 ->orderBy('report_date')
@@ -511,16 +517,18 @@ class SupervisionAnalyticsController extends Controller
                                 'Nihil / Tidak Ada Insiden',
                                 'Tidak ada kejadian khusus yang dilaporkan',
                                 '-',
-                                '-',
+                                // '-',
                             ], ';');
                         } else {
                             foreach ($incidents as $incident) {
+                                /*
                                 $statusLabel = match ($incident->status) {
                                     'resolved' => 'Selesai Ditangani',
                                     'in_progress' => 'Sedang Ditangani',
                                     'escalated' => 'Perlu Eskalasi',
                                     default => ucfirst((string) $incident->status),
                                 };
+                                */
 
                                 fputcsv($handle, [
                                     $rowNumber++,
@@ -539,7 +547,7 @@ class SupervisionAnalyticsController extends Controller
                                     $incident->categoryLabel(),
                                     $incident->description ?: '-',
                                     $incident->action_taken ?: '-',
-                                    $statusLabel,
+                                    // $statusLabel,
                                 ], ';');
                             }
                         }

@@ -53,11 +53,13 @@ class RolePermission extends Model
             'group' => 'Operasional Logbook',
             'description' => 'Mengubah data operasional dan rincian logbook supervisi.',
         ],
+        /*
         'update_incident_status' => [
             'label' => 'Tindak Lanjut Insiden',
             'group' => 'Operasional Logbook',
             'description' => 'Memperbarui status penanganan dan mengisi solusi kejadian.',
         ],
+        */
         'view_analytics' => [
             'label' => 'Akses Grafik Analisis',
             'group' => 'Analisis & Pelaporan',
@@ -83,7 +85,7 @@ class RolePermission extends Model
     public const DEFAULT_SUPERVISOR_PERMISSIONS = [
         'create_report',
         'edit_report',
-        'update_incident_status',
+        // 'update_incident_status',
         'view_analytics',
     ];
 
@@ -114,4 +116,3 @@ class RolePermission extends Model
             ->where('app_id', AppRole::APP_ID);
     }
 }
-

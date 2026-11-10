@@ -90,10 +90,12 @@ class SupervisionReportController extends Controller
                 ->whereIn('category', $complaintCategoryIds)
                 ->count()
             : 0;
+        /*
         $resolvedIncidentsCount = Incident::query()
             ->whereIn('supervision_report_id', $accessibleIdsSubquery)
             ->where('status', 'resolved')
             ->count();
+        */
 
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
@@ -106,7 +108,7 @@ class SupervisionReportController extends Controller
             'todayReportsCount' => $todayReportsCount,
             'totalIncidentsCount' => $totalIncidentsCount,
             'totalComplaintsCount' => $totalComplaintsCount,
-            'resolvedIncidentsCount' => $resolvedIncidentsCount,
+            // 'resolvedIncidentsCount' => $resolvedIncidentsCount,
             'rooms' => $rooms,
             'nurses' => $nurses,
             'dateFrom' => $dateFrom,
@@ -298,22 +300,12 @@ class SupervisionReportController extends Controller
             ->with('success', 'Perubahan logbook supervisi keperawatan berhasil disimpan.');
     }
 
-    /**
-     * Update the follow-up status and action taken of a specific incident.
-     */
+    /*
     public function updateIncidentStatus(
         Request $request,
         SupervisionReport $supervisionReport,
         Incident $incident
     ): RedirectResponse {
-        /*
-        // [GLOBAL VISIBILITY LOGIC - Gunakan canBeModifiedBy() ketika isAccessibleBy() dibuka untuk semua user]
-        abort_unless(
-            $request->user()?->hasPermission('update_incident_status')
-            && $supervisionReport->canBeModifiedBy($request->user()),
-            403
-        );
-        */
         abort_unless($request->user()?->hasPermission('update_incident_status') && $supervisionReport->isAccessibleBy($request->user()), 403);
         abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
 
@@ -330,6 +322,7 @@ class SupervisionReportController extends Controller
         return redirect()->route('supervisi.show', $supervisionReport)
             ->with('success', 'Status tindak lanjut kejadian berhasil diperbarui.');
     }
+    */
 
     /**
      * @return array<string, mixed>
@@ -359,7 +352,7 @@ class SupervisionReportController extends Controller
             'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
             'incidents.*.description' => ['required_with:incidents', 'string'],
             'incidents.*.action_taken' => ['nullable', 'string'],
-            'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
+            // 'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
         ], [
             // 'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             'collaborators.*.max' => 'Nama kolaborator maksimal 255 karakter.',
@@ -406,7 +399,8 @@ class SupervisionReportController extends Controller
                 'incident_time' => $incidentData['incident_time'] ?? null,
                 'description' => $incidentData['description'],
                 'action_taken' => $incidentData['action_taken'] ?? null,
-                'status' => $incidentData['status'] ?? 'in_progress',
+                // 'status' => $incidentData['status'] ?? 'in_progress',
+                'status' => $incidentData['status'] ?? null,
             ]);
         }
     }
