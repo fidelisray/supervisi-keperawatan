@@ -638,6 +638,61 @@
                 </div>
             </div>
         </div>
+
+        <!-- Unsaved Changes Navigation Blocking Modal -->
+        <div x-show="showLeaveModal" x-cloak @keydown.escape.window="cancelLeaveNavigation()" class="relative z-50"
+            aria-labelledby="leave-modal-title" role="dialog" aria-modal="true">
+            <div x-show="showLeaveModal" @click="cancelLeaveNavigation()" x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-950/50 transition-opacity"
+                aria-hidden="true"></div>
+
+            <div class="fixed inset-0 z-50 w-screen overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                    <div x-show="showLeaveModal" @click.stop x-transition:enter="ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave="ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
+                        <div class="p-6">
+                            <div class="flex items-start space-x-4">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 id="leave-modal-title" class="text-sm font-bold text-slate-900">
+                                        Perubahan Belum Disimpan
+                                    </h3>
+                                    <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                                        Anda memiliki perubahan data logbook supervisi yang belum disimpan. Jika
+                                        meninggalkan halaman ini sekarang, data yang sedang Anda kerjakan akan hilang.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <button type="button" @click="confirmLeaveNavigation()"
+                                class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 transition cursor-pointer focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                                Tinggalkan Tanpa Menyimpan
+                            </button>
+                            <button type="button" @click="cancelLeaveNavigation()"
+                                class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                Lanjutkan Pengisian
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Alpine.js Component Script -->
@@ -707,6 +762,13 @@
                     status: 'in_progress'
                 },
 
+                initialStateSnapshot: '',
+                hasServerValidationErrors: @json($errors->any()),
+                isSubmitting: false,
+                showLeaveModal: false,
+                pendingNavigationUrl: null,
+                pendingLogoutForm: null,
+
                 get filteredRooms() {
                     const q = (this.roomSearch || '').trim().toLowerCase();
                     if (!q) return this.rooms;
@@ -730,6 +792,108 @@
                     const hours = String(now.getHours()).padStart(2, '0');
                     const minutes = String(now.getMinutes()).padStart(2, '0');
                     this.modalData.incident_time = `${hours}:${minutes}`;
+                    this.setupNavigationGuard();
+                },
+
+                getFormStateSnapshot() {
+                    const form = document.getElementById('supervisionForm');
+                    const reportDate = form?.querySelector('[name="report_date"]')?.value || '';
+                    const patientCount = String(form?.querySelector('[name="patient_count"]')?.value ?? '');
+                    const nurseCount = String(form?.querySelector('[name="nurse_count"]')?.value ?? '');
+                    const generalNotes = (form?.querySelector('[name="general_notes"]')?.value || '').trim();
+
+                    return JSON.stringify({
+                        reportDate,
+                        selectedRoom: (this.selectedRoom || '').trim(),
+                        roomSearch: (this.roomSearch || '').trim(),
+                        patientCount,
+                        nurseCount,
+                        collaborators: this.collaborators,
+                        collaboratorSearch: (this.collaboratorSearch || '').trim(),
+                        incidents: this.incidents,
+                        generalNotes,
+                        modalDraft: this.showIncidentModal ? (this.modalData.description || '').trim() : ''
+                    });
+                },
+
+                isFormDirty() {
+                    if (this.isSubmitting) return false;
+                    if (this.hasServerValidationErrors) return true;
+                    if (!this.initialStateSnapshot) return false;
+                    return this.getFormStateSnapshot() !== this.initialStateSnapshot;
+                },
+
+                setupNavigationGuard() {
+                    this.$nextTick(() => {
+                        this.initialStateSnapshot = this.getFormStateSnapshot();
+                    });
+
+                    window.addEventListener('beforeunload', (e) => {
+                        if (this.isFormDirty()) {
+                            e.preventDefault();
+                            e.returnValue = '';
+                        }
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (this.isSubmitting) return;
+                        const anchor = e.target.closest('a[href]');
+                        if (!anchor) return;
+                        const href = anchor.getAttribute('href');
+                        if (!href || href.startsWith('#') || href.startsWith('javascript:') || anchor.target === '_blank' || anchor.hasAttribute('download')) {
+                            return;
+                        }
+                        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
+                            return;
+                        }
+                        const targetUrl = new URL(anchor.href, window.location.origin);
+                        if (targetUrl.href === window.location.href) {
+                            return;
+                        }
+                        if (this.isFormDirty()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.pendingNavigationUrl = targetUrl.href;
+                            this.pendingLogoutForm = null;
+                            this.showLeaveModal = true;
+                        }
+                    }, true);
+
+                    document.addEventListener('submit', (e) => {
+                        if (this.isSubmitting) return;
+                        const form = e.target;
+                        if (!form || form.id === 'supervisionForm') {
+                            return;
+                        }
+                        if (this.isFormDirty()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.pendingNavigationUrl = null;
+                            this.pendingLogoutForm = form;
+                            this.showLeaveModal = true;
+                        }
+                    }, true);
+                },
+
+                cancelLeaveNavigation() {
+                    this.showLeaveModal = false;
+                    this.pendingNavigationUrl = null;
+                    this.pendingLogoutForm = null;
+                },
+
+                confirmLeaveNavigation() {
+                    this.isSubmitting = true;
+                    const targetUrl = this.pendingNavigationUrl;
+                    const logoutForm = this.pendingLogoutForm;
+                    this.showLeaveModal = false;
+                    this.pendingNavigationUrl = null;
+                    this.pendingLogoutForm = null;
+
+                    if (logoutForm) {
+                        logoutForm.submit();
+                    } else if (targetUrl) {
+                        window.location.href = targetUrl;
+                    }
                 },
 
                 selectRoom(name) {
@@ -969,6 +1133,7 @@
                         return;
                     }
                     */
+                    this.isSubmitting = true;
                     this.$nextTick(() => {
                         event.target.submit();
                     });

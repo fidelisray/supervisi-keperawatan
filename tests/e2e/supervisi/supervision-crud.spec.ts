@@ -65,7 +65,19 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     const notesInput = page.locator('textarea[name="general_notes"]');
     await notesInput.fill('[E2E-TEST] Supervisi malam berlangsung tertib.');
 
-    // 5. Submit Form Laporan Supervisi
+    // 4b. Verifikasi Navigation Blocking saat ada perubahan belum disimpan (Dirty State) pada Create
+    const lihatRiwayatLink = page.getByRole('link', { name: /Lihat Riwayat/i });
+    await lihatRiwayatLink.click();
+    const leaveModalHeading = page.getByRole('heading', { name: /Perubahan Belum Disimpan/i });
+    await expect(leaveModalHeading).toBeVisible();
+    await expect(page).toHaveURL(/.*supervisi\/create/);
+
+    // Klik "Lanjutkan Pengisian" -> modal tertutup dan user tetap di halaman Create beserta datanya
+    await page.getByRole('button', { name: /Lanjutkan Pengisian/i }).click();
+    await expect(leaveModalHeading).toBeHidden();
+    await expect(notesInput).toHaveValue('[E2E-TEST] Supervisi malam berlangsung tertib.');
+
+    // 5. Submit Form Laporan Supervisi (harus lolos tanpa diblokir oleh navigation guard)
     const submitBtn = page.getByRole('button', { name: /Simpan Laporan Supervisi/i });
     await submitBtn.click({ force: true });
 
@@ -90,5 +102,22 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
 
     // Verifikasi badge status berubah menjadi Selesai
     await expect(page.getByText(/Selesai/i).first()).toBeVisible();
+
+    // 8. Verifikasi Navigation Blocking pada halaman Edit Logbook (/supervisi/{id}/edit)
+    const editLogbookLink = page.getByRole('link', { name: /Edit Logbook/i });
+    await editLogbookLink.click();
+    await expect(page).toHaveURL(/.*supervisi\/\d+\/edit/);
+
+    const editNotesInput = page.locator('textarea[name="general_notes"]');
+    await editNotesInput.fill('[E2E-TEST] Perubahan catatan yang belum disimpan.');
+
+    // Coba beralih halaman dengan klik "Kembali ke Detail" -> harus ditahan oleh modal
+    await page.getByRole('link', { name: /Kembali ke Detail/i }).click();
+    await expect(page.getByRole('heading', { name: /Perubahan Belum Disimpan/i })).toBeVisible();
+    await expect(page).toHaveURL(/.*supervisi\/\d+\/edit/);
+
+    // Klik "Tinggalkan Tanpa Menyimpan" -> berpindah kembali ke halaman detail
+    await page.getByRole('button', { name: /Tinggalkan Tanpa Menyimpan/i }).click();
+    await expect(page).toHaveURL(/.*supervisi\/\d+$/);
   });
 });
