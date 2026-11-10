@@ -199,9 +199,9 @@ class SupervisionReportController extends Controller
 
         $supervisionReport->load(['incidents.incidentCategory']);
 
-        $logoPath = resource_path('images/logo.png');
+        $logoPath = resource_path('images/web-icon.webp');
         $logoBase64 = is_file($logoPath)
-            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            ? 'data:image/webp;base64,'.base64_encode((string) file_get_contents($logoPath))
             : null;
 
         $pdf = Pdf::loadView('supervisi.pdf', [

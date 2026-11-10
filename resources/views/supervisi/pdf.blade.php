@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Supervisi #RPT-{{ str_pad((string) $report->id, 5, '0', STR_PAD_LEFT) }} - {{ $report->room_name }}</title>
+    <title>Laporan Supervisi #RPT-{{ str_pad((string) $report->id, 5, '0', STR_PAD_LEFT) }} - {{ $report->room_name }}
+    </title>
     <style>
         @page {
             margin: 18mm 16mm 18mm 16mm;
@@ -303,19 +305,29 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Kop Surat RS St. Elisabeth Semarang -->
+    @php
+        $logoImage =
+            $logoBase64 ??
+            (is_file(resource_path('images/web-icon.webp'))
+                ? 'data:image/webp;base64,' .
+                    base64_encode((string) file_get_contents(resource_path('images/web-icon.webp')))
+                : null);
+    @endphp
     <table class="letterhead-table">
         <tr>
-            @if(!empty($logoBase64))
+            @if (!empty($logoImage))
                 <td class="letterhead-logo-cell">
-                    <img src="{{ $logoBase64 }}" alt="Logo RS St. Elisabeth Semarang" class="letterhead-logo">
+                    <img src="{{ $logoImage }}" alt="Logo RS St. Elisabeth Semarang" class="letterhead-logo">
                 </td>
             @endif
             <td class="letterhead-text-cell">
                 <p class="hospital-name">RS St. Elisabeth Semarang</p>
                 <p class="department-name">Bidang Keperawatan &middot; Sistem Informasi Supervisi Keperawatan</p>
-                <p class="hospital-address">Jl. Kawi No. 1, Tegalsari, Kec. Candisari, Kota Semarang, Jawa Tengah 50614</p>
+                <p class="hospital-address">Jl. Kawi No. 1, Tegalsari, Kec. Candisari, Kota Semarang, Jawa Tengah 50614
+                </p>
                 <p class="hospital-motto">"Pancaran Cintanya Menyembuhkan Derita Sesama"</p>
             </td>
         </tr>
@@ -338,9 +350,7 @@
     <!-- Bagian I: Ringkasan Operasional -->
     <div class="section-heading">I. Informasi Operasional &amp; Petugas Supervisi</div>
     @php
-        $collaborators = is_array($report->nurse_in_charge)
-            ? $report->nurse_in_charge
-            : $report->collaboratorList();
+        $collaborators = is_array($report->nurse_in_charge) ? $report->nurse_in_charge : $report->collaboratorList();
     @endphp
     <table class="summary-table">
         <tr>
@@ -366,7 +376,8 @@
             <td class="summary-label">Supervisor Pengawas</td>
             <td class="summary-value"><strong>{{ $report->supervisor_name }}</strong></td>
             <td class="summary-label">Waktu Pencatatan</td>
-            <td class="summary-value">{{ $report->created_at ? $report->created_at->translatedFormat('d F Y, H:i').' WIB' : '-' }}</td>
+            <td class="summary-value">
+                {{ $report->created_at ? $report->created_at->translatedFormat('d F Y, H:i') . ' WIB' : '-' }}</td>
         </tr>
         <tr>
             <td class="summary-label">Kolaborator ({{ count($collaborators) }})</td>
@@ -381,8 +392,9 @@
     </table>
 
     <!-- Bagian II: Rincian Kejadian & Tindak Lanjut -->
-    <div class="section-heading">II. Rincian Kejadian, Insiden &amp; Tindak Lanjut ({{ $report->incidents->count() }})</div>
-    @if($report->incidents->isEmpty())
+    <div class="section-heading">II. Rincian Kejadian, Insiden &amp; Tindak Lanjut ({{ $report->incidents->count() }})
+    </div>
+    @if ($report->incidents->isEmpty())
         <div class="empty-box">
             <strong>Dinas Berjalan Aman &amp; Kondusif</strong><br>
             Tidak ada insiden, komplain, atau kendala fasilitas yang dilaporkan pada sesi supervisi ini.
@@ -399,12 +411,12 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($report->incidents as $index => $incident)
+                @foreach ($report->incidents as $index => $incident)
                     <tr>
                         <td style="text-align: center; font-weight: bold;">{{ $index + 1 }}</td>
                         <td>
                             <span class="category-pill">{{ $incident->categoryLabel() }}</span>
-                            @if($incident->incident_time)
+                            @if ($incident->incident_time)
                                 <span class="time-label">Pukul {{ $incident->incident_time }} WIB</span>
                             @else
                                 <span class="time-label">Waktu tidak dicantumkan</span>
@@ -413,7 +425,7 @@
                         <td style="white-space: pre-line;">{{ $incident->description }}</td>
                         <td style="white-space: pre-line;">{{ $incident->action_taken ?: '-' }}</td>
                         <td style="text-align: center;">
-                            @if($incident->status === 'resolved')
+                            @if ($incident->status === 'resolved')
                                 <span class="status-badge status-resolved">Selesai</span>
                             @elseif($incident->status === 'escalated')
                                 <span class="status-badge status-escalated">Butuh Eskalasi</span>
@@ -429,15 +441,18 @@
 
     <!-- Bagian III: Catatan Umum / Handover -->
     <div class="section-heading">III. Pesan Khusus Operan (Handover) / Catatan Evaluasi</div>
-    <div class="notes-box">{{ $report->general_notes ?: 'Tidak ada catatan khusus tambahan pada laporan supervisi ini.' }}</div>
+    <div class="notes-box">
+        {{ $report->general_notes ?: 'Tidak ada catatan khusus tambahan pada laporan supervisi ini.' }}</div>
 
     <!-- Blok Pengesahan & Tanda Tangan -->
     <div class="signature-wrapper">
         <table class="signature-table">
             <tr>
                 <td class="signature-left">
-                    Dokumen ini dihasilkan secara otomatis melalui Sistem E-Supervisi Keperawatan RS St. Elisabeth Semarang.<br>
-                    Referensi Dokumen: #RPT-{{ str_pad((string) $report->id, 5, '0', STR_PAD_LEFT) }} &middot; Dicetak oleh: {{ $printedBy }}
+                    Dokumen ini dihasilkan secara otomatis melalui Sistem E-Supervisi Keperawatan RS St. Elisabeth
+                    Semarang.<br>
+                    Referensi Dokumen: #RPT-{{ str_pad((string) $report->id, 5, '0', STR_PAD_LEFT) }} &middot; Dicetak
+                    oleh: {{ $printedBy }}
                 </td>
                 <td class="signature-right">
                     <div>Semarang, {{ $printedAt->translatedFormat('d F Y') }}</div>
@@ -450,5 +465,5 @@
         </table>
     </div>
 </body>
-</html>
 
+</html>
