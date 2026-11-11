@@ -497,3 +497,84 @@ test('authorized user can stream supervision report pdf while unauthorized user 
         ->get(route('supervisi.pdf', $report))
         ->assertForbidden();
 });
+
+test('supervision index defaults to today preset, exposes semua data chip, and metric cards follow the active filter', function () {
+    $this->travelTo(Carbon\Carbon::parse('2026-11-09 10:00:00', 'Asia/Jakarta'));
+
+    $todayReport = SupervisionReport::create([
+        'report_date' => '2026-11-09',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'status' => 'submitted',
+    ]);
+    $todayReport->incidents()->create(['category' => 1, 'description' => 'Insiden hari ini', 'status' => 'resolved']);
+
+    $oldReport = SupervisionReport::create([
+        'report_date' => '2026-10-15',
+        'shift' => 'pagi',
+        'room_name' => 'ANGELA',
+        'patient_count' => 8,
+        'nurse_count' => 2,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'status' => 'submitted',
+    ]);
+    $oldReport->incidents()->create(['category' => 1, 'description' => 'Insiden lama A', 'status' => 'in_progress']);
+    $oldReport->incidents()->create(['category' => 1, 'description' => 'Insiden lama B', 'status' => 'in_progress']);
+
+    $default = $this->actingAs($this->supervisor)->get(route('supervisi.index'));
+    $default->assertSuccessful()
+        ->assertSee('Logbook Hari Ini')
+        ->assertSee('Semua Data')
+        ->assertDontSee('Reset Semua Filter');
+    expect($default->viewData('totalReportsCount'))->toBe(1)
+        ->and($default->viewData('totalIncidentsCount'))->toBe(1)
+        ->and($default->viewData('resolvedIncidentsCount'))->toBe(1);
+
+    $all = $this->actingAs($this->supervisor)->get(route('supervisi.index', ['preset' => 'all']));
+    $all->assertSuccessful()
+        ->assertSee('Total Logbook')
+        ->assertDontSee('Logbook Hari Ini')
+        ->assertSee('Reset Semua Filter');
+    expect($all->viewData('totalReportsCount'))->toBe(2)
+        ->and($all->viewData('totalIncidentsCount'))->toBe(3)
+        ->and($all->viewData('resolvedIncidentsCount'))->toBe(1);
+});
+
+test('supervision index renders numbering and dynamic follow-up status badges per logbook', function () {
+    $makeReport = function (string $room, array $statuses) {
+        $report = SupervisionReport::create([
+            'report_date' => now()->toDateString(),
+            'shift' => 'pagi',
+            'room_name' => $room,
+            'patient_count' => 5,
+            'nurse_count' => 2,
+            'supervisor_name' => $this->supervisor->name,
+            'nurse_in_charge' => [],
+            'status' => 'submitted',
+        ]);
+        foreach ($statuses as $i => $status) {
+            $report->incidents()->create(['category' => 1, 'description' => "Insiden {$i}", 'status' => $status]);
+        }
+    };
+
+    $makeReport('RUANG-NIHIL', []);
+    $makeReport('RUANG-MERAH', ['resolved', 'in_progress', 'in_progress']);
+    $makeReport('RUANG-ORANYE', ['resolved', 'resolved', 'in_progress']);
+    $makeReport('RUANG-HIJAU', ['resolved', 'resolved']);
+
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.index'))
+        ->assertSuccessful()
+        ->assertSee('Tidak Ada Insiden')
+        ->assertSee('1 dari 3 terselesaikan')
+        ->assertSee('2 dari 3 terselesaikan')
+        ->assertSee('bg-rose-50 text-rose-700', false)
+        ->assertSee('bg-amber-50 text-amber-700', false)
+        ->assertSee('bg-emerald-50 text-emerald-700', false)
+        ->assertSee('Selesai');
+});

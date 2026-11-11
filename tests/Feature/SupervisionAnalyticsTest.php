@@ -48,7 +48,7 @@ test('analytics page renders incident distribution and charts scoped to creator,
     ]);
 
     // Creator supervisor sees their report data, categories, and analytical sections
-    $response = $this->actingAs($creatorSupervisor)->get(route('supervisi.analytics'));
+    $response = $this->actingAs($creatorSupervisor)->get(route('supervisi.analytics', ['preset' => 'all']));
     $response->assertSuccessful();
     $response->assertSee('Analisis &amp; Grafik Kejadian Ruangan', false);
     $response->assertSee('Cakupan: Logbook Saya &amp; Kolaborator', false);
@@ -61,14 +61,14 @@ test('analytics page renders incident distribution and charts scoped to creator,
 
     // Unrelated supervisor does not see FRANSISKUS in their analytics table
     $this->actingAs($otherSupervisor)
-        ->get(route('supervisi.analytics'))
+        ->get(route('supervisi.analytics', ['preset' => 'all']))
         ->assertSuccessful()
         ->assertSee('Cakupan: Logbook Saya &amp; Kolaborator', false)
         ->assertSee('Belum ada data ruangan pada periode ini.');
 
     // Admin sees all hospital analytics
     $this->actingAs($admin)
-        ->get(route('supervisi.analytics'))
+        ->get(route('supervisi.analytics', ['preset' => 'all']))
         ->assertSuccessful()
         ->assertSee('Cakupan: Seluruh Rumah Sakit')
         ->assertSee('FRANSISKUS');
@@ -122,13 +122,13 @@ test('analytics page correctly applies room and status filters', function () {
     ]);
 
     // Filter by room=FRANSISKUS
-    $resRoom = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['room' => 'FRANSISKUS']));
+    $resRoom = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['preset' => 'all', 'room' => 'FRANSISKUS']));
     $resRoom->assertSuccessful();
     $resRoom->assertSee('FRANSISKUS');
     $resRoom->assertDontSee('TERESIA');
 
     // Filter by status=resolved
-    $resStatus = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['status' => 'resolved']));
+    $resStatus = $this->actingAs($supervisor)->get(route('supervisi.analytics', ['preset' => 'all', 'status' => 'resolved']));
     $resStatus->assertSuccessful();
     $resStatus->assertSee('FRANSISKUS');
     $resStatus->assertDontSee('TERESIA');
@@ -343,7 +343,7 @@ test('analytics assigns slate gray hex color to Lain-Lain category in chart and 
         'status' => 'resolved',
     ]);
 
-    $response = $this->actingAs($admin)->get(route('supervisi.analytics'));
+    $response = $this->actingAs($admin)->get(route('supervisi.analytics', ['preset' => 'all']));
     $response->assertSuccessful();
 
     $categoryStats = $response->viewData('categoryStats');
@@ -352,4 +352,46 @@ test('analytics assigns slate gray hex color to Lain-Lain category in chart and 
 
     $chartPayload = $response->viewData('chartPayload');
     expect($chartPayload['category']['colors'])->toContain('#64748b');
+});
+
+test('analytics defaults to today preset, supports semua data chip, and shows four dynamic metric cards', function () {
+    $admin = User::factory()->create(['nip' => '5508150824', 'name' => 'Purwanto Ali', 'app_roles' => 0]);
+
+    $report = SupervisionReport::create([
+        'report_date' => '2026-10-15',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 2,
+        'supervisor_name' => $admin->name,
+        'nurse_in_charge' => 'Perawat 1',
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report->id,
+        'category' => 1,
+        'incident_time' => '09:00',
+        'description' => 'Insiden lama',
+        'action_taken' => 'Tindakan',
+        'status' => 'resolved',
+    ]);
+
+    $default = $this->actingAs($admin)
+        ->get(route('supervisi.analytics'));
+    $default->assertSuccessful()
+        ->assertSee('Logbook Hari Ini')
+        ->assertSee('Semua Data')
+        ->assertSee('Terselesaikan');
+    expect($default->viewData('totalReports'))->toBe(0)
+        ->and($default->viewData('totalIncidents'))->toBe(0);
+
+    $all = $this->actingAs($admin)->get(route('supervisi.analytics', ['preset' => 'all']));
+    $all->assertSuccessful()
+        ->assertSee('Total Logbook')
+        ->assertSee('Komplain Pasien')
+        ->assertSee('FRANSISKUS');
+    expect($all->viewData('totalReports'))->toBe(1)
+        ->and($all->viewData('totalIncidents'))->toBe(1)
+        ->and($all->viewData('resolvedCount'))->toBe(1);
 });

@@ -9,11 +9,17 @@ test.describe('Analisis & Grafik Supervisi Keperawatan', () => {
     // 1. Verifikasi Header & Indikator Halaman
     await expect(page.getByRole('heading', { name: /Analisis & Grafik Kejadian Ruangan/i })).toBeVisible();
 
-    // 2. Verifikasi 4 Kartu Metrik Ringkasan Eksekutif
+    // 2. Verifikasi 4 Kartu Metrik Ringkasan Eksekutif (default filter: Hari Ini)
+    await expect(page.getByText('Logbook Hari Ini')).toBeVisible();
+    await expect(page.getByText('Total Kejadian Hari Ini')).toBeVisible();
+    await expect(page.getByText('Komplain Pasien Hari Ini')).toBeVisible();
+    await expect(page.getByText('Terselesaikan', { exact: true })).toBeVisible();
+
+    // 2b. Chip "Semua Data" mengubah judul kartu menjadi total keseluruhan
+    await page.getByRole('link', { name: 'Semua Data', exact: true }).click();
+    await expect(page).toHaveURL(/preset=all/);
     await expect(page.getByText('Total Logbook')).toBeVisible();
-    await expect(page.getByText('Total Butir Insiden')).toBeVisible();
-    await expect(page.getByText('Tingkat Penyelesaian')).toBeVisible();
-    await expect(page.getByText('Perlu Tindak Lanjut')).toBeVisible();
+    await expect(page.getByText('Total Kejadian', { exact: true })).toBeVisible();
 
     // 3. Verifikasi Filter Controls
     await expect(page.getByRole('combobox', { name: /Ruangan \/ Bangsal/i })).toBeVisible();

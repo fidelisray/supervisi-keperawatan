@@ -66,27 +66,33 @@
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500 mr-1">Rentang Cepat:</span>
                 <a 
                     href="{{ route('supervisi.analytics', array_merge(request()->except(['preset', 'date_from', 'date_to']), ['preset' => 'today'])) }}"
-                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ request('preset') === 'today' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
+                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ $activePreset === 'today' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
                 >
                     Hari Ini
                 </a>
                 <a 
                     href="{{ route('supervisi.analytics', array_merge(request()->except(['preset', 'date_from', 'date_to']), ['preset' => 'last_7_days'])) }}"
-                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ request('preset') === 'last_7_days' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
+                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ $activePreset === 'last_7_days' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
                 >
                     7 Hari Terakhir
                 </a>
                 <a 
                     href="{{ route('supervisi.analytics', array_merge(request()->except(['preset', 'date_from', 'date_to']), ['preset' => 'this_month'])) }}"
-                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ request('preset') === 'this_month' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
+                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ $activePreset === 'this_month' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
                 >
                     Bulan Ini
                 </a>
                 <a 
                     href="{{ route('supervisi.analytics', array_merge(request()->except(['preset', 'date_from', 'date_to']), ['preset' => 'last_month'])) }}"
-                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ request('preset') === 'last_month' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
+                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ $activePreset === 'last_month' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
                 >
                     Bulan Lalu
+                </a>
+                <a 
+                    href="{{ route('supervisi.analytics', array_merge(request()->except(['preset', 'date_from', 'date_to']), ['preset' => 'all'])) }}"
+                    class="px-2.5 py-1 rounded-md text-xs font-semibold transition {{ $activePreset === 'all' ? 'bg-teal-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}"
+                >
+                    Semua Data
                 </a>
                 @if(request()->hasAny(['preset', 'room', 'category_id', 'status', 'date_from', 'date_to']))
                     <a 
@@ -103,7 +109,7 @@
 
             <!-- Detailed Multi-dimension Filters Form -->
             <form method="GET" action="{{ route('supervisi.analytics') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-                <input type="hidden" name="preset" value="{{ request('preset') }}">
+                <input type="hidden" name="preset" value="{{ $activePreset }}">
 
                 <!-- Filter Ruangan -->
                 <div class="sm:col-span-1 lg:col-span-3">
@@ -150,6 +156,7 @@
                         id="date_from" 
                         name="date_from" 
                         value="{{ $dateFrom }}" 
+                        onchange="if(this.form.preset) this.form.preset.value=''"
                         class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     >
                 </div>
@@ -161,6 +168,7 @@
                         id="date_to" 
                         name="date_to" 
                         value="{{ $dateTo }}" 
+                        onchange="if(this.form.preset) this.form.preset.value=''"
                         class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     >
                 </div>
@@ -178,13 +186,16 @@
         </div>
 
         <!-- Top Summary KPIs -->
+        @php
+            $isTodayPreset = $activePreset === 'today';
+        @endphp
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Total Laporan -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Logbook</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $isTodayPreset ? 'Logbook Hari Ini' : 'Total Logbook' }}</p>
                     <p class="text-2xl font-extrabold text-slate-900 mt-1 font-mono">{{ $totalReports }}</p>
-                    <p class="text-xs text-slate-500 mt-0.5">Laporan dalam periode terpilih</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Logbook Tersimpan</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -196,9 +207,9 @@
             <!-- Total Insiden -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Butir Insiden</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $isTodayPreset ? 'Total Kejadian Hari Ini' : 'Total Kejadian' }}</p>
                     <p class="text-2xl font-extrabold text-slate-900 mt-1 font-mono">{{ $totalIncidents }}</p>
-                    <p class="text-xs text-slate-500 mt-0.5">Seluruh kategori kejadian</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Kejadian Terdata</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,30 +218,30 @@
                 </div>
             </div>
 
-            <!-- Tingkat Penyelesaian -->
+            <!-- Komplain Pasien -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Tingkat Penyelesaian</p>
-                    <p class="text-2xl font-extrabold text-emerald-600 mt-1 font-mono">{{ $resolutionRate }}%</p>
-                    <p class="text-xs text-slate-500 mt-0.5">{{ $resolvedCount }} insiden selesai ditangani</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ $isTodayPreset ? 'Komplain Pasien Hari Ini' : 'Komplain Pasien' }}</p>
+                    <p class="text-2xl font-extrabold text-rose-600 mt-1 font-mono">{{ $totalComplaintsCount }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Kejadian Komplain Pasien</p>
                 </div>
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
                 </div>
             </div>
 
-            <!-- Perlu Tindak Lanjut -->
+            <!-- Terselesaikan -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Perlu Tindak Lanjut</p>
-                    <p class="text-2xl font-extrabold text-amber-600 mt-1 font-mono">{{ $pendingCount }}</p>
-                    <p class="text-xs text-slate-500 mt-0.5">{{ $statusStats['in_progress']['count'] ?? 0 }} proses &middot; {{ $statusStats['escalated']['count'] ?? 0 }} eskalasi</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Terselesaikan</p>
+                    <p class="text-2xl font-extrabold text-emerald-600 mt-1 font-mono">{{ $resolvedCount }}</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Tindak lanjut tuntas</p>
                 </div>
-                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
             </div>
@@ -663,7 +674,7 @@
 
                             <!-- Opsi 1: Sesuai Filter Aktif -->
                             <a 
-                                href="{{ route('supervisi.analytics.export', array_merge(request()->query(), ['scope' => 'filtered'])) }}"
+                                href="{{ route('supervisi.analytics.export', array_merge(request()->query(), ['preset' => $activePreset, 'scope' => 'filtered'])) }}"
                                 @click="exportModalOpen = false"
                                 class="block p-4 rounded-xl border-2 border-emerald-500/80 bg-emerald-50/40 hover:bg-emerald-50 hover:border-emerald-600 transition group cursor-pointer"
                             >

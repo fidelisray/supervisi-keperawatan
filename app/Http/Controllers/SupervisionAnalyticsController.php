@@ -25,8 +25,13 @@ class SupervisionAnalyticsController extends Controller
         $dateFrom = (string) $request->string('date_from')->trim();
         $dateTo = (string) $request->string('date_to')->trim();
 
+        if ($preset === '' && ! $request->hasAny(['preset', 'date_from', 'date_to'])) {
+            $preset = 'today';
+        }
+
         if ($preset !== '') {
             [$dateFrom, $dateTo] = match ($preset) {
+                'all' => ['', ''],
                 'today' => [now()->toDateString(), now()->toDateString()],
                 'last_7_days' => [now()->subDays(6)->toDateString(), now()->toDateString()],
                 'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
@@ -297,10 +302,13 @@ class SupervisionAnalyticsController extends Controller
         $resolvedCount = $statusStats['resolved']['count'] ?? 0;
         $pendingCount = ($statusStats['in_progress']['count'] ?? 0) + ($statusStats['escalated']['count'] ?? 0);
         $resolutionRate = $totalIncidents > 0 ? round(($resolvedCount / $totalIncidents) * 100, 1) : 0.0;
+        $totalComplaintsCount = $allIncidents->whereIn('category', $complaintCategoryIds)->count();
 
         return view('supervisi.analytics', [
             'totalReports' => $totalReports,
             'totalIncidents' => $totalIncidents,
+            'totalComplaintsCount' => $totalComplaintsCount,
+            'activePreset' => $preset,
             'resolvedCount' => $resolvedCount,
             'pendingCount' => $pendingCount,
             'resolutionRate' => $resolutionRate,

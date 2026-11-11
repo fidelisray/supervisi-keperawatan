@@ -8,7 +8,6 @@ use App\Models\IncidentCategory;
 use App\Models\Room;
 use App\Models\SupervisionReport;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,14 +25,18 @@ class SupervisionReportController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $today = Carbon::today();
 
         $preset = (string) $request->string('preset')->trim();
         $dateFrom = (string) $request->string('date_from')->trim();
         $dateTo = (string) $request->string('date_to')->trim();
 
+        if ($preset === '' && $dateFrom === '' && $dateTo === '' && ! $request->hasAny(['preset', 'date_from', 'date_to'])) {
+            $preset = 'today';
+        }
+
         if ($preset !== '') {
             [$dateFrom, $dateTo] = match ($preset) {
+                'all' => ['', ''],
                 'today' => [now()->toDateString(), now()->toDateString()],
                 'last_7_days' => [now()->subDays(6)->toDateString(), now()->toDateString()],
                 'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
@@ -74,7 +77,7 @@ class SupervisionReportController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $accessibleIdsSubquery = (clone $accessibleReportsQuery)->select('id');
+        $accessibleIdsSubquery = (clone $filteredQuery)->select('id');
 
         $complaintCategoryIds = IncidentCategory::withTrashed()
             ->get(['id', 'incident_category'])
@@ -82,7 +85,7 @@ class SupervisionReportController extends Controller
             ->pluck('id')
             ->all();
 
-        $todayReportsCount = (clone $accessibleReportsQuery)->whereDate('report_date', $today)->count();
+        $totalReportsCount = (clone $filteredQuery)->count();
         $totalIncidentsCount = Incident::query()->whereIn('supervision_report_id', $accessibleIdsSubquery)->count();
         $totalComplaintsCount = count($complaintCategoryIds) > 0
             ? Incident::query()
@@ -103,7 +106,8 @@ class SupervisionReportController extends Controller
 
         return view('supervisi.index', [
             'reports' => $reports,
-            'todayReportsCount' => $todayReportsCount,
+            'totalReportsCount' => $totalReportsCount,
+            'activePreset' => $preset,
             'totalIncidentsCount' => $totalIncidentsCount,
             'totalComplaintsCount' => $totalComplaintsCount,
             'resolvedIncidentsCount' => $resolvedIncidentsCount,
