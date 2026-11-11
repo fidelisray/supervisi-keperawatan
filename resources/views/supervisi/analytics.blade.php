@@ -144,7 +144,7 @@
                         <option value="all">Semua Status</option>
                         <option value="resolved" {{ $selectedStatus === 'resolved' ? 'selected' : '' }}>Selesai Ditangani</option>
                         <option value="in_progress" {{ $selectedStatus === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani</option>
-                        <option value="escalated" {{ $selectedStatus === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi</option>
+                        {{-- <option value="escalated" {{ $selectedStatus === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi</option> --}}
                     </select>
                 </div>
 
@@ -324,7 +324,8 @@
                                 <canvas id="statusDoughnutChart"></canvas>
                             </div>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
+                        {{-- <div class="grid grid-cols-3 gap-2"> --}}
+                        <div class="grid grid-cols-2 gap-2">
                             @foreach($statusStats as $key => $stat)
                                 <button
                                     type="button"

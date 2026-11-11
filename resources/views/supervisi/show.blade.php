@@ -145,7 +145,7 @@
                 @else
                     <div class="space-y-4">
                         @foreach($report->incidents as $index => $incident)
-                            <div x-data="{ openStatusUpdate: false }" class="p-5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3">
+                            <div x-data="{ openStatusUpdate: false, showConfirmModal: false }" class="p-5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <div class="flex items-center space-x-2">
                                         <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">
@@ -173,8 +173,8 @@
                                             {{ $incident->status === 'resolved' ? 'Selesai' : ($incident->status === 'escalated' ? 'Butuh Eskalasi' : 'Sedang Ditangani') }}
                                         </span>
 
-                                        {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
-                                        @if(auth()->user()?->hasPermission('update_incident_status'))
+                                        {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user()) && $incident->status !== 'resolved') --}}
+                                        @if(auth()->user()?->hasPermission('update_incident_status') && $incident->status !== 'resolved')
                                             <button
                                                 type="button"
                                                 @click="openStatusUpdate = !openStatusUpdate"
@@ -208,11 +208,11 @@
                                         </div>
                                     @endif
 
-                                    {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user())) --}}
-                                    @if(auth()->user()?->hasPermission('update_incident_status'))
+                                    {{-- [GLOBAL VISIBILITY LOGIC]: @if(auth()->user()?->hasPermission('update_incident_status') && $report->canBeModifiedBy(auth()->user()) && $incident->status !== 'resolved') --}}
+                                    @if(auth()->user()?->hasPermission('update_incident_status') && $incident->status !== 'resolved')
                                         <!-- Inline Follow-up Status Update Form -->
                                         <div x-show="openStatusUpdate" x-cloak class="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                                            <form method="POST" action="{{ route('supervisi.incidents.update-status', [$report, $incident]) }}" class="space-y-3">
+                                            <form x-ref="statusForm{{ $incident->id }}" method="POST" action="{{ route('supervisi.incidents.update-status', [$report, $incident]) }}" class="space-y-3">
                                                 @csrf
                                                 @method('PATCH')
 
@@ -222,7 +222,7 @@
                                                         <select name="status" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900">
                                                             <option value="in_progress" {{ $incident->status === 'in_progress' ? 'selected' : '' }}>Sedang Ditangani</option>
                                                             <option value="resolved" {{ $incident->status === 'resolved' ? 'selected' : '' }}>Selesai Ditangani</option>
-                                                            <option value="escalated" {{ $incident->status === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi Supervisor</option>
+                                                            {{-- <option value="escalated" {{ $incident->status === 'escalated' ? 'selected' : '' }}>Perlu Eskalasi Supervisor</option> --}}
                                                         </select>
                                                     </div>
                                                 </div>
@@ -236,11 +236,38 @@
                                                     <button type="button" @click="openStatusUpdate = false" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">
                                                         Batal
                                                     </button>
-                                                    <button type="submit" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
+                                                    <button type="button" @click="showConfirmModal = true" class="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
                                                         Simpan Status Insiden
                                                     </button>
                                                 </div>
                                             </form>
+
+                                            <!-- Pop-up Confirmation Modal -->
+                                            <div x-show="showConfirmModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs">
+                                                <div @click.away="showConfirmModal = false" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200 space-y-4">
+                                                    <div class="flex items-start gap-3">
+                                                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <h4 class="text-sm font-bold text-slate-900">Konfirmasi Perubahan Status</h4>
+                                                            <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                                                                Perubahan yang dilakukan tidak dapat diedit kembali, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                                        <button type="button" @click="showConfirmModal = false" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                                                            Periksa Kembali
+                                                        </button>
+                                                        <button type="button" @click="$refs['statusForm{{ $incident->id }}'].submit()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
+                                                            Ya, Simpan Perubahan
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     @endif
                                 </div>

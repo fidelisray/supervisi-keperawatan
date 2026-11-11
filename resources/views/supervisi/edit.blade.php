@@ -13,14 +13,19 @@
         ])->values();
 
         $initialCollaborators = old('collaborators', $report->collaboratorList());
-        $initialIncidents = old('incidents', $report->incidents->map(fn ($inc) => [
+        $lockedIds = $report->incidents->where('status', 'resolved')->pluck('id')->all();
+        $initialIncidents = collect(old('incidents', $report->incidents->map(fn ($inc) => [
             'id' => $inc->id,
             'category' => (int) $inc->category,
             'incident_time' => $inc->incident_time ?? '',
             'description' => $inc->description,
             'action_taken' => $inc->action_taken ?? '',
             'status' => $inc->status,
-        ])->values()->all());
+            'is_locked' => $inc->status === 'resolved',
+        ])->values()->all()))->map(fn ($item) => array_merge($item, [
+            'id' => $item['id'] ?? null,
+            'is_locked' => $item['is_locked'] ?? in_array((int) ($item['id'] ?? 0), $lockedIds, true),
+        ]))->values()->all();
         $categoryMeta = $incidentCategories->mapWithKeys(fn ($cat) => [
             $cat->id => [
                 'label' => $cat->incident_category,
@@ -415,6 +420,7 @@
                                     </button>
 
                                     <button 
+                                        x-show="!item.is_locked"
                                         type="button" 
                                         @click="removeIncident(index)"
                                         class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
@@ -426,6 +432,7 @@
                                     </button>
                                 </div>
 
+                                <input type="hidden" :name="'incidents[' + index + '][id]'" :value="item.id || ''">
                                 <input type="hidden" :name="'incidents[' + index + '][category]'" :value="item.category">
                                 <input type="hidden" :name="'incidents[' + index + '][incident_time]'" :value="item.incident_time">
                                 <input type="hidden" :name="'incidents[' + index + '][description]'" :value="item.description">
@@ -531,11 +538,12 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Status Penanganan</label>
-                                    <select x-model="modalData.status" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
+                                    <select x-model="modalData.status" :disabled="modalData.is_locked" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed">
                                         <option value="in_progress">Sedang Ditangani</option>
                                         <option value="resolved">Selesai Ditangani</option>
-                                        <option value="escalated">Perlu Eskalasi Supervisor</option>
+                                        {{-- <option value="escalated">Perlu Eskalasi Supervisor</option> --}}
                                     </select>
+                                    <p x-show="modalData.is_locked" class="text-[11px] text-emerald-700 font-medium mt-1">Status telah selesai dan tidak dapat diubah kembali.</p>
                                 </div>
                             </div>
 
@@ -964,6 +972,9 @@
                 },
 
                 removeIncident(index) {
+                    if (this.incidents[index]?.is_locked) {
+                        return;
+                    }
                     this.incidents.splice(index, 1);
                 },
 

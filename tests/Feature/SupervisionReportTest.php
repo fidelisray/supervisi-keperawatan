@@ -4,6 +4,7 @@ use App\Models\Incident;
 use App\Models\SupervisionReport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -197,21 +198,54 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ])
         ->assertForbidden();
 
-    // Admin has full view, edit, and incident status update access to all reports
+    // Admin has full view and edit access to all reports, but resolved incident is locked from further status updates
     $this->actingAs($this->admin)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
         ->assertSee('Edit Logbook')
-        ->assertSee('Update Tindak Lanjut');
+        ->assertSee('Selesai')
+        ->assertDontSee('Update Tindak Lanjut');
 
+    // Attempting to change or downgrade resolved incident status via patch is blocked
+    $this->actingAs($this->admin)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'in_progress',
+            'action_taken' => 'Percobaan downgrade status oleh Administrator.',
+        ])
+        ->assertSessionHasErrors('status');
+
+    expect($latestIncident->fresh()->status)->toBe('resolved');
+
+    // Attempting to set status to escalated is blocked by validation
     $this->actingAs($this->admin)
         ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
             'status' => 'escalated',
-            'action_taken' => 'Dievaluasi oleh Administrator.',
+            'action_taken' => 'Percobaan eskalasi yang disembunyikan.',
         ])
-        ->assertRedirect(route('supervisi.show', $report));
+        ->assertSessionHasErrors('status');
 
-    expect($latestIncident->fresh()->status)->toBe('escalated');
+    // Attempting to downgrade resolved incident via update logbook is also rejected
+    $this->actingAs($this->admin)
+        ->put(route('supervisi.update', $report), [
+            'report_date' => now()->toDateString(),
+            'room_name' => 'ICU (Intensive Care Unit)',
+            'patient_count' => 7,
+            'nurse_count' => 4,
+            'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+            'incidents' => [
+                [
+                    'id' => $latestIncident->id,
+                    'category' => 2,
+                    'incident_time' => '15:20',
+                    'description' => 'Syringe pump nomor 4 alarm berbunyi baterai drop.',
+                    'action_taken' => 'Alat sudah diganti unit cadangan.',
+                    'status' => 'in_progress',
+                ],
+            ],
+        ])
+        ->assertSessionHasErrors('status');
+
+    expect($latestIncident->fresh()->status)->toBe('resolved');
 });
 
 test('store requires mandatory room, date, patient count, and nurse count while collaborators are optional', function () {
@@ -543,6 +577,80 @@ test('supervision index defaults to today preset, exposes semua data chip, and m
     expect($all->viewData('totalReportsCount'))->toBe(2)
         ->and($all->viewData('totalIncidentsCount'))->toBe(3)
         ->and($all->viewData('resolvedIncidentsCount'))->toBe(1);
+});
+
+test('incident status can only be updated once to resolved and is locked thereafter', function () {
+    $report = SupervisionReport::create([
+        'report_date' => now()->toDateString(),
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'status' => 'submitted',
+    ]);
+
+    $incident = $report->incidents()->create([
+        'category' => 1,
+        'incident_time' => '08:30',
+        'description' => 'Keluhan kebisingan AC.',
+        'status' => 'in_progress',
+    ]);
+
+    // Initial state: can see Update Tindak Lanjut button
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful()
+        ->assertSee('Update Tindak Lanjut')
+        ->assertSee('Perubahan yang dilakukan tidak dapat diedit kembali');
+
+    // Update status to resolved (allowed once)
+    $this->actingAs($this->supervisor)
+        ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
+            'status' => 'resolved',
+            'action_taken' => 'AC diperbaiki oleh teknisi.',
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($incident->fresh()->status)->toBe('resolved')
+        ->and($incident->fresh()->isResolved())->toBeTrue();
+
+    // After resolved: Update Tindak Lanjut button is hidden on detail page
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.show', $report))
+        ->assertSuccessful()
+        ->assertSee('Selesai')
+        ->assertDontSee('Update Tindak Lanjut');
+
+    // Second update attempt is blocked at controller level
+    $this->actingAs($this->supervisor)
+        ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
+            'status' => 'in_progress',
+            'action_taken' => 'Mencoba membuka kembali.',
+        ])
+        ->assertSessionHasErrors('status');
+
+    expect($incident->fresh()->status)->toBe('resolved');
+
+    // Model event guard also prevents changing status from resolved to in_progress directly
+    expect(function () use ($incident) {
+        $incident->fresh()->update(['status' => 'in_progress']);
+    })->toThrow(ValidationException::class);
+
+    // Edit logbook form cannot delete the resolved incident
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), [
+            'report_date' => now()->toDateString(),
+            'room_name' => 'FRANSISKUS',
+            'patient_count' => 10,
+            'nurse_count' => 3,
+            'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+            'incidents' => [],
+        ])
+        ->assertSessionHasErrors('incidents');
+
+    expect($report->fresh()->incidents()->count())->toBe(1);
 });
 
 test('supervision index renders numbering and dynamic follow-up status badges per logbook', function () {

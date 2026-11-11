@@ -283,7 +283,47 @@ class SupervisionReportController extends Controller
         $validated = $this->validateReportPayload($request);
         $collaboratorsList = $this->extractCollaboratorsList($request);
 
-        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsList) {
+        $lockedIncidents = $supervisionReport->incidents()
+            ->where('status', 'resolved')
+            ->get()
+            ->keyBy('id');
+
+        $submittedIncidents = collect($validated['incidents'] ?? [])->values();
+        $hasExplicitIds = $submittedIncidents->contains(fn ($item) => ! empty($item['id']));
+
+        if ($hasExplicitIds) {
+            $submittedLockedIds = $submittedIncidents
+                ->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if ($lockedIncidents->keys()->diff($submittedLockedIds)->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'incidents' => 'Kejadian yang sudah selesai ditangani tidak dapat dihapus.',
+                ]);
+            }
+        } elseif ($submittedIncidents->count() < $lockedIncidents->count()) {
+            throw ValidationException::withMessages([
+                'incidents' => 'Kejadian yang sudah selesai ditangani tidak dapat dihapus.',
+            ]);
+        }
+
+        $lockedIncidentsByIndex = $lockedIncidents->values();
+
+        foreach ($submittedIncidents as $idx => $incidentData) {
+            $lockedIncident = $hasExplicitIds
+                ? $lockedIncidents->get((int) ($incidentData['id'] ?? 0))
+                : $lockedIncidentsByIndex->get($idx);
+
+            if ($lockedIncident !== null && isset($incidentData['status']) && $incidentData['status'] !== 'resolved') {
+                throw ValidationException::withMessages([
+                    'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
+                ]);
+            }
+        }
+
+        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsList, $lockedIncidents, $lockedIncidentsByIndex, $submittedIncidents, $hasExplicitIds) {
             $supervisionReport->update([
                 'report_date' => $validated['report_date'],
                 'shift' => $validated['shift'] ?? $supervisionReport->shift,
@@ -294,8 +334,33 @@ class SupervisionReportController extends Controller
                 'general_notes' => $validated['general_notes'] ?? null,
             ]);
 
-            $supervisionReport->incidents()->delete();
-            $this->syncReportIncidents($supervisionReport, $validated['incidents'] ?? []);
+            $supervisionReport->incidents()
+                ->whereNotIn('id', $lockedIncidents->keys()->all())
+                ->delete();
+
+            $newIncidents = [];
+
+            foreach ($submittedIncidents as $idx => $incidentData) {
+                $lockedIncident = $hasExplicitIds
+                    ? $lockedIncidents->get((int) ($incidentData['id'] ?? 0))
+                    : $lockedIncidentsByIndex->get($idx);
+
+                if ($lockedIncident === null) {
+                    $newIncidents[] = $incidentData;
+
+                    continue;
+                }
+
+                $lockedIncident->update([
+                    'category' => (int) $incidentData['category'],
+                    'incident_time' => $incidentData['incident_time'] ?? null,
+                    'description' => $incidentData['description'],
+                    'action_taken' => $incidentData['action_taken'] ?? null,
+                    'status' => 'resolved',
+                ]);
+            }
+
+            $this->syncReportIncidents($supervisionReport, $newIncidents);
         });
 
         return redirect()->route('supervisi.show', $supervisionReport)
@@ -321,8 +386,15 @@ class SupervisionReportController extends Controller
         abort_unless($request->user()?->hasPermission('update_incident_status') && $supervisionReport->isAccessibleBy($request->user()), 403);
         abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
 
+        if ($incident->isResolved()) {
+            throw ValidationException::withMessages([
+                'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
+            ]);
+        }
+
         $validated = $request->validate([
-            'status' => ['required', 'in:in_progress,resolved,escalated'],
+            // 'status' => ['required', 'in:in_progress,resolved,escalated'],
+            'status' => ['required', 'in:in_progress,resolved'],
             'action_taken' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -359,11 +431,13 @@ class SupervisionReportController extends Controller
             'nurse_in_charge' => ['nullable'],
             'general_notes' => ['nullable', 'string', 'max:2000'],
             'incidents' => ['nullable', 'array'],
+            'incidents.*.id' => ['nullable', 'integer'],
             'incidents.*.category' => ['required_with:incidents', 'integer', Rule::in($validCategoryIds)],
             'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
             'incidents.*.description' => ['required_with:incidents', 'string'],
             'incidents.*.action_taken' => ['nullable', 'string'],
-            'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
+            // 'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
+            'incidents.*.status' => ['nullable', 'in:in_progress,resolved'],
         ], [
             // 'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             'collaborators.*.max' => 'Nama kolaborator maksimal 255 karakter.',

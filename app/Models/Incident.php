@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class Incident extends Model
 {
@@ -45,6 +46,25 @@ class Incident extends Model
             'supervision_report_id' => 'integer',
             'category' => 'integer',
         ];
+    }
+
+    /**
+     * Cegah status tindak lanjut yang sudah selesai diubah kembali pada level model.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (Incident $incident): void {
+            if ($incident->getOriginal('status') === 'resolved' && $incident->status !== 'resolved') {
+                throw ValidationException::withMessages([
+                    'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
+                ]);
+            }
+        });
+    }
+
+    public function isResolved(): bool
+    {
+        return $this->status === 'resolved';
     }
 
     /**

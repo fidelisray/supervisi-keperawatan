@@ -100,8 +100,15 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     const saveStatusBtn = page.getByRole('button', { name: /Simpan Status Insiden/i });
     await saveStatusBtn.click();
 
-    // Verifikasi badge status berubah menjadi Selesai
+    // Verifikasi Pop-up Konfirmasi muncul dengan pesan peringatan
+    await expect(page.getByText(/Perubahan yang dilakukan tidak dapat diedit kembali, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
+
+    // Klik tombol konfirmasi "Ya, Simpan Perubahan"
+    await page.getByRole('button', { name: /Ya, Simpan Perubahan/i }).click();
+
+    // Verifikasi badge status berubah menjadi Selesai dan tombol Update Tindak Lanjut hilang (terkunci)
     await expect(page.getByText(/Selesai/i).first()).toBeVisible();
+    await expect(updateStatusBtn).toBeHidden();
 
     // 8. Verifikasi Navigation Blocking pada halaman Edit Logbook (/supervisi/{id}/edit)
     const editLogbookLink = page.getByRole('link', { name: /Edit Logbook/i });

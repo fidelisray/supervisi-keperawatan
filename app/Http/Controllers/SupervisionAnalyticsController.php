@@ -159,7 +159,7 @@ class SupervisionAnalyticsController extends Controller
         $statuses = [
             'resolved' => ['label' => 'Selesai Ditangani', 'color' => 'bg-emerald-600', 'hex' => '#059669', 'text' => 'text-emerald-700'],
             'in_progress' => ['label' => 'Sedang Ditangani', 'color' => 'bg-amber-500', 'hex' => '#d97706', 'text' => 'text-amber-700'],
-            'escalated' => ['label' => 'Perlu Eskalasi', 'color' => 'bg-rose-600', 'hex' => '#dc2626', 'text' => 'text-rose-700'],
+            // 'escalated' => ['label' => 'Perlu Eskalasi', 'color' => 'bg-rose-600', 'hex' => '#dc2626', 'text' => 'text-rose-700'],
         ];
 
         $statusStats = [];

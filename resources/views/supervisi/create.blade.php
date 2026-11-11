@@ -595,7 +595,7 @@
                                         class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition">
                                         <option value="in_progress">Sedang Ditangani</option>
                                         <option value="resolved">Selesai Ditangani</option>
-                                        <option value="escalated">Perlu Eskalasi Supervisor</option>
+                                        {{-- <option value="escalated">Perlu Eskalasi Supervisor</option> --}}
                                     </select>
                                 </div>
                             </div>
