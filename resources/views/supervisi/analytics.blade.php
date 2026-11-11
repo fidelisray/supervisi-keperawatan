@@ -1,6 +1,17 @@
 <x-layouts.app>
     <x-slot name="title">Analisis & Grafik Insiden Supervisi</x-slot>
 
+    @php
+        $roomsJson = $rooms
+            ->map(
+                fn($r) => [
+                    'name' => $r->nama_ruangan,
+                    'installation' => $r->instalasi ? 'Instalasi ' . $r->instalasi : '',
+                ],
+            )
+            ->values();
+    @endphp
+
     <div 
         x-data="analyticsDashboard(@js($chartPayload), '{{ route('supervisi.analytics.drilldown') }}')"
         class="max-w-7xl mx-auto space-y-8 print:p-0 print:space-y-4"
@@ -111,17 +122,54 @@
             <form method="GET" action="{{ route('supervisi.analytics') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
                 <input type="hidden" name="preset" value="{{ $activePreset }}">
 
-                <!-- Filter Ruangan -->
-                <div class="sm:col-span-1 lg:col-span-3">
-                    <label for="room" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Ruangan / Bangsal</label>
-                    <select id="room" name="room" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                        <option value="">Semua Ruangan</option>
-                        @foreach($rooms as $r)
-                            <option value="{{ $r->nama_ruangan }}" {{ $selectedRoom === $r->nama_ruangan ? 'selected' : '' }}>
-                                {{ $r->nama_ruangan }}
-                            </option>
-                        @endforeach
-                    </select>
+                <!-- Filter Ruangan (Searchable Combobox) -->
+                <div class="sm:col-span-1 lg:col-span-3 relative"
+                    x-data="searchableRoomSelect({
+                        rooms: {{ Js::from($roomsJson) }},
+                        selected: @js($selectedRoom)
+                    })"
+                    @click.outside="isOpen = false"
+                >
+                    <label for="room_search_analytics" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
+                        Ruangan / Bangsal
+                    </label>
+                    <div class="relative">
+                        <input type="text"
+                            id="room_search_analytics"
+                            role="combobox"
+                            autocomplete="off"
+                            x-model="search"
+                            @focus="isOpen = true"
+                            @input="onInput()"
+                            placeholder="Semua Ruangan"
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs">
+                        <input type="hidden" name="room" :value="selectedRoom">
+
+                        <!-- Dropdown Result List -->
+                        <div x-show="isOpen" x-cloak
+                            class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                            <button type="button"
+                                @click="selectRoom('', '')"
+                                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedRoom === '' }">
+                                <span class="font-semibold text-slate-600">Semua Ruangan</span>
+                            </button>
+                            <template x-for="room in filteredRooms" :key="room.name">
+                                <button type="button"
+                                    @click="selectRoom(room.name, room.name)"
+                                    class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                    :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedRoom === room.name }">
+                                    <span x-text="room.name" class="font-medium"></span>
+                                    <span class="text-[11px] text-slate-400 font-normal ml-2"
+                                        x-text="room.installation"></span>
+                                </button>
+                            </template>
+                            <div x-show="filteredRooms.length === 0"
+                                class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                Ruangan tidak ditemukan
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Filter Kategori Insiden -->
@@ -1003,6 +1051,34 @@
                             }
                         }
                     });
+                }
+            };
+        }
+
+        function searchableRoomSelect(config) {
+            return {
+                isOpen: false,
+                rooms: config.rooms || [],
+                selectedRoom: config.selected || '',
+                search: config.selected || '',
+                onInput() {
+                    this.isOpen = true;
+                    this.selectedRoom = this.search.trim();
+                },
+                get filteredRooms() {
+                    if (!this.search || this.search === 'Semua Ruangan') {
+                        return this.rooms;
+                    }
+                    const q = this.search.toLowerCase().trim();
+                    return this.rooms.filter(r =>
+                        r.name.toLowerCase().includes(q) ||
+                        (r.installation && r.installation.toLowerCase().includes(q))
+                    );
+                },
+                selectRoom(value, displayText) {
+                    this.selectedRoom = value;
+                    this.search = displayText;
+                    this.isOpen = false;
                 }
             };
         }

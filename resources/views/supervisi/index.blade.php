@@ -1,6 +1,27 @@
 <x-layouts.app>
     <x-slot name="title">Riwayat Logbook Supervisi</x-slot>
 
+    @php
+        $roomsJson = $rooms
+            ->map(
+                fn($r) => [
+                    'name' => $r->nama_ruangan,
+                    'installation' => $r->instalasi ? 'Instalasi ' . $r->instalasi : '',
+                ],
+            )
+            ->values();
+
+        $nursesJson = $nurses
+            ->filter(fn($n) => !empty($n->description))
+            ->map(
+                fn($n) => [
+                    'name' => $n->description,
+                    'nip' => $n->nip,
+                ],
+            )
+            ->values();
+    @endphp
+
     <div class="max-w-7xl mx-auto space-y-8">
         <!-- Page Title & Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
@@ -169,19 +190,53 @@
                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
                 <input type="hidden" name="preset" value="{{ $activePreset }}">
 
-                <div class="sm:col-span-1 lg:col-span-3">
-                    <label for="room"
+                <!-- Filter Ruangan (Searchable Combobox) -->
+                <div class="sm:col-span-1 lg:col-span-3 relative"
+                    x-data="searchableRoomSelect({
+                        rooms: {{ Js::from($roomsJson) }},
+                        selected: @js(request('room', ''))
+                    })"
+                    @click.outside="isOpen = false"
+                >
+                    <label for="room_search"
                         class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Ruangan</label>
-                    <select id="room" name="room"
-                        class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                        <option value="">Semua Ruangan</option>
-                        @foreach ($rooms as $room)
-                            <option value="{{ $room->nama_ruangan }}"
-                                {{ request('room') === $room->nama_ruangan ? 'selected' : '' }}>
-                                {{ $room->nama_ruangan }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <input type="text"
+                            id="room_search"
+                            role="combobox"
+                            autocomplete="off"
+                            x-model="search"
+                            @focus="isOpen = true"
+                            @input="onInput()"
+                            placeholder="Semua Ruangan"
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs">
+                        <input type="hidden" name="room" :value="selectedRoom">
+
+                        <!-- Dropdown Result List -->
+                        <div x-show="isOpen" x-cloak
+                            class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                            <button type="button"
+                                @click="selectRoom('', '')"
+                                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedRoom === '' }">
+                                <span class="font-semibold text-slate-600">Semua Ruangan</span>
+                            </button>
+                            <template x-for="room in filteredRooms" :key="room.name">
+                                <button type="button"
+                                    @click="selectRoom(room.name, room.name)"
+                                    class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                    :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedRoom === room.name }">
+                                    <span x-text="room.name" class="font-medium"></span>
+                                    <span class="text-[11px] text-slate-400 font-normal ml-2"
+                                        x-text="room.installation"></span>
+                                </button>
+                            </template>
+                            <div x-show="filteredRooms.length === 0"
+                                class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                Ruangan tidak ditemukan
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="sm:col-span-1 lg:col-span-2">
@@ -210,29 +265,110 @@
                 </div>
                 --}}
                 @if (auth()->user()?->hasPermission('view_all_reports'))
-                    <div class="sm:col-span-1 lg:col-span-2">
-                        <label for="supervisor"
+                    <!-- Filter Supervisor (Searchable Combobox) -->
+                    <div class="sm:col-span-1 lg:col-span-2 relative"
+                        x-data="searchableNurseSelect({
+                            nurses: {{ Js::from($nursesJson) }},
+                            selected: @js(request('supervisor', '')),
+                            allLabel: 'Semua Supervisor'
+                        })"
+                        @click.outside="isOpen = false"
+                    >
+                        <label for="supervisor_search"
                             class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Supervisor</label>
-                        <input type="text" id="supervisor" name="supervisor" list="filter_nurse_list"
-                            value="{{ request('supervisor') }}" placeholder="Nama supervisor..."
-                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        <div class="relative">
+                            <input type="text"
+                                id="supervisor_search"
+                                role="combobox"
+                                autocomplete="off"
+                                x-model="search"
+                                @focus="isOpen = true"
+                                @input="onInput()"
+                                placeholder="Nama supervisor..."
+                                class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs">
+                            <input type="hidden" name="supervisor" :value="selectedNurse">
+
+                            <!-- Dropdown Result List -->
+                            <div x-show="isOpen" x-cloak
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                                <button type="button"
+                                    @click="selectNurse('', '')"
+                                    class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                    :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedNurse === '' }">
+                                    <span class="font-semibold text-slate-600">Semua Supervisor</span>
+                                </button>
+                                <template x-for="nurse in filteredNurses" :key="nurse.nip + nurse.name">
+                                    <button type="button"
+                                        @click="selectNurse(nurse.name, nurse.name)"
+                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                        :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedNurse === nurse.name }">
+                                        <div class="flex items-center gap-2 truncate">
+                                            <span class="font-medium" x-text="nurse.name"></span>
+                                            <span class="text-[11px] font-mono text-slate-500"
+                                                x-text="'(NIP: ' + nurse.nip + ')'"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                                <div x-show="filteredNurses.length === 0"
+                                    class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    Supervisor tidak ditemukan
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
 
-                <div
-                    class="sm:col-span-1 {{ auth()->user()?->hasPermission('view_all_reports') ? 'lg:col-span-2' : 'lg:col-span-3' }}">
-                    <label for="collaborator"
+                <!-- Filter Kolaborator (Searchable Combobox) -->
+                <div class="sm:col-span-1 {{ auth()->user()?->hasPermission('view_all_reports') ? 'lg:col-span-2' : 'lg:col-span-3' }} relative"
+                    x-data="searchableNurseSelect({
+                        nurses: {{ Js::from($nursesJson) }},
+                        selected: @js(request('collaborator', '')),
+                        allLabel: 'Semua Kolaborator'
+                    })"
+                    @click.outside="isOpen = false"
+                >
+                    <label for="collaborator_search"
                         class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Kolaborator</label>
-                    <input type="text" id="collaborator" name="collaborator" list="filter_nurse_list"
-                        value="{{ request('collaborator') }}" placeholder="Nama kolaborator..."
-                        class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                </div>
+                    <div class="relative">
+                        <input type="text"
+                            id="collaborator_search"
+                            role="combobox"
+                            autocomplete="off"
+                            x-model="search"
+                            @focus="isOpen = true"
+                            @input="onInput()"
+                            placeholder="Nama kolaborator..."
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none shadow-2xs">
+                        <input type="hidden" name="collaborator" :value="selectedNurse">
 
-                <datalist id="filter_nurse_list">
-                    @foreach ($nurses as $nurse)
-                        <option value="{{ $nurse->description }}">{{ $nurse->nip }}</option>
-                    @endforeach
-                </datalist>
+                        <!-- Dropdown Result List -->
+                        <div x-show="isOpen" x-cloak
+                            class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                            <button type="button"
+                                @click="selectNurse('', '')"
+                                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedNurse === '' }">
+                                <span class="font-semibold text-slate-600">Semua Kolaborator</span>
+                            </button>
+                            <template x-for="nurse in filteredNurses" :key="nurse.nip + nurse.name">
+                                <button type="button"
+                                    @click="selectNurse(nurse.name, nurse.name)"
+                                    class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer text-slate-800"
+                                    :class="{ 'bg-teal-50 text-teal-900 font-semibold': selectedNurse === nurse.name }">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <span class="font-medium" x-text="nurse.name"></span>
+                                        <span class="text-[11px] font-mono text-slate-500"
+                                            x-text="'(NIP: ' + nurse.nip + ')'"></span>
+                                    </div>
+                                </button>
+                            </template>
+                            <div x-show="filteredNurses.length === 0"
+                                class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                Kolaborator tidak ditemukan
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div
                     class="{{ auth()->user()?->hasPermission('view_all_reports') ? 'sm:col-span-2 lg:col-span-1' : 'sm:col-span-2 lg:col-span-2' }}">
@@ -420,4 +556,62 @@
             @endif
         </div>
     </div>
+
+    <script>
+        function searchableRoomSelect(config) {
+            return {
+                isOpen: false,
+                rooms: config.rooms || [],
+                selectedRoom: config.selected || '',
+                search: config.selected || '',
+                onInput() {
+                    this.isOpen = true;
+                    this.selectedRoom = this.search.trim();
+                },
+                get filteredRooms() {
+                    if (!this.search || this.search === 'Semua Ruangan') {
+                        return this.rooms;
+                    }
+                    const q = this.search.toLowerCase().trim();
+                    return this.rooms.filter(r =>
+                        r.name.toLowerCase().includes(q) ||
+                        (r.installation && r.installation.toLowerCase().includes(q))
+                    );
+                },
+                selectRoom(value, displayText) {
+                    this.selectedRoom = value;
+                    this.search = displayText;
+                    this.isOpen = false;
+                }
+            };
+        }
+
+        function searchableNurseSelect(config) {
+            return {
+                isOpen: false,
+                nurses: config.nurses || [],
+                selectedNurse: config.selected || '',
+                search: config.selected || '',
+                onInput() {
+                    this.isOpen = true;
+                    this.selectedNurse = this.search.trim();
+                },
+                get filteredNurses() {
+                    if (!this.search || this.search === config.allLabel) {
+                        return this.nurses;
+                    }
+                    const q = this.search.toLowerCase().trim();
+                    return this.nurses.filter(n =>
+                        n.name.toLowerCase().includes(q) ||
+                        (n.nip && String(n.nip).toLowerCase().includes(q))
+                    );
+                },
+                selectNurse(value, displayText) {
+                    this.selectedNurse = value;
+                    this.search = displayText;
+                    this.isOpen = false;
+                }
+            };
+        }
+    </script>
 </x-layouts.app>
