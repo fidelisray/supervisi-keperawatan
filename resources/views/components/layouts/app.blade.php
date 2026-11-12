@@ -14,9 +14,53 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    <script>
+        (function () {
+            try {
+                var isDesktop = window.innerWidth >= 768;
+                var isFolded = localStorage.getItem('supervisi_sidebar_folded') === 'true';
+                var isHoverNav = sessionStorage.getItem('supervisi_sidebar_hover_nav') === 'true';
+                if (isDesktop && isFolded && !isHoverNav) {
+                    document.documentElement.classList.add('sidebar-compact-init');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <style>
         [x-cloak] {
             display: none !important;
+        }
+
+        @media (min-width: 768px) {
+            html.sidebar-compact-init #app-sidebar {
+                width: 86px !important;
+            }
+
+            html.sidebar-compact-init #app-sidebar .sidebar-expanded-brand {
+                opacity: 0 !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }
+
+            html.sidebar-compact-init #app-sidebar .sidebar-compact-brand {
+                opacity: 1 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+            }
+
+            html.sidebar-compact-init #app-sidebar .sidebar-text-reveal {
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            html.sidebar-compact-init #app-sidebar .sidebar-section-header {
+                opacity: 0 !important;
+            }
+
+            html.sidebar-compact-init #app-sidebar .sidebar-section-divider {
+                opacity: 1 !important;
+            }
         }
     </style>
 </head>
@@ -49,18 +93,18 @@
         </header>
 
         <!-- Sidebar Navigation -->
-        <aside x-ref="sidebar" @mouseenter="onSidebarMouseEnter()" @mouseleave="onSidebarMouseLeave()"
+        <aside id="app-sidebar" x-ref="sidebar" @mouseenter="onSidebarMouseEnter()" @mouseleave="onSidebarMouseLeave()"
             :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
-            class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out md:sticky md:top-0 md:h-screen md:max-h-screen md:translate-x-0 border-r border-slate-800 flex-shrink-0 overflow-x-hidden">
-            <!-- Hospital Branding & Fold Toggle -->
-            <div class="border-b border-slate-800 bg-slate-950/60 flex-shrink-0 transition-all duration-200"
-                :class="isCompact ? 'p-3 space-y-2.5' : 'p-5 space-y-3'">
-                <!-- Expanded Logo Card (logo.png) -->
-                <div x-ref="expandedBrand" x-show="!isCompact" class="space-y-3">
+            class="fixed inset-y-0 left-0 z-40 w-72 bg-slate-900 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out md:sticky md:top-0 md:h-screen md:max-h-screen md:translate-x-0 border-r border-slate-800 flex-shrink-0 overflow-x-hidden select-none">
+            <!-- Hospital Branding & Fold Toggle (Fixed-Height Stage: Zero Vertical Jump) -->
+            <div class="relative h-[144px] border-b border-slate-800 bg-slate-950/60 flex-shrink-0 overflow-hidden">
+                <!-- Layer 1: Expanded Logo Card (logo.png) -->
+                <div x-ref="expandedBrand"
+                    class="sidebar-expanded-brand absolute inset-y-0 left-0 w-[287px] p-4 flex flex-col justify-between">
                     <div
-                        class="bg-white rounded-xl p-3.5 shadow-xs border border-slate-800/60 flex items-center justify-center">
+                        class="bg-white rounded-xl p-3 shadow-xs border border-slate-800/60 flex items-center justify-center h-[68px]">
                         <img src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo RS St. Elisabeth Semarang"
-                            class="h-14 w-auto max-w-full object-contain">
+                            class="h-12 w-auto max-w-full object-contain">
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -70,11 +114,10 @@
                         </span>
 
                         <button type="button" @click="toggleFold()"
-                            class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-blue-600 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer shrink-0"
+                            class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-blue-600 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer shrink-0"
                             :title="sidebarFolded ? 'Sematkan Sidebar Terbuka' : 'Lipat Sidebar (30%)'"
                             aria-label="Toggle Lipat Sidebar">
-                            <svg x-ref="foldIconExpanded" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                             </svg>
@@ -82,8 +125,9 @@
                     </div>
                 </div>
 
-                <!-- Compact / Folded Logo (web-icon.webp) -->
-                <div x-ref="compactBrand" x-show="isCompact" x-cloak class="flex flex-col items-center space-y-2">
+                <!-- Layer 2: Compact / Folded Logo (web-icon.webp) -->
+                <div x-ref="compactBrand"
+                    class="sidebar-compact-brand absolute inset-y-0 left-0 w-[85px] py-4 px-2.5 flex flex-col items-center justify-between opacity-0 invisible pointer-events-none">
                     <div
                         class="w-14 h-14 bg-white rounded-xl p-1.5 shadow-xs border border-slate-800/60 flex items-center justify-center">
                         <img src="{{ Vite::asset('resources/images/web-icon.webp') }}"
@@ -91,7 +135,7 @@
                     </div>
 
                     <button type="button" @click="toggleFold()"
-                        class="hidden md:inline-flex items-center justify-center w-9 h-8 rounded-lg bg-slate-800/90 hover:bg-blue-600 text-blue-300 hover:text-white border border-slate-700 transition cursor-pointer"
+                        class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-blue-600 text-blue-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
                         title="Buka Penuh Sidebar" aria-label="Buka Penuh Sidebar">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -101,103 +145,118 @@
                 </div>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="flex-1 py-4 space-y-2 overflow-y-auto overflow-x-hidden" :class="isCompact ? 'px-2' : 'px-3'">
-                <div x-show="!isCompact"
-                    class="sidebar-section-label px-3 pb-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
-                    Menu Utama
+            <!-- Navigation Links (Fixed-Rail Icon Geometry: Zero Horizontal/Vertical Jump) -->
+            <nav class="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden">
+                <div class="relative h-8 flex items-center px-3 overflow-hidden whitespace-nowrap">
+                    <span class="sidebar-section-header text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
+                        Menu Utama
+                    </span>
+                    <span
+                        class="sidebar-section-divider absolute inset-x-2 top-1/2 -translate-y-1/2 border-t border-slate-800 opacity-0 pointer-events-none"></span>
                 </div>
 
                 @if (auth()->user()?->hasPermission('create_report'))
-                    <a href="{{ route('supervisi.create') }}" title="Input Logbook Supervisi"
-                        :class="isCompact ? 'justify-center px-2 py-3' : 'px-3.5 py-3'"
-                        class="flex items-center rounded-xl text-base font-semibold transition-colors {{ request()->routeIs('supervisi.create') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                        <svg class="w-6 h-6 flex-shrink-0" :class="isCompact ? '' : 'mr-3.5'" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span x-show="!isCompact" class="sidebar-label truncate">Input Logbook Supervisi</span>
+                    <a href="{{ route('supervisi.create') }}" @click="onSidebarLinkClick()"
+                        title="Input Logbook Supervisi"
+                        class="group flex items-center h-12 rounded-xl text-base font-semibold transition-colors overflow-hidden whitespace-nowrap {{ request()->routeIs('supervisi.create') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                        <span class="w-[61px] h-12 shrink-0 flex items-center justify-center">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </span>
+                        <span class="sidebar-text-reveal pr-3.5 truncate">Input Logbook Supervisi</span>
                     </a>
                 @endif
 
-                <a href="{{ route('supervisi.index') }}" title="Riwayat & Monitoring"
-                    :class="isCompact ? 'justify-center px-2 py-3' : 'px-3.5 py-3'"
-                    class="flex items-center rounded-xl text-base font-semibold transition-colors {{ request()->routeIs('supervisi.index') || request()->routeIs('supervisi.show') || request()->routeIs('supervisi.edit') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                    <svg class="w-6 h-6 flex-shrink-0" :class="isCompact ? '' : 'mr-3.5'" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                    <span x-show="!isCompact" class="sidebar-label truncate">Riwayat & Monitoring</span>
+                <a href="{{ route('supervisi.index') }}" @click="onSidebarLinkClick()" title="Riwayat & Monitoring"
+                    class="group flex items-center h-12 rounded-xl text-base font-semibold transition-colors overflow-hidden whitespace-nowrap {{ request()->routeIs('supervisi.index') || request()->routeIs('supervisi.show') || request()->routeIs('supervisi.edit') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                    <span class="w-[61px] h-12 shrink-0 flex items-center justify-center">
+                        <svg class="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                    </span>
+                    <span class="sidebar-text-reveal pr-3.5 truncate">Riwayat & Monitoring</span>
                 </a>
 
                 @if (auth()->user()?->hasPermission('view_analytics'))
-                    <div x-show="!isCompact"
-                        class="sidebar-section-label pt-5 px-3 pb-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
-                        Analisis & Laporan
+                    <div class="relative h-9 pt-2 flex items-center px-3 overflow-hidden whitespace-nowrap">
+                        <span
+                            class="sidebar-section-header text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
+                            Analisis & Laporan
+                        </span>
+                        <span
+                            class="sidebar-section-divider absolute inset-x-2 top-1/2 -translate-y-1/2 border-t border-slate-800 opacity-0 pointer-events-none"></span>
                     </div>
-                    <div x-show="isCompact" x-cloak class="my-2 border-t border-slate-800"></div>
 
-                    <a href="{{ route('supervisi.analytics') }}" title="Grafik Insiden"
-                        :class="isCompact ? 'justify-center px-2 py-3' : 'px-3.5 py-3'"
-                        class="flex items-center rounded-xl text-base font-semibold transition-colors {{ request()->routeIs('supervisi.analytics') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                        <svg class="w-6 h-6 flex-shrink-0" :class="isCompact ? '' : 'mr-3.5'" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span x-show="!isCompact" class="sidebar-label truncate">Grafik Insiden</span>
+                    <a href="{{ route('supervisi.analytics') }}" @click="onSidebarLinkClick()" title="Grafik Insiden"
+                        class="group flex items-center h-12 rounded-xl text-base font-semibold transition-colors overflow-hidden whitespace-nowrap {{ request()->routeIs('supervisi.analytics') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                        <span class="w-[61px] h-12 shrink-0 flex items-center justify-center">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </span>
+                        <span class="sidebar-text-reveal pr-3.5 truncate">Grafik Insiden</span>
                     </a>
                 @endif
 
                 @auth
                     @if (auth()->user()->hasPermission('manage_roles') || auth()->user()->hasPermission('manage_incident_categories'))
-                        <div x-show="!isCompact"
-                            class="sidebar-section-label pt-5 px-3 pb-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
-                            Administrasi Sistem
+                        <div class="relative h-9 pt-2 flex items-center px-3 overflow-hidden whitespace-nowrap">
+                            <span
+                                class="sidebar-section-header text-xs font-bold text-slate-400 uppercase tracking-wider truncate">
+                                Administrasi Sistem
+                            </span>
+                            <span
+                                class="sidebar-section-divider absolute inset-x-2 top-1/2 -translate-y-1/2 border-t border-slate-800 opacity-0 pointer-events-none"></span>
                         </div>
-                        <div x-show="isCompact" x-cloak class="my-2 border-t border-slate-800"></div>
 
                         @if (auth()->user()->hasPermission('manage_roles'))
-                            <a href="{{ route('admin.roles.index') }}" title="Manajemen Role & Akses"
-                                :class="isCompact ? 'justify-center px-2 py-3' : 'px-3.5 py-3'"
-                                class="flex items-center rounded-xl text-base font-semibold transition-colors {{ request()->routeIs('admin.roles.*') ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <svg class="w-6 h-6 flex-shrink-0" :class="isCompact ? '' : 'mr-3.5'" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                                <span x-show="!isCompact" class="sidebar-label truncate">Manajemen Role & Akses</span>
+                            <a href="{{ route('admin.roles.index') }}" @click="onSidebarLinkClick()"
+                                title="Manajemen Role & Akses"
+                                class="group flex items-center h-12 rounded-xl text-base font-semibold transition-colors overflow-hidden whitespace-nowrap {{ request()->routeIs('admin.roles.*') ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <span class="w-[61px] h-12 shrink-0 flex items-center justify-center">
+                                    <svg class="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-text-reveal pr-3.5 truncate">Manajemen Role & Akses</span>
                             </a>
                         @endif
 
                         @if (auth()->user()->hasPermission('manage_incident_categories'))
-                            <a href="{{ route('admin.incident-categories.index') }}" title="Manajemen Kategori Insiden"
-                                :class="isCompact ? 'justify-center px-2 py-3' : 'px-3.5 py-3'"
-                                class="flex items-center rounded-xl text-base font-semibold transition-colors {{ request()->routeIs('admin.incident-categories.*') ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                                <svg class="w-6 h-6 flex-shrink-0" :class="isCompact ? '' : 'mr-3.5'" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                </svg>
-                                <span x-show="!isCompact" class="sidebar-label truncate">Manajemen Kategori Insiden</span>
+                            <a href="{{ route('admin.incident-categories.index') }}" @click="onSidebarLinkClick()"
+                                title="Manajemen Kategori Insiden"
+                                class="group flex items-center h-12 rounded-xl text-base font-semibold transition-colors overflow-hidden whitespace-nowrap {{ request()->routeIs('admin.incident-categories.*') ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                                <span class="w-[61px] h-12 shrink-0 flex items-center justify-center">
+                                    <svg class="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-text-reveal pr-3.5 truncate">Manajemen Kategori Insiden</span>
                             </a>
                         @endif
                     @endif
                 @endauth
             </nav>
 
-            <!-- User Information Card -->
+            <!-- User Information Card (Fixed-Rail Geometry: Zero Jump) -->
             @auth
-                <div class="border-t border-slate-800 bg-slate-950/80 space-y-3 flex-shrink-0"
-                    :class="isCompact ? 'p-2.5' : 'p-4'">
-                    <div class="flex items-center" :class="isCompact ? 'justify-center' : 'space-x-3'">
-                        <div class="w-11 h-11 rounded-full bg-teal-700 border-2 border-teal-400/40 flex items-center justify-center font-bold text-white text-sm shrink-0"
-                            title="{{ auth()->user()->name }} (NIP: {{ auth()->user()->nip }})">
-                            {{ auth()->user()->initials() }}
+                <div class="border-t border-slate-800 bg-slate-950/80 py-3.5 px-3 space-y-2.5 flex-shrink-0 overflow-hidden">
+                    <div class="flex items-center h-16 overflow-hidden whitespace-nowrap">
+                        <div class="w-[61px] shrink-0 flex items-center justify-center">
+                            <div class="w-11 h-11 rounded-full bg-teal-700 border-2 border-teal-400/40 flex items-center justify-center font-bold text-white text-sm shrink-0"
+                                title="{{ auth()->user()->name }} (NIP: {{ auth()->user()->nip }})">
+                                {{ auth()->user()->initials() }}
+                            </div>
                         </div>
-                        <div x-show="!isCompact" class="sidebar-label flex-1 min-w-0">
+                        <div class="sidebar-text-reveal flex-1 min-w-0 pr-2">
                             <p class="text-sm font-semibold text-white truncate" title="{{ auth()->user()->name }}">
                                 {{ auth()->user()->name }}
                             </p>
@@ -205,7 +264,7 @@
                                 NIP: {{ auth()->user()->nip }}
                             </p>
                             <span
-                                class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-800 text-teal-300 border border-slate-700">
+                                class="mt-0.5 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-teal-300 border border-slate-700 truncate max-w-full">
                                 {{ auth()->user()->roleLabel() }}
                             </span>
                         </div>
@@ -214,14 +273,15 @@
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" aria-label="Keluar" title="Keluar"
-                            :class="isCompact ? 'px-2 py-2.5' : 'px-3.5 py-2.5 gap-2'"
-                            class="w-full min-h-11 inline-flex items-center justify-center rounded-xl text-sm font-semibold text-slate-200 bg-slate-900 hover:bg-rose-950/80 hover:text-rose-200 border border-slate-700 hover:border-rose-800/60 transition cursor-pointer">
-                            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
-                            <span x-show="!isCompact" class="sidebar-label">Keluar</span>
+                            class="w-full h-11 flex items-center rounded-xl text-sm font-semibold text-slate-200 bg-slate-900 hover:bg-rose-950/80 hover:text-rose-200 border border-slate-700 hover:border-rose-800/60 transition-colors cursor-pointer overflow-hidden whitespace-nowrap">
+                            <span class="w-[61px] h-11 shrink-0 flex items-center justify-center">
+                                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-text-reveal pr-4">Keluar</span>
                         </button>
                     </form>
                 </div>
@@ -376,37 +436,81 @@
                 isDesktop: window.innerWidth >= 768,
                 fullWidth: 288,
                 foldedWidth: 86, // 30% dari 288px
+                sidebarTl: null,
+                hoverEnterTimer: null,
+                hoverLeaveTimer: null,
 
                 get isCompact() {
                     return this.isDesktop && this.sidebarFolded && !this.sidebarHovering;
                 },
 
                 initSidebar() {
+                    let hoverNav = false;
                     try {
                         this.sidebarFolded = localStorage.getItem('supervisi_sidebar_folded') === 'true';
+                        hoverNav = sessionStorage.getItem('supervisi_sidebar_hover_nav') === 'true';
+                        sessionStorage.removeItem('supervisi_sidebar_hover_nav');
                     } catch (e) {
                         this.sidebarFolded = false;
                     }
 
                     this.isDesktop = window.innerWidth >= 768;
+
+                    if (this.isDesktop && this.sidebarFolded && hoverNav) {
+                        this.sidebarHovering = true;
+                    }
+
                     this.applySidebarAnimation(true);
+
+                    if (this.sidebarHovering) {
+                        setTimeout(() => {
+                            if (this.sidebarHovering && this.$refs.sidebar && !this.$refs.sidebar.matches(':hover')) {
+                                this.sidebarHovering = false;
+                                this.applySidebarAnimation(false);
+                            }
+                        }, 180);
+                    }
 
                     window.addEventListener('resize', () => {
                         const wasDesktop = this.isDesktop;
                         this.isDesktop = window.innerWidth >= 768;
                         if (wasDesktop !== this.isDesktop) {
+                            this.clearHoverTimers();
+                            this.sidebarHovering = false;
                             this.applySidebarAnimation(true);
                         }
                     });
                 },
 
-                toggleFold() {
-                    this.sidebarFolded = !this.sidebarFolded;
-                    if (this.sidebarFolded) {
-                        this.sidebarHovering = false;
+                clearHoverTimers() {
+                    if (this.hoverEnterTimer) {
+                        clearTimeout(this.hoverEnterTimer);
+                        this.hoverEnterTimer = null;
                     }
+                    if (this.hoverLeaveTimer) {
+                        clearTimeout(this.hoverLeaveTimer);
+                        this.hoverLeaveTimer = null;
+                    }
+                },
+
+                onSidebarLinkClick() {
+                    this.clearHoverTimers();
+                    try {
+                        if (this.isDesktop && this.sidebarFolded && this.sidebarHovering) {
+                            sessionStorage.setItem('supervisi_sidebar_hover_nav', 'true');
+                        } else {
+                            sessionStorage.removeItem('supervisi_sidebar_hover_nav');
+                        }
+                    } catch (e) {}
+                },
+
+                toggleFold() {
+                    this.clearHoverTimers();
+                    this.sidebarFolded = !this.sidebarFolded;
+                    this.sidebarHovering = false;
                     try {
                         localStorage.setItem('supervisi_sidebar_folded', this.sidebarFolded ? 'true' : 'false');
+                        sessionStorage.removeItem('supervisi_sidebar_hover_nav');
                     } catch (e) {}
                     this.applySidebarAnimation(false);
                 },
@@ -415,16 +519,40 @@
                     if (!this.isDesktop || !this.sidebarFolded) {
                         return;
                     }
-                    this.sidebarHovering = true;
-                    this.applySidebarAnimation(false);
+                    if (this.hoverLeaveTimer) {
+                        clearTimeout(this.hoverLeaveTimer);
+                        this.hoverLeaveTimer = null;
+                    }
+                    if (this.sidebarHovering) {
+                        return;
+                    }
+                    this.hoverEnterTimer = setTimeout(() => {
+                        this.hoverEnterTimer = null;
+                        if (this.isDesktop && this.sidebarFolded && !this.sidebarHovering) {
+                            this.sidebarHovering = true;
+                            this.applySidebarAnimation(false);
+                        }
+                    }, 45);
                 },
 
                 onSidebarMouseLeave() {
                     if (!this.isDesktop || !this.sidebarFolded) {
                         return;
                     }
-                    this.sidebarHovering = false;
-                    this.applySidebarAnimation(false);
+                    if (this.hoverEnterTimer) {
+                        clearTimeout(this.hoverEnterTimer);
+                        this.hoverEnterTimer = null;
+                    }
+                    if (!this.sidebarHovering) {
+                        return;
+                    }
+                    this.hoverLeaveTimer = setTimeout(() => {
+                        this.hoverLeaveTimer = null;
+                        if (this.isDesktop && this.sidebarFolded && this.sidebarHovering) {
+                            this.sidebarHovering = false;
+                            this.applySidebarAnimation(false);
+                        }
+                    }, 75);
                 },
 
                 applySidebarAnimation(immediate = false) {
@@ -433,72 +561,161 @@
                         return;
                     }
 
+                    const expandedBrand = this.$refs.expandedBrand;
+                    const compactBrand = this.$refs.compactBrand;
+                    const textReveals = sidebarEl.querySelectorAll('.sidebar-text-reveal');
+                    const sectionHeaders = sidebarEl.querySelectorAll('.sidebar-section-header');
+                    const sectionDividers = sidebarEl.querySelectorAll('.sidebar-section-divider');
+
+                    if (this.sidebarTl) {
+                        this.sidebarTl.kill();
+                        this.sidebarTl = null;
+                    }
+
                     if (!this.isDesktop) {
+                        document.documentElement.classList.remove('sidebar-compact-init');
                         if (window.gsap) {
-                            window.gsap.set(sidebarEl, {
-                                clearProps: 'width'
-                            });
+                            window.gsap.set(sidebarEl, { clearProps: 'width' });
+                            if (expandedBrand) {
+                                window.gsap.set(expandedBrand, { autoAlpha: 1, scale: 1, pointerEvents: 'auto' });
+                            }
+                            if (compactBrand) {
+                                window.gsap.set(compactBrand, { autoAlpha: 0, scale: 0.86, pointerEvents: 'none' });
+                            }
+                            window.gsap.set(textReveals, { opacity: 1, x: 0, pointerEvents: 'auto' });
+                            window.gsap.set(sectionHeaders, { opacity: 1, x: 0 });
+                            window.gsap.set(sectionDividers, { opacity: 0 });
                         } else {
                             sidebarEl.style.width = '';
                         }
                         return;
                     }
 
-                    const targetWidth = this.isCompact ? this.foldedWidth : this.fullWidth;
-                    const duration = immediate ? 0 : 0.36;
+                    const compact = this.isCompact;
+                    const targetWidth = compact ? this.foldedWidth : this.fullWidth;
 
-                    if (window.gsap) {
-                        window.gsap.killTweensOf(sidebarEl);
-                        window.gsap.to(sidebarEl, {
-                            width: targetWidth,
-                            duration: duration,
-                            ease: 'power3.out',
-                        });
-
-                        this.$nextTick(() => {
-                            if (this.isCompact && this.$refs.compactBrand) {
-                                window.gsap.fromTo(
-                                    this.$refs.compactBrand, {
-                                        opacity: 0,
-                                        scale: 0.82
-                                    }, {
-                                        opacity: 1,
-                                        scale: 1,
-                                        duration: duration ? 0.28 : 0,
-                                        ease: 'back.out(1.6)'
-                                    }
-                                );
-                            } else if (!this.isCompact && this.$refs.expandedBrand) {
-                                window.gsap.fromTo(
-                                    this.$refs.expandedBrand, {
-                                        opacity: 0,
-                                        scale: 0.95
-                                    }, {
-                                        opacity: 1,
-                                        scale: 1,
-                                        duration: duration ? 0.28 : 0,
-                                        ease: 'power2.out'
-                                    }
-                                );
-                                const labels = sidebarEl.querySelectorAll('.sidebar-label, .sidebar-section-label');
-                                if (labels.length > 0 && !immediate) {
-                                    window.gsap.fromTo(
-                                        labels, {
-                                            opacity: 0,
-                                            x: -8
-                                        }, {
-                                            opacity: 1,
-                                            x: 0,
-                                            duration: 0.24,
-                                            stagger: 0.015,
-                                            ease: 'power2.out'
-                                        }
-                                    );
-                                }
-                            }
-                        });
-                    } else {
+                    if (!window.gsap) {
                         sidebarEl.style.width = targetWidth + 'px';
+                        document.documentElement.classList.toggle('sidebar-compact-init', compact);
+                        return;
+                    }
+
+                    if (immediate) {
+                        window.gsap.set(sidebarEl, { width: targetWidth });
+                        if (expandedBrand) {
+                            window.gsap.set(expandedBrand, {
+                                autoAlpha: compact ? 0 : 1,
+                                scale: compact ? 0.94 : 1,
+                                pointerEvents: compact ? 'none' : 'auto',
+                            });
+                        }
+                        if (compactBrand) {
+                            window.gsap.set(compactBrand, {
+                                autoAlpha: compact ? 1 : 0,
+                                scale: compact ? 1 : 0.86,
+                                pointerEvents: compact ? 'auto' : 'none',
+                            });
+                        }
+                        window.gsap.set(textReveals, {
+                            opacity: compact ? 0 : 1,
+                            x: compact ? -6 : 0,
+                            pointerEvents: compact ? 'none' : 'auto',
+                        });
+                        window.gsap.set(sectionHeaders, {
+                            opacity: compact ? 0 : 1,
+                            x: compact ? -4 : 0,
+                        });
+                        window.gsap.set(sectionDividers, {
+                            opacity: compact ? 1 : 0,
+                        });
+                        document.documentElement.classList.remove('sidebar-compact-init');
+                        return;
+                    }
+
+                    document.documentElement.classList.remove('sidebar-compact-init');
+
+                    const tl = window.gsap.timeline({
+                        defaults: { overwrite: 'auto' },
+                    });
+                    this.sidebarTl = tl;
+
+                    if (compact) {
+                        tl.to(textReveals, {
+                            opacity: 0,
+                            x: -6,
+                            pointerEvents: 'none',
+                            duration: 0.16,
+                            ease: 'power2.out',
+                        }, 0)
+                        .to(sectionHeaders, {
+                            opacity: 0,
+                            x: -4,
+                            duration: 0.15,
+                            ease: 'power2.out',
+                        }, 0)
+                        .to(sectionDividers, {
+                            opacity: 1,
+                            duration: 0.2,
+                            ease: 'power2.out',
+                        }, 0.08)
+                        .to(expandedBrand, {
+                            autoAlpha: 0,
+                            scale: 0.94,
+                            pointerEvents: 'none',
+                            duration: 0.18,
+                            ease: 'power2.out',
+                        }, 0)
+                        .to(sidebarEl, {
+                            width: this.foldedWidth,
+                            duration: 0.32,
+                            ease: 'power3.inOut',
+                        }, 0.02)
+                        .to(compactBrand, {
+                            autoAlpha: 1,
+                            scale: 1,
+                            pointerEvents: 'auto',
+                            duration: 0.24,
+                            ease: 'back.out(1.4)',
+                        }, 0.12);
+                    } else {
+                        tl.to(compactBrand, {
+                            autoAlpha: 0,
+                            scale: 0.86,
+                            pointerEvents: 'none',
+                            duration: 0.16,
+                            ease: 'power2.out',
+                        }, 0)
+                        .to(sectionDividers, {
+                            opacity: 0,
+                            duration: 0.15,
+                            ease: 'power2.out',
+                        }, 0)
+                        .to(sidebarEl, {
+                            width: this.fullWidth,
+                            duration: 0.32,
+                            ease: 'power3.out',
+                        }, 0)
+                        .to(expandedBrand, {
+                            autoAlpha: 1,
+                            scale: 1,
+                            pointerEvents: 'auto',
+                            duration: 0.24,
+                            ease: 'power2.out',
+                        }, 0.08)
+                        .to(sectionHeaders, {
+                            opacity: 1,
+                            x: 0,
+                            duration: 0.22,
+                            ease: 'power2.out',
+                        }, 0.1)
+                        .to(textReveals, {
+                            opacity: 1,
+                            x: 0,
+                            pointerEvents: 'auto',
+                            duration: 0.22,
+                            stagger: 0.012,
+                            ease: 'power2.out',
+                        }, 0.08);
                     }
                 }
             };
