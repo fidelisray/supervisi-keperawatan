@@ -470,39 +470,39 @@
                     x-transition:leave="ease-in duration-150"
                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-200"
+                    class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-3xl border border-slate-200"
                 >
                     <form :action="modalActionUrl" method="POST">
                         @csrf
                         @method('PUT')
 
                         <!-- Modal Header -->
-                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
+                        <div class="px-7 py-5 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
                             <div>
-                                <h3 class="text-base font-bold text-slate-900" id="modal-title">
+                                <h3 class="text-lg sm:text-xl font-bold text-slate-900" id="modal-title">
                                     Kelola Hak Akses Role: <span class="text-teal-700" x-text="modalRoleName"></span>
                                 </h3>
-                                <p class="text-xs text-slate-500 mt-0.5">
+                                <p class="text-sm text-slate-500 mt-1">
                                     Kode Role: <span class="font-mono font-bold" x-text="modalRoleId"></span> &middot; Tentukan modul dan tindakan apa saja yang dapat diakses oleh role ini.
                                 </p>
                             </div>
                             <button
                                 type="button"
                                 @click="closePermissionModal()"
-                                class="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 transition cursor-pointer"
+                                class="text-slate-400 hover:text-slate-600 rounded-lg p-2 transition cursor-pointer"
                             >
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
                         <!-- Modal Body -->
-                        <div class="px-6 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+                        <div class="px-7 py-6 space-y-6 max-h-[65vh] overflow-y-auto">
                             <!-- Quick Actions -->
-                            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                                <span class="text-xs font-semibold text-slate-600">Daftar Modul &amp; Hak Akses:</span>
-                                <div class="flex items-center space-x-2 text-xs">
+                            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                                <span class="text-sm font-semibold text-slate-600">Daftar Modul &amp; Hak Akses:</span>
+                                <div class="flex items-center space-x-2.5 text-sm">
                                     <button
                                         type="button"
                                         @click="selectAllModalPermissions()"
@@ -522,26 +522,26 @@
                             </div>
 
                             @foreach($groupedPermissions as $groupName => $perms)
-                                <div class="space-y-2">
-                                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                        <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                                <div class="space-y-2.5">
+                                    <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
                                         {{ $groupName }}
                                     </h4>
-                                    <div class="grid grid-cols-1 gap-2 pl-3">
+                                    <div class="grid grid-cols-1 gap-2.5 pl-3">
                                         @foreach($perms as $pKey => $pMeta)
-                                            <label class="flex items-start space-x-3 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50/80 transition cursor-pointer">
+                                            <label class="flex items-start space-x-3.5 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/80 transition cursor-pointer">
                                                 <input
                                                     type="checkbox"
                                                     name="permissions[]"
                                                     value="{{ $pKey }}"
                                                     x-model="modalPermissions"
-                                                    class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                                    class="w-4 h-4 mt-1 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                                                 >
                                                 <div class="flex-1 min-w-0">
                                                     <div class="flex items-center justify-between">
-                                                        <span class="text-xs font-bold text-slate-800">{{ $pMeta['label'] }}</span>
+                                                        <span class="text-base font-bold text-slate-800">{{ $pMeta['label'] }}</span>
                                                     </div>
-                                                    <p class="text-xs text-slate-500 mt-0.5">{{ $pMeta['description'] }}</p>
+                                                    <p class="text-sm text-slate-500 mt-0.5">{{ $pMeta['description'] }}</p>
                                                 </div>
                                             </label>
                                         @endforeach
@@ -551,17 +551,17 @@
                         </div>
 
                         <!-- Modal Footer -->
-                        <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-3">
+                        <div class="px-7 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-3">
                             <button
                                 type="button"
                                 @click="closePermissionModal()"
-                                class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+                                class="px-5 py-2.5 rounded-xl text-base font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
                             >
                                 Batal
                             </button>
                             <button
                                 type="submit"
-                                class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition cursor-pointer shadow-xs"
+                                class="px-5 py-2.5 rounded-xl text-base font-bold text-white bg-teal-600 hover:bg-teal-700 transition cursor-pointer shadow-xs"
                             >
                                 Simpan Perubahan Hak Akses
                             </button>

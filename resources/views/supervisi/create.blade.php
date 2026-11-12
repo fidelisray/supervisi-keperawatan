@@ -546,73 +546,73 @@
                         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                         @keydown.escape.window="handleEscapeKey()"
-                        class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-xl border border-slate-200">
-                        <div class="bg-blue-900 px-6 py-4 flex items-center justify-between text-white">
-                            <div class="flex items-center space-x-2.5">
+                        class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-3xl border border-slate-200">
+                        <div class="bg-blue-900 px-7 py-5 flex items-center justify-between text-white">
+                            <div class="flex items-center space-x-3.5">
                                 <div
-                                    class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-amber-300 text-sm">
+                                    class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-amber-300 text-lg">
                                     +
                                 </div>
                                 <div>
-                                    <h3 class="text-sm font-bold tracking-tight" id="modal-title"
+                                    <h3 class="text-lg sm:text-xl font-bold tracking-tight" id="modal-title"
                                         x-text="editingIndex !== null ? 'Ubah Butir Kejadian' : 'Tambah Kejadian Ruangan'">
                                         Tambah Kejadian Ruangan
                                     </h3>
-                                    <p class="text-xs text-blue-200">Isi detail insiden dan penanganan yang dilakukan.
+                                    <p class="text-sm text-blue-200 mt-0.5">Isi detail insiden dan penanganan yang dilakukan.
                                     </p>
                                 </div>
                             </div>
 
                             <button type="button" @click="handleBackdropClick()"
-                                class="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                class="p-2 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition cursor-pointer">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div class="p-6 space-y-5">
+                        <div class="p-7 space-y-6">
                             <!-- Category Selection -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">
+                                <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2.5">
                                     Kategori Masalah / Poin Kejadian
                                 </label>
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     @foreach ($incidentCategories as $cat)
                                         <label class="cursor-pointer" title="{{ $cat->description }}">
                                             <input type="radio" x-model.number="modalData.category"
                                                 value="{{ $cat->id }}" class="peer sr-only">
                                             <div
-                                                class="p-2.5 rounded-lg border border-slate-200 text-center transition {{ $cat->radioPeerClasses() }} font-semibold text-xs hover:bg-slate-50">
+                                                class="p-3.5 rounded-xl border border-slate-200 text-center transition {{ $cat->radioPeerClasses() }} font-semibold text-sm hover:bg-slate-50">
                                                 {{ $cat->incident_category }}
                                             </div>
                                         </label>
                                     @endforeach
                                 </div>
-                                <p class="text-[11px] text-slate-500 mt-1.5"
+                                <p class="text-sm text-slate-500 mt-2"
                                     x-show="getCategoryDescription(modalData.category)"
                                     x-text="getCategoryDescription(modalData.category)"></p>
                             </div>
 
                             <!-- Jam Kejadian & Status -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <label
-                                        class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                        class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                         Perkiraan Jam Kejadian
                                     </label>
                                     <input type="time" x-model="modalData.incident_time"
-                                        class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition">
+                                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition">
                                 </div>
 
                                 <div>
                                     <label
-                                        class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                        class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                         Status Penanganan
                                     </label>
                                     <select x-model="modalData.status"
-                                        class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition">
+                                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition">
                                         <option value="in_progress">Sedang Ditangani</option>
                                         <option value="resolved">Selesai Ditangani</option>
                                         {{-- <option value="escalated">Perlu Eskalasi Supervisor</option> --}}
@@ -622,34 +622,34 @@
 
                             <!-- Deskripsi Kejadian -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                     Uraian Masalah / Kejadian <span class="text-rose-600">*</span>
                                 </label>
                                 <textarea x-ref="descriptionInput" x-model="modalData.description" rows="3"
                                     placeholder="Jelaskan secara ringkas dan objektif apa yang terjadi di ruangan..."
-                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition"></textarea>
-                                <p x-show="modalError" class="text-xs text-rose-600 mt-1" x-text="modalError"></p>
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition"></textarea>
+                                <p x-show="modalError" class="text-sm text-rose-600 mt-1.5" x-text="modalError"></p>
                             </div>
 
                             <!-- Tindak Lanjut / Solusi -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                                <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                     Tindak Lanjut / Solusi yang Dilakukan
                                 </label>
                                 <textarea x-model="modalData.action_taken" rows="2"
                                     placeholder="Apa tindakan cepat yang sudah dilakukan perawat, atau instruksi tindak lanjutnya..."
-                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition"></textarea>
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition"></textarea>
                             </div>
                         </div>
 
                         <!-- Modal Actions -->
-                        <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex justify-end space-x-2.5">
+                        <div class="bg-slate-50 px-7 py-4 border-t border-slate-200 flex justify-end space-x-3">
                             <button type="button" @click="handleBackdropClick()"
-                                class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                                class="px-5 py-2.5 rounded-xl text-base font-semibold text-slate-700 hover:bg-slate-200 transition cursor-pointer">
                                 Batal
                             </button>
                             <button type="button" @click="saveIncidentFromModal()"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs">
+                                class="inline-flex items-center px-5 py-2.5 rounded-xl text-base font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer">
                                 <span
                                     x-text="editingIndex !== null ? 'Simpan Perubahan' : 'Tambahkan ke Logbook'"></span>
                             </button>
@@ -676,21 +676,21 @@
                         x-transition:leave="ease-in duration-150"
                         x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                        class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
-                        <div class="p-6">
+                        class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-xl border border-slate-200">
+                        <div class="p-7">
                             <div class="flex items-start space-x-4">
                                 <div
-                                    class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    class="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                 </div>
                                 <div class="flex-1">
-                                    <h3 id="leave-modal-title" class="text-sm font-bold text-slate-900">
+                                    <h3 id="leave-modal-title" class="text-lg font-bold text-slate-900">
                                         Perubahan Belum Disimpan
                                     </h3>
-                                    <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                                    <p class="text-base text-slate-600 mt-2 leading-relaxed">
                                         Anda memiliki perubahan data logbook supervisi yang belum disimpan. Jika
                                         meninggalkan halaman ini sekarang, data yang sedang Anda kerjakan akan hilang.
                                     </p>
@@ -699,13 +699,13 @@
                         </div>
 
                         <div
-                            class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            class="bg-slate-50 px-7 py-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                             <button type="button" @click="confirmLeaveNavigation()"
-                                class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 transition cursor-pointer focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                                class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-base font-semibold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 transition cursor-pointer focus:ring-2 focus:ring-rose-500 focus:outline-none">
                                 Tinggalkan Tanpa Menyimpan
                             </button>
                             <button type="button" @click="cancelLeaveNavigation()"
-                                class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-base font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                 Lanjutkan Pengisian
                             </button>
                         </div>
