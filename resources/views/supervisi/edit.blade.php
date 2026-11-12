@@ -525,7 +525,7 @@
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" :class="modalData.is_category_locked ? 'opacity-60' : ''">
                                     @foreach($incidentCategories as $cat)
                                         <label :class="modalData.is_category_locked ? 'cursor-not-allowed' : 'cursor-pointer'" title="{{ $cat->description }}">
-                                            <input type="radio" name="modal_category" :checked="Number(modalData.category) === {{ $cat->id }}" :disabled="modalData.is_category_locked" @click.prevent="requestCategoryChange({{ $cat->id }})" value="{{ $cat->id }}" class="peer sr-only">
+                                            <input type="radio" name="modal_category" :checked="Number(modalData.category) === {{ $cat->id }}" x-effect="$el.checked = (Number(modalData.category) === {{ $cat->id }})" :disabled="modalData.is_category_locked" @click.prevent="requestCategoryChange({{ $cat->id }})" value="{{ $cat->id }}" class="peer sr-only">
                                             <div class="p-2.5 rounded-lg border border-slate-200 text-center transition {{ $cat->radioPeerClasses() }} font-semibold text-xs" :class="modalData.is_category_locked ? '' : 'hover:bg-slate-50'">
                                                 {{ $cat->incident_category }}
                                             </div>
@@ -979,6 +979,12 @@
                         status: 'in_progress'
                     };
                     this.showIncidentModal = true;
+                    this.$nextTick(() => {
+                        const radio = document.querySelector(`input[name="modal_category"][value="${defaultCategoryId}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    });
                 },
 
                 closeModal() {
@@ -994,32 +1000,55 @@
                         return;
                     }
                     const targetCategory = Number(categoryId);
-                    if (targetCategory === Number(this.modalData.category)) {
+                    const currentCategory = Number(this.modalData.category);
+                    if (targetCategory === currentCategory) {
                         return;
                     }
-                    const isLeavingOriginalCategory = this.modalData.id
-                        && this.modalData.original_category != null
-                        && Number(this.modalData.category) === Number(this.modalData.original_category);
 
-                    if (isLeavingOriginalCategory) {
+                    const hasOriginalCategory = this.modalData.original_category != null;
+                    const isExistingIncident = Boolean(this.modalData.id) || hasOriginalCategory;
+                    const originalCategory = hasOriginalCategory ? Number(this.modalData.original_category) : null;
+
+                    if (isExistingIncident && originalCategory !== null && targetCategory !== originalCategory) {
                         this.pendingCategory = targetCategory;
                         this.showCategoryConfirmModal = true;
                         return;
                     }
+
                     this.modalData.category = targetCategory;
+                    this.$nextTick(() => {
+                        const radio = document.querySelector(`input[name="modal_category"][value="${targetCategory}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    });
                 },
 
                 confirmCategoryChange() {
                     if (this.pendingCategory !== null) {
-                        this.modalData.category = this.pendingCategory;
+                        const target = this.pendingCategory;
+                        this.modalData.category = target;
+                        this.$nextTick(() => {
+                            const radio = document.querySelector(`input[name="modal_category"][value="${target}"]`);
+                            if (radio) {
+                                radio.checked = true;
+                            }
+                        });
                     }
                     this.pendingCategory = null;
                     this.showCategoryConfirmModal = false;
                 },
 
                 cancelCategoryChange() {
+                    const current = this.modalData.category;
                     this.pendingCategory = null;
                     this.showCategoryConfirmModal = false;
+                    this.$nextTick(() => {
+                        const radio = document.querySelector(`input[name="modal_category"][value="${current}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    });
                 },
 
                 editIncident(index) {
@@ -1027,6 +1056,12 @@
                     this.modalError = '';
                     this.modalData = JSON.parse(JSON.stringify(this.incidents[index]));
                     this.showIncidentModal = true;
+                    this.$nextTick(() => {
+                        const radio = document.querySelector(`input[name="modal_category"][value="${this.modalData.category}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+                    });
                 },
 
                 saveIncidentFromModal() {

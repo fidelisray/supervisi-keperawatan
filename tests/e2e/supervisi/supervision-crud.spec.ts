@@ -158,7 +158,7 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     const categoryRadios = page.locator('input[name="modal_category"]');
     const radioCount = await categoryRadios.count();
     expect(radioCount).toBeGreaterThan(1);
-    expect(await categoryRadios.first().isChecked()).toBe(true);
+    await expect(categoryRadios.first()).toBeChecked();
 
     // Klik opsi kategori kedua (berbeda dari kategori awal)
     await categoryRadios.nth(1).click({ force: true });
@@ -171,14 +171,38 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     // Uji klik "Periksa Kembali" -> modal konfirmasi tertutup dan pilihan kembali ke kategori awal
     await page.getByRole('button', { name: /Periksa Kembali/i }).click();
     await expect(categoryConfirmModal).toBeHidden();
-    expect(await categoryRadios.first().isChecked()).toBe(true);
+    await expect(categoryRadios.first()).toBeChecked();
 
     // Klik opsi kategori kedua lagi dan konfirmasi perubahan
     await categoryRadios.nth(1).click({ force: true });
     await expect(categoryConfirmModal).toBeVisible();
     await page.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
     await expect(categoryConfirmModal).toBeHidden();
-    expect(await categoryRadios.nth(1).isChecked()).toBe(true);
+    await expect(categoryRadios.nth(1)).toBeChecked();
+
+    // Verifikasi bug fix: saat berada di kategori kedua, klik kategori ketiga harus tetap memicu modal konfirmasi
+    if (radioCount > 2) {
+      await categoryRadios.nth(2).click({ force: true });
+      await expect(categoryConfirmModal).toBeVisible();
+      await expect(page.getByText(/Penggantian kategori kejadian hanya dapat dilakukan sekali saja, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
+
+      // Klik "Periksa Kembali" -> pilihan tetap bertahan di kategori kedua
+      await page.getByRole('button', { name: /Periksa Kembali/i }).click();
+      await expect(categoryConfirmModal).toBeHidden();
+      await expect(categoryRadios.nth(1)).toBeChecked();
+
+      // Klik kembali ke kategori awal (indeks 0) -> langsung kembali tanpa pop-up modal konfirmasi
+      await categoryRadios.first().click({ force: true });
+      await expect(categoryConfirmModal).toBeHidden();
+      await expect(categoryRadios.first()).toBeChecked();
+
+      // Klik kembali kategori kedua dan konfirmasi perubahan untuk disimpan ke logbook
+      await categoryRadios.nth(1).click({ force: true });
+      await expect(categoryConfirmModal).toBeVisible();
+      await page.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
+      await expect(categoryConfirmModal).toBeHidden();
+      await expect(categoryRadios.nth(1)).toBeChecked();
+    }
 
     // Simpan butir insiden dari modal
     await page.getByRole('button', { name: 'Simpan', exact: true }).click();
