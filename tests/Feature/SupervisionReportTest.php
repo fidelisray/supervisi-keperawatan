@@ -686,3 +686,73 @@ test('supervision index renders numbering and dynamic follow-up status badges pe
         ->assertSee('bg-emerald-50 text-emerald-700', false)
         ->assertSee('Selesai');
 });
+
+test('incident category can only be changed once and edit logbook cannot change incident status', function () {
+    $report = SupervisionReport::create([
+        'report_date' => now()->toDateString(),
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'status' => 'submitted',
+    ]);
+
+    $incident = $report->incidents()->create([
+        'category' => 1,
+        'incident_time' => '08:30',
+        'description' => 'Keluhan kebisingan AC.',
+        'status' => 'in_progress',
+    ]);
+
+    $buildPayload = fn (int $category, string $status = 'in_progress') => [
+        'report_date' => now()->toDateString(),
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'incidents' => [
+            [
+                'id' => $incident->id,
+                'category' => $category,
+                'incident_time' => '08:30',
+                'description' => 'Keluhan kebisingan AC.',
+                'status' => $status,
+            ],
+        ],
+    ];
+
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.edit', $report))
+        ->assertSuccessful()
+        ->assertSee('Penggantian kategori kejadian hanya dapat dilakukan sekali saja')
+        ->assertDontSee('Perlu Eskalasi Supervisor</option>', false);
+
+    expect($incident->fresh()->isCategoryLocked())->toBeFalse();
+
+    // Perubahan kategori pertama kali berhasil dan mengunci kategori, status dari form edit diabaikan
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildPayload(2, 'resolved'))
+        ->assertRedirect(route('supervisi.show', $report));
+
+    $incident->refresh();
+    expect($incident->category)->toBe(2)
+        ->and($incident->isCategoryLocked())->toBeTrue()
+        ->and($incident->status)->toBe('in_progress');
+
+    // Perubahan kategori kedua ditolak
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildPayload(3))
+        ->assertSessionHasErrors('category');
+
+    expect($incident->fresh()->category)->toBe(2);
+
+    // Model guard menolak perubahan kategori langsung
+    expect(fn () => $incident->fresh()->update(['category' => 3]))->toThrow(ValidationException::class);
+
+    // Menyimpan ulang dengan kategori yang sama tetap diizinkan
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildPayload(2))
+        ->assertRedirect(route('supervisi.show', $report));
+});

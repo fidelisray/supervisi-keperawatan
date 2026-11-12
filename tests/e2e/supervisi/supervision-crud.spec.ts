@@ -139,5 +139,75 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     expect(pdfResponse.headers()['content-type']).toContain('application/pdf');
     const pdfBody = await pdfResponse.body();
     expect(pdfBody.subarray(0, 5).toString()).toBe('%PDF-');
+
+    // 10. Verifikasi Modal Edit Insiden: Penguncian Kategori 1 Kali, Modal Konfirmasi, & Status Penanganan Tersembunyi
+    await page.getByRole('link', { name: /Edit Logbook/i }).click();
+    await expect(page).toHaveURL(/.*supervisi\/\d+\/edit/);
+
+    // Buka modal edit insiden untuk butir insiden pertama
+    const editIncidentBtn = page.locator('button[title="Ubah butir kejadian"]').first();
+    await editIncidentBtn.click();
+
+    const editIncidentHeading = page.getByRole('heading', { name: /Ubah Butir Kejadian/i });
+    await expect(editIncidentHeading).toBeVisible();
+
+    // Verifikasi kontrol Status Penanganan tidak ada di modal edit logbook
+    await expect(page.locator('select[name="status"]')).toBeHidden();
+
+    // Verifikasi radio kategori insiden dan status tercentang awal
+    const categoryRadios = page.locator('input[name="modal_category"]');
+    const radioCount = await categoryRadios.count();
+    expect(radioCount).toBeGreaterThan(1);
+    expect(await categoryRadios.first().isChecked()).toBe(true);
+
+    // Klik opsi kategori kedua (berbeda dari kategori awal)
+    await categoryRadios.nth(1).click({ force: true });
+
+    // Verifikasi modal konfirmasi muncul dengan peringatan penggantian hanya 1 kali
+    const categoryConfirmModal = page.locator('[role="alertdialog"]');
+    await expect(categoryConfirmModal).toBeVisible();
+    await expect(page.getByText(/Penggantian kategori kejadian hanya dapat dilakukan sekali saja, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
+
+    // Uji klik "Periksa Kembali" -> modal konfirmasi tertutup dan pilihan kembali ke kategori awal
+    await page.getByRole('button', { name: /Periksa Kembali/i }).click();
+    await expect(categoryConfirmModal).toBeHidden();
+    expect(await categoryRadios.first().isChecked()).toBe(true);
+
+    // Klik opsi kategori kedua lagi dan konfirmasi perubahan
+    await categoryRadios.nth(1).click({ force: true });
+    await expect(categoryConfirmModal).toBeVisible();
+    await page.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
+    await expect(categoryConfirmModal).toBeHidden();
+    expect(await categoryRadios.nth(1).isChecked()).toBe(true);
+
+    // Simpan butir insiden dari modal
+    await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+    await expect(editIncidentHeading).toBeHidden();
+
+    // Simpan pembaruan logbook ke backend
+    const saveLogbookBtn = page.getByRole('button', { name: /Simpan Perubahan Logbook/i });
+    await saveLogbookBtn.click({ force: true });
+
+    // Verifikasi sukses dan redirect ke halaman detail laporan
+    await expect(page).toHaveURL(/.*supervisi\/\d+$/);
+    await expect(page.getByText(/Perubahan logbook supervisi keperawatan berhasil disimpan/i)).toBeVisible();
+
+    // Buka kembali halaman Edit Logbook untuk memverifikasi kategori terkunci permanen
+    await page.getByRole('link', { name: /Edit Logbook/i }).click();
+    await expect(page).toHaveURL(/.*supervisi\/\d+\/edit/);
+
+    // Buka kembali modal insiden
+    await page.locator('button[title="Ubah butir kejadian"]').first().click();
+    await expect(editIncidentHeading).toBeVisible();
+
+    // Verifikasi teks peringatan terkunci muncul dan seluruh radio kategori berstatus disabled
+    await expect(page.getByText(/Kategori insiden telah dikunci dan tidak dapat diubah kembali/i)).toBeVisible();
+    for (let i = 0; i < radioCount; i++) {
+      await expect(categoryRadios.nth(i)).toBeDisabled();
+    }
+
+    // Tutup modal edit insiden
+    await page.getByRole('button', { name: /Batal/i }).click();
+    await expect(editIncidentHeading).toBeHidden();
   });
 });

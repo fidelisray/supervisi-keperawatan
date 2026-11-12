@@ -35,6 +35,7 @@ class Incident extends Model
         'description',
         'action_taken',
         'status',
+        'is_category_locked',
     ];
 
     /**
@@ -45,11 +46,12 @@ class Incident extends Model
         return [
             'supervision_report_id' => 'integer',
             'category' => 'integer',
+            'is_category_locked' => 'boolean',
         ];
     }
 
     /**
-     * Cegah status tindak lanjut yang sudah selesai diubah kembali pada level model.
+     * Cegah status tindak lanjut yang sudah selesai dan kategori yang sudah pernah diubah diganti kembali pada level model.
      */
     protected static function booted(): void
     {
@@ -59,12 +61,23 @@ class Incident extends Model
                     'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
                 ]);
             }
+
+            if ($incident->getOriginal('is_category_locked') && $incident->isDirty('category')) {
+                throw ValidationException::withMessages([
+                    'category' => 'Kategori insiden yang sudah pernah diubah tidak dapat diganti kembali.',
+                ]);
+            }
         });
     }
 
     public function isResolved(): bool
     {
         return $this->status === 'resolved';
+    }
+
+    public function isCategoryLocked(): bool
+    {
+        return (bool) ($this->attributes['is_category_locked'] ?? false);
     }
 
     /**

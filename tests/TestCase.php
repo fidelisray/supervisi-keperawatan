@@ -341,6 +341,7 @@ abstract class TestCase extends BaseTestCase
                 $table->text('description');
                 $table->text('action_taken')->nullable();
                 $table->string('status')->default('in_progress');
+                $table->boolean('is_category_locked')->default(false);
                 $table->timestamps();
             });
         }

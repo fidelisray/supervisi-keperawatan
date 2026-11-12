@@ -283,22 +283,20 @@ class SupervisionReportController extends Controller
         $validated = $this->validateReportPayload($request);
         $collaboratorsList = $this->extractCollaboratorsList($request);
 
-        $lockedIncidents = $supervisionReport->incidents()
-            ->where('status', 'resolved')
-            ->get()
-            ->keyBy('id');
+        $existingIncidents = $supervisionReport->incidents()->get()->keyBy('id');
+        $lockedIncidents = $existingIncidents->filter(fn (Incident $incident) => $incident->isResolved());
 
         $submittedIncidents = collect($validated['incidents'] ?? [])->values();
         $hasExplicitIds = $submittedIncidents->contains(fn ($item) => ! empty($item['id']));
 
         if ($hasExplicitIds) {
-            $submittedLockedIds = $submittedIncidents
+            $submittedIds = $submittedIncidents
                 ->pluck('id')
                 ->filter()
                 ->map(fn ($id) => (int) $id)
                 ->all();
 
-            if ($lockedIncidents->keys()->diff($submittedLockedIds)->isNotEmpty()) {
+            if ($lockedIncidents->keys()->diff($submittedIds)->isNotEmpty()) {
                 throw ValidationException::withMessages([
                     'incidents' => 'Kejadian yang sudah selesai ditangani tidak dapat dihapus.',
                 ]);
@@ -311,19 +309,31 @@ class SupervisionReportController extends Controller
 
         $lockedIncidentsByIndex = $lockedIncidents->values();
 
-        foreach ($submittedIncidents as $idx => $incidentData) {
-            $lockedIncident = $hasExplicitIds
-                ? $lockedIncidents->get((int) ($incidentData['id'] ?? 0))
-                : $lockedIncidentsByIndex->get($idx);
+        $resolveExistingIncident = fn (int $idx, array $incidentData): ?Incident => $hasExplicitIds
+            ? $existingIncidents->get((int) ($incidentData['id'] ?? 0))
+            : $lockedIncidentsByIndex->get($idx);
 
-            if ($lockedIncident !== null && isset($incidentData['status']) && $incidentData['status'] !== 'resolved') {
+        foreach ($submittedIncidents as $idx => $incidentData) {
+            $existingIncident = $resolveExistingIncident($idx, $incidentData);
+
+            if ($existingIncident === null) {
+                continue;
+            }
+
+            if ($existingIncident->isResolved() && isset($incidentData['status']) && $incidentData['status'] !== 'resolved') {
                 throw ValidationException::withMessages([
                     'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
                 ]);
             }
+
+            if ($existingIncident->isCategoryLocked() && (int) $incidentData['category'] !== (int) $existingIncident->category) {
+                throw ValidationException::withMessages([
+                    'category' => 'Kategori insiden yang sudah pernah diubah tidak dapat diganti kembali.',
+                ]);
+            }
         }
 
-        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsList, $lockedIncidents, $lockedIncidentsByIndex, $submittedIncidents, $hasExplicitIds) {
+        DB::connection('sqlsrv')->transaction(function () use ($supervisionReport, $validated, $collaboratorsList, $submittedIncidents, $resolveExistingIncident) {
             $supervisionReport->update([
                 'report_date' => $validated['report_date'],
                 'shift' => $validated['shift'] ?? $supervisionReport->shift,
@@ -334,31 +344,34 @@ class SupervisionReportController extends Controller
                 'general_notes' => $validated['general_notes'] ?? null,
             ]);
 
-            $supervisionReport->incidents()
-                ->whereNotIn('id', $lockedIncidents->keys()->all())
-                ->delete();
-
             $newIncidents = [];
+            $keptIncidentIds = [];
 
             foreach ($submittedIncidents as $idx => $incidentData) {
-                $lockedIncident = $hasExplicitIds
-                    ? $lockedIncidents->get((int) ($incidentData['id'] ?? 0))
-                    : $lockedIncidentsByIndex->get($idx);
+                $existingIncident = $resolveExistingIncident($idx, $incidentData);
 
-                if ($lockedIncident === null) {
+                if ($existingIncident === null) {
                     $newIncidents[] = $incidentData;
 
                     continue;
                 }
 
-                $lockedIncident->update([
-                    'category' => (int) $incidentData['category'],
+                $keptIncidentIds[] = $existingIncident->id;
+                $newCategory = (int) $incidentData['category'];
+                $categoryChanged = $newCategory !== (int) $existingIncident->category;
+
+                $existingIncident->update([
+                    'category' => $newCategory,
                     'incident_time' => $incidentData['incident_time'] ?? null,
                     'description' => $incidentData['description'],
                     'action_taken' => $incidentData['action_taken'] ?? null,
-                    'status' => 'resolved',
+                    'is_category_locked' => $existingIncident->isCategoryLocked() || $categoryChanged,
                 ]);
             }
+
+            $supervisionReport->incidents()
+                ->whereNotIn('id', $keptIncidentIds)
+                ->delete();
 
             $this->syncReportIncidents($supervisionReport, $newIncidents);
         });
