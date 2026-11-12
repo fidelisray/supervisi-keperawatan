@@ -839,3 +839,83 @@ test('incident category can only be changed once and edit logbook cannot change 
         ->put(route('supervisi.update', $report), $buildPayload(2))
         ->assertRedirect(route('supervisi.show', $report));
 });
+
+test('pagination hides first and last buttons when total pages are 5 or fewer', function () {
+    // Buat 15 laporan dummy (dengan paginate(10) menghasilkan 2 halaman)
+    $rows = [];
+    for ($i = 1; $i <= 15; $i++) {
+        $rows[] = [
+            'report_date' => now()->toDateString(),
+            'shift' => 'pagi',
+            'room_name' => 'FRANSISKUS',
+            'patient_count' => 10,
+            'nurse_count' => 3,
+            'supervisor_name' => $this->supervisor->name,
+            'nurse_in_charge' => '[]',
+            'status' => 'submitted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+    }
+    SupervisionReport::insert($rows);
+
+    $response = $this->actingAs($this->supervisor)->get(route('supervisi.index', ['preset' => 'all']));
+
+    $response->assertSuccessful();
+    $response->assertSee('Menampilkan');
+    $response->assertSee('dari');
+    $response->assertSee('laporan');
+    $response->assertDontSee('&laquo; Awal', false);
+    $response->assertDontSee('Akhir &raquo;', false);
+});
+
+test('pagination renders dynamic first, last, and 2 page window when total pages exceed 5', function () {
+    // Buat 90 laporan dummy (dengan paginate(10) menghasilkan 9 halaman)
+    $rows = [];
+    for ($i = 1; $i <= 90; $i++) {
+        $rows[] = [
+            'report_date' => now()->toDateString(),
+            'shift' => 'pagi',
+            'room_name' => 'FRANSISKUS',
+            'patient_count' => 10,
+            'nurse_count' => 3,
+            'supervisor_name' => $this->supervisor->name,
+            'nurse_in_charge' => '[]',
+            'status' => 'submitted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+    }
+    SupervisionReport::insert($rows);
+
+    // 1. Sepertiga awal (Halaman 1, 1 <= ceil(9/3) = 3): Tombol Akhir muncul, Tombol Awal tidak muncul
+    $page1Response = $this->actingAs($this->supervisor)
+        ->get(route('supervisi.index', ['preset' => 'all', 'page' => 1]));
+
+    $page1Response->assertSuccessful()
+        ->assertSee('Akhir &raquo;', false)
+        ->assertDontSee('&laquo; Awal', false);
+
+    // 2. Pertengahan (Halaman 5, 3 < 5 <= ceil(18/3) = 6): Keduanya muncul
+    $page5Response = $this->actingAs($this->supervisor)
+        ->get(route('supervisi.index', ['preset' => 'all', 'page' => 5]));
+
+    $page5Response->assertSuccessful()
+        ->assertSee('&laquo; Awal', false)
+        ->assertSee('Akhir &raquo;', false)
+        // Window 2 sebelum dan 2 sesudah: [3, 4, 5, 6, 7]
+        ->assertSee('page=3')
+        ->assertSee('page=4')
+        ->assertSee('page=6')
+        ->assertSee('page=7')
+        ->assertDontSee('page=2')
+        ->assertDontSee('page=8');
+
+    // 3. Sepertiga akhir (Halaman 8, 8 > 6): Tombol Awal muncul, Tombol Akhir tidak muncul
+    $page8Response = $this->actingAs($this->supervisor)
+        ->get(route('supervisi.index', ['preset' => 'all', 'page' => 8]));
+
+    $page8Response->assertSuccessful()
+        ->assertSee('&laquo; Awal', false)
+        ->assertDontSee('Akhir &raquo;', false);
+});

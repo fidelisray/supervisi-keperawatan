@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -30,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
 
         // 2. Pasang Anti-Disaster Safeguard multi-lapis untuk database SQL Server RSSES
         $this->registerDatabaseSafeguards();
+
+        // 3. Daftarkan template pagination kustom
+        Paginator::defaultView('vendor.pagination.custom');
     }
 
     /**
