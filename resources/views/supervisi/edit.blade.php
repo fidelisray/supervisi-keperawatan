@@ -52,9 +52,9 @@
         class="max-w-6xl mx-auto space-y-8"
     >
         <!-- Page Title & Context Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-200">
             <div>
-                <nav class="flex text-xs text-slate-500 mb-1" aria-label="Breadcrumb">
+                <nav class="flex text-sm text-slate-500 mb-1" aria-label="Breadcrumb">
                     <ol class="inline-flex items-center space-x-1">
                         <li>Supervisi Keperawatan</li>
                         <li><span class="mx-1 text-slate-400">/</span></li>
@@ -63,10 +63,10 @@
                         <li class="text-blue-700 font-semibold">Edit Logbook</li>
                     </ol>
                 </nav>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
                     Edit Logbook Supervisi Ruang Perawatan
                 </h1>
-                <p class="text-sm text-slate-600 mt-0.5">
+                <p class="text-base text-slate-600 mt-1">
                     Perbarui data operasional bangsal, daftar kolaborator, atau rincian tindak lanjut kejadian.
                 </p>
             </div>
@@ -74,9 +74,9 @@
             <div class="flex items-center space-x-2">
                 <a 
                     href="{{ route('supervisi.show', $report) }}" 
-                    class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs"
+                    class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs"
                 >
-                    <svg class="w-4 h-4 mr-1.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-5 h-5 mr-1.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     Kembali ke Detail
@@ -97,11 +97,11 @@
             <!-- Section 1: Data Operasional Ruangan -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-20">
                 <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
-                    <div class="flex items-center space-x-2.5">
-                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-sm">
                             1
                         </div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                        <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                             Data Operasional Ruangan
                         </h2>
                     </div>
@@ -113,10 +113,10 @@
                     <!-- Tanggal Supervisi -->
                     <div class="md:col-span-4">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="report_date" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="report_date" class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Tanggal Supervisi
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
                         </div>
                         <input 
                             type="date" 
@@ -126,20 +126,20 @@
                             min="{{ $minReportDate }}"
                             max="{{ $maxReportDate }}"
                             required 
-                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                         >
                         @error('report_date')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Ruangan Instalasi Perawatan (Searchable Combobox) -->
                     <div class="md:col-span-4 relative z-30" @click.outside="closeRoomDropdown()">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="room_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="room_search_input" class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Ruangan / Instalasi Perawatan
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
                             <input 
@@ -154,7 +154,7 @@
                                 @keydown.enter.prevent="selectHighlightedRoom()"
                                 @keydown.escape="closeRoomDropdown()"
                                 placeholder="Ketik untuk cari ruangan / instalasi..." 
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                             >
                             <input type="hidden" name="room_name" :value="selectedRoom">
 
@@ -162,7 +162,7 @@
                             <div 
                                 x-show="isRoomOpen" 
                                 x-cloak
-                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
                             >
                                 <template x-for="(room, rIdx) in filteredRooms" :key="room.name">
                                     <button
@@ -170,30 +170,30 @@
                                         @click="selectRoom(room.name)"
                                         @mouseenter="roomHighlightIndex = rIdx"
                                         :class="{ 'bg-blue-50 text-blue-900 font-semibold': roomHighlightIndex === rIdx, 'text-slate-800': roomHighlightIndex !== rIdx }"
-                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-blue-50 transition cursor-pointer"
+                                        class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-blue-50 transition cursor-pointer"
                                     >
                                         <span x-text="room.name"></span>
-                                        <span class="text-[11px] text-slate-400 font-normal ml-2" x-text="room.installation"></span>
+                                        <span class="text-xs text-slate-400 font-normal ml-2" x-text="room.installation"></span>
                                     </button>
                                 </template>
-                                <div x-show="filteredRooms.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                <div x-show="filteredRooms.length === 0" class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                     Ruangan tidak ditemukan
                                 </div>
                             </div>
                         </div>
-                        <p x-show="roomError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="roomError"></p>
+                        <p x-show="roomError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium" x-text="roomError"></p>
                         @error('room_name')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Jumlah Pasien -->
                     <div class="md:col-span-2">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="patient_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="patient_count" class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Jumlah Pasien (BOR)
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
                             <input 
@@ -203,24 +203,24 @@
                                 min="0" 
                                 value="{{ old('patient_count', $report->patient_count) }}"
                                 required 
-                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
+                                class="w-full pl-4 pr-18 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
                             >
-                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
+                            <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-sm text-slate-400 font-medium">
                                 Orang
                             </span>
                         </div>
                         @error('patient_count')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Jumlah Perawat Bertugas -->
                     <div class="md:col-span-2">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="nurse_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="nurse_count" class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Perawat Bertugas
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
                             <input 
@@ -230,20 +230,20 @@
                                 min="0" 
                                 value="{{ old('nurse_count', $report->nurse_count) }}"
                                 required 
-                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
+                                class="w-full pl-4 pr-18 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
                             >
-                            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
+                            <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-sm text-slate-400 font-medium">
                                 Ners
                             </span>
                         </div>
                         @error('nurse_count')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <!-- Supervisor Pembuat -->
                     <div class="md:col-span-5">
-                        <label for="supervisor_name" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                        <label for="supervisor_name" class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                             Supervisor Pembuat Laporan
                         </label>
                         <input 
@@ -252,17 +252,17 @@
                             name="supervisor_name" 
                             value="{{ $report->supervisor_name }}"
                             readonly
-                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 text-sm font-medium cursor-not-allowed shadow-2xs"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-100 text-slate-700 text-base font-medium cursor-not-allowed shadow-2xs"
                         >
                     </div>
 
                     <!-- Multi-Kolaborator Supervisi (Searchable Combobox) -->
                     <div class="md:col-span-7 relative z-20" @click.outside="isCollaboratorOpen = false">
                         <div class="flex items-center justify-between mb-1.5">
-                            <label for="collaborator_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            <label for="collaborator_search_input" class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Kolaborator Supervisi (Dapat Lebih dari Satu)
                             </label>
-                            <span class="text-[11px] text-slate-500 font-medium">
+                            <span class="text-xs text-slate-500 font-medium">
                                 <span class="font-bold text-teal-700" x-text="collaborators.length">0</span> dipilih
                             </span>
                         </div>
@@ -283,7 +283,7 @@
                                         @keydown.enter.prevent="selectHighlightedCollaborator()"
                                         @keydown.escape="isCollaboratorOpen = false"
                                         placeholder="Ketik NIP atau nama rekan perawat..." 
-                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                                     >
                                 </div>
                                 {{-- <button
@@ -299,7 +299,7 @@
                             <div 
                                 x-show="isCollaboratorOpen" 
                                 x-cloak
-                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
                             >
                                 <template x-for="(nurse, nIdx) in filteredNurses" :key="nurse.nip + nurse.name">
                                     <button
@@ -312,16 +312,16 @@
                                             'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400': collaborators.includes(nurse.name),
                                             'text-slate-800': collaboratorHighlightIndex !== nIdx && !collaborators.includes(nurse.name)
                                         }"
-                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer"
+                                        class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition cursor-pointer"
                                     >
                                         <div class="flex items-center gap-2 truncate">
                                             <span class="font-medium" x-text="nurse.name"></span>
-                                            <span class="text-[11px] font-mono text-slate-500" x-text="'(NIP: ' + nurse.nip + ')'"></span>
+                                            <span class="text-xs font-mono text-slate-500" x-text="'(NIP: ' + nurse.nip + ')'"></span>
                                         </div>
-                                        <span x-show="collaborators.includes(nurse.name)" class="text-[10px] uppercase font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">Sudah Dipilih</span>
+                                        <span x-show="collaborators.includes(nurse.name)" class="text-xs uppercase font-bold text-teal-700 bg-teal-100 px-2.5 py-0.5 rounded">Sudah Dipilih</span>
                                     </button>
                                 </template>
-                                <div x-show="filteredNurses.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                <div x-show="filteredNurses.length === 0" class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                     Perawat tidak ditemukan dengan kata kunci tersebut
                                 </div>
                             </div>
@@ -332,9 +332,9 @@
                             <input type="hidden" :name="'collaborators[' + cIndex + ']'" :value="collab">
                         </template>
 
-                        <div class="mt-2.5 flex flex-wrap gap-2" x-show="collaborators.length > 0">
+                        <div class="mt-3 flex flex-wrap gap-2" x-show="collaborators.length > 0">
                             <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-900 border border-teal-200">
+                                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-teal-50 text-teal-900 border border-teal-200">
                                     <span x-text="collab"></span>
                                     <button
                                         type="button"
@@ -348,12 +348,12 @@
                             </template>
                         </div>
 
-                        <p x-show="collaboratorError" x-cloak class="text-xs text-rose-600 mt-1.5 font-medium" x-text="collaboratorError"></p>
+                        <p x-show="collaboratorError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium" x-text="collaboratorError"></p>
                         @error('collaborators')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                         @error('nurse_in_charge')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -362,15 +362,15 @@
             <!-- Section 2: Log Kejadian Ruangan -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-10 overflow-hidden">
                 <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div class="flex items-center space-x-2.5">
-                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
                             2
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                            <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                                 Rincian Kejadian & Tindak Lanjut
                             </h2>
-                            <p class="text-xs text-slate-500">
+                            <p class="text-sm text-slate-500">
                                 Tambah, ubah, atau perbarui status penanganan insiden ruangan.
                             </p>
                         </div>
@@ -379,7 +379,7 @@
                     <button 
                         type="button" 
                         @click="openModal()"
-                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer"
+                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs cursor-pointer"
                     >
                         Tambah Kejadian
                     </button>
@@ -388,45 +388,45 @@
                 <div class="p-6">
                     <template x-if="incidents.length === 0">
                         <div class="text-center py-10 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                            <p class="text-sm font-semibold text-slate-700">Tidak ada butir kejadian pada laporan ini.</p>
+                            <p class="text-base font-semibold text-slate-700">Tidak ada butir kejadian pada laporan ini.</p>
                         </div>
                     </template>
 
-                    <div class="space-y-3.5" x-show="incidents.length > 0">
+                    <div class="space-y-4" x-show="incidents.length > 0">
                         <template x-for="(item, index) in incidents" :key="index">
-                            <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div class="flex-1 space-y-2">
+                            <div class="p-5 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div class="flex-1 space-y-2.5">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span 
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold"
+                                            class="inline-flex items-center px-3 py-1 rounded-md text-sm font-bold"
                                             :class="getCategoryStyle(item.category)"
                                             x-text="getCategoryLabel(item.category)"
                                         ></span>
 
                                         <template x-if="item.incident_time">
-                                            <span class="inline-flex items-center text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                                            <span class="inline-flex items-center text-sm text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md font-medium">
                                                 Pukul <span class="ml-1" x-text="item.incident_time"></span> WIB
                                             </span>
                                         </template>
 
                                         <span 
-                                            class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                                            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold"
                                             :class="getStatusStyle(item.status)"
                                             x-text="getStatusLabel(item.status)"
                                         ></span>
                                     </div>
 
                                     <div>
-                                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Deskripsi Kejadian</h4>
-                                        <p class="text-sm text-slate-800 whitespace-pre-line mt-0.5 font-medium" x-text="item.description"></p>
+                                        <h4 class="text-sm font-bold uppercase tracking-wider text-slate-400">Deskripsi Kejadian</h4>
+                                        <p class="text-base text-slate-800 whitespace-pre-line mt-1 font-medium" x-text="item.description"></p>
                                     </div>
 
                                     <template x-if="item.action_taken && item.action_taken.trim() !== ''">
-                                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 mt-2">
-                                            <h5 class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 mt-2">
+                                            <h5 class="text-xs font-bold uppercase tracking-wider text-emerald-800">
                                                 Tindak Lanjut / Solusi:
                                             </h5>
-                                            <p class="text-xs text-slate-700 whitespace-pre-line mt-1" x-text="item.action_taken"></p>
+                                            <p class="text-sm text-slate-700 whitespace-pre-line mt-1" x-text="item.action_taken"></p>
                                         </div>
                                     </template>
                                 </div>
@@ -435,10 +435,10 @@
                                     <button 
                                         type="button" 
                                         @click="editIncident(index)"
-                                        class="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
+                                        class="p-2.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
                                         title="Ubah butir kejadian"
                                     >
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                         </svg>
                                     </button>
@@ -447,10 +447,10 @@
                                         x-show="item.status !== 'resolved'"
                                         type="button" 
                                         @click="removeIncident(index)"
-                                        class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        class="p-2.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                         title="Hapus butir kejadian"
                                     >
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                     </button>
@@ -470,11 +470,11 @@
 
             <!-- Section 3: Catatan Evaluasi / Handover -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center space-x-2.5">
-                    <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-sm">
                         3
                     </div>
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                         Catatan Khusus Supervisi &amp; Handover
                     </h2>
                 </div>
@@ -483,27 +483,27 @@
                         name="general_notes" 
                         rows="3" 
                         placeholder="Tuliskan catatan evaluasi supervisor atau pesan penting..."
-                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                     >{{ old('general_notes', $report->general_notes) }}</textarea>
                 </div>
             </div>
 
             <!-- Bottom Sticky Action Bar -->
-            <div class="sticky bottom-4 z-20 bg-white p-4 rounded-xl border border-slate-300 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div class="text-xs text-slate-600">
+            <div class="sticky bottom-4 z-20 bg-white p-4 sm:p-5 rounded-xl border border-slate-300 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="text-sm text-slate-600">
                     Memperbarui logbook ruangan <strong class="text-slate-900">{{ $report->room_name }}</strong>
                 </div>
 
                 <div class="flex items-center space-x-3">
                     <a 
                         href="{{ route('supervisi.show', $report) }}" 
-                        class="px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
+                        class="px-5 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
                     >
                         Batal
                     </a>
                     <button 
                         type="submit" 
-                        class="inline-flex items-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm cursor-pointer"
+                        class="inline-flex items-center px-6 py-3 rounded-xl text-base font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm cursor-pointer"
                     >
                         Simpan Perubahan Logbook
                     </button>

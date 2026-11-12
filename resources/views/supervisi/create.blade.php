@@ -3,27 +3,28 @@
 
     <div x-data="supervisionLogbook()" x-init="init()" class="max-w-6xl mx-auto space-y-8">
         <!-- Page Title & Context Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-200">
             <div>
-                <nav class="flex text-xs text-slate-500 mb-1" aria-label="Breadcrumb">
+                <nav class="flex text-sm text-slate-500 mb-1" aria-label="Breadcrumb">
                     <ol class="inline-flex items-center space-x-1">
                         <li>Supervisi Keperawatan</li>
                         <li><span class="mx-1 text-slate-400">/</span></li>
                         <li class="text-blue-700 font-semibold">Formulir Logbook Supervisi</li>
                     </ol>
                 </nav>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-900">
-                    Logbook Supervisi Ruang Perawatan
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                    Logbook Supervisi
                 </h1>
-                <p class="text-sm text-slate-600 mt-0.5">
-                    Catat kondisi operasional bangsal dan laporkan kejadian/insiden selama dinas supervisi berlangsung.
+                <p class="text-base text-slate-600 mt-1">
+                    Catat kondisi operasional ruang rawat inap dan laporkan kejadian/insiden selama supervisi
+                    berlangsung.
                 </p>
             </div>
 
             <div class="flex items-center space-x-2">
                 <a href="{{ route('supervisi.index') }}"
-                    class="inline-flex items-center px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs">
-                    <svg class="w-4 h-4 mr-1.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition shadow-2xs">
+                    <svg class="w-5 h-5 mr-1.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
@@ -41,12 +42,12 @@
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-20">
                 <div
                     class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between rounded-t-xl">
-                    <div class="flex items-center space-x-2.5">
+                    <div class="flex items-center space-x-3">
                         <div
-                            class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">
+                            class="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-sm">
                             1
                         </div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                        <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                             Data Operasional Ruangan
                         </h2>
                     </div>
@@ -57,18 +58,18 @@
                     <div class="md:col-span-4">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="report_date"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Tanggal Supervisi
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi"
                                 aria-label="Wajib diisi">*</span>
                         </div>
                         <input type="date" id="report_date" name="report_date"
                             value="{{ old('report_date', $today) }}" min="{{ $minReportDate }}"
                             max="{{ $today }}" required
-                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
                         @error('report_date')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -79,10 +80,10 @@
                     <div class="md:col-span-4 relative z-30" @click.outside="closeRoomDropdown()">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="room_search_input"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Ruangan / Instalasi Perawatan
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi"
                                 aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
@@ -92,12 +93,12 @@
                                 @keydown.down.prevent="highlightNextRoom()" @keydown.up.prevent="highlightPrevRoom()"
                                 @keydown.enter.prevent="selectHighlightedRoom()" @keydown.escape="closeRoomDropdown()"
                                 placeholder="Ketik untuk cari ruangan / instalasi..."
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
                             <input type="hidden" name="room_name" :value="selectedRoom">
 
                             <!-- Dropdown Result List -->
                             <div x-show="isRoomOpen" x-cloak
-                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
                                 <template x-for="(room, rIdx) in filteredRooms" :key="room.name">
                                     <button type="button" @click="selectRoom(room.name)"
                                         @mouseenter="roomHighlightIndex = rIdx"
@@ -106,22 +107,23 @@
                                                 rIdx,
                                             'text-slate-800': roomHighlightIndex !== rIdx
                                         }"
-                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-blue-50 transition cursor-pointer">
+                                        class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-blue-50 transition cursor-pointer">
                                         <span x-text="room.name"></span>
-                                        <span class="text-[11px] text-slate-400 font-normal ml-2"
+                                        <span class="text-xs text-slate-400 font-normal ml-2"
                                             x-text="room.installation"></span>
                                     </button>
                                 </template>
                                 <div x-show="filteredRooms.length === 0"
-                                    class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                     Ruangan tidak ditemukan
                                 </div>
                             </div>
                         </div>
-                        <p x-show="roomError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="roomError">
+                        <p x-show="roomError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium"
+                            x-text="roomError">
                         </p>
                         @error('room_name')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -129,23 +131,23 @@
                     <div class="md:col-span-2">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="patient_count"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Jumlah Pasien
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi"
                                 aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
                             <input type="number" id="patient_count" name="patient_count" min="0"
                                 value="{{ old('patient_count', 0) }}" required
-                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
+                                class="w-full pl-4 pr-18 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
                             <span
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
+                                class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-sm text-slate-400 font-medium">
                                 Orang
                             </span>
                         </div>
                         @error('patient_count')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -153,23 +155,23 @@
                     <div class="md:col-span-2">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="nurse_count"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Perawat Bertugas
                             </label>
-                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                            <span class="text-rose-600 font-bold text-base leading-none" title="Wajib diisi"
                                 aria-label="Wajib diisi">*</span>
                         </div>
                         <div class="relative">
                             <input type="number" id="nurse_count" name="nurse_count" min="0"
                                 value="{{ old('nurse_count', 2) }}" required
-                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
+                                class="w-full pl-4 pr-18 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
                             <span
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
+                                class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-sm text-slate-400 font-medium">
                                 Orang
                             </span>
                         </div>
                         @error('nurse_count')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -177,11 +179,11 @@
                     <div class="md:col-span-5">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="supervisor_name"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Supervisor / Pengawas Keperawatan
                             </label>
                             @auth
-                                <span class="text-[11px] font-mono font-medium text-slate-500">
+                                <span class="text-xs font-mono font-medium text-slate-500">
                                     NIP: {{ auth()->user()->nip }}
                                 </span>
                             @endauth
@@ -189,10 +191,10 @@
                         <div class="relative">
                             <input type="text" id="supervisor_name" name="supervisor_name"
                                 value="{{ old('supervisor_name', $defaultSupervisor) }}" readonly required
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 text-sm font-medium cursor-not-allowed shadow-2xs">
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-100 text-slate-700 text-base font-medium cursor-not-allowed shadow-2xs">
                         </div>
                         @error('supervisor_name')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
 
@@ -200,10 +202,10 @@
                     <div class="md:col-span-7 relative z-20" @click.outside="isCollaboratorOpen = false">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="collaborator_search_input"
-                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                 Kolaborator Supervisi (Dapat Lebih dari Satu)
                             </label>
-                            <span class="text-[11px] text-slate-500 font-medium">
+                            <span class="text-xs text-slate-500 font-medium">
                                 <span class="font-bold text-teal-700" x-text="collaborators.length">0</span> dipilih
                             </span>
                         </div>
@@ -221,7 +223,7 @@
                                         @keydown.enter.prevent="selectHighlightedCollaborator()"
                                         @keydown.escape="isCollaboratorOpen = false"
                                         placeholder="Ketik NIP atau nama rekan perawat..."
-                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
+                                        class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
                                 </div>
                                 {{-- <button
                                     type="button"
@@ -234,7 +236,7 @@
 
                             <!-- Collaborators Dropdown Result List -->
                             <div x-show="isCollaboratorOpen" x-cloak
-                                class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
+                                class="absolute z-30 left-0 right-0 mt-1 max-h-64 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100">
                                 <template x-for="(nurse, nIdx) in filteredNurses" :key="nurse.nip + nurse.name">
                                     <button type="button" @click="addCollaboratorDirect(nurse.name)"
                                         @mouseenter="collaboratorHighlightIndex = nIdx"
@@ -247,19 +249,19 @@
                                             'text-slate-800': collaboratorHighlightIndex !== nIdx && !collaborators
                                                 .includes(nurse.name)
                                         }"
-                                        class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer">
+                                        class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between transition cursor-pointer">
                                         <div class="flex items-center gap-2 truncate">
                                             <span class="font-medium" x-text="nurse.name"></span>
-                                            <span class="text-[11px] font-mono text-slate-500"
+                                            <span class="text-xs font-mono text-slate-500"
                                                 x-text="'(NIP: ' + nurse.nip + ')'"></span>
                                         </div>
                                         <span x-show="collaborators.includes(nurse.name)"
-                                            class="text-[10px] uppercase font-bold text-teal-700 bg-teal-100 px-2 py-0.5 rounded">Sudah
+                                            class="text-xs uppercase font-bold text-teal-700 bg-teal-100 px-2.5 py-0.5 rounded">Sudah
                                             Dipilih</span>
                                     </button>
                                 </template>
                                 <div x-show="filteredNurses.length === 0"
-                                    class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                     Perawat tidak ditemukan dengan kata kunci tersebut
                                 </div>
                             </div>
@@ -272,10 +274,10 @@
                         </template>
 
                         <!-- Selected Collaborator Chips -->
-                        <div class="mt-2.5 flex flex-wrap gap-2" x-show="collaborators.length > 0">
+                        <div class="mt-3 flex flex-wrap gap-2" x-show="collaborators.length > 0">
                             <template x-for="(collab, cIndex) in collaborators" :key="cIndex">
                                 <span
-                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-900 border border-teal-200">
+                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-teal-50 text-teal-900 border border-teal-200">
                                     <span x-text="collab"></span>
                                     <button type="button" @click.stop="removeCollaborator(cIndex)"
                                         class="text-teal-600 hover:text-rose-600 focus:outline-none cursor-pointer"
@@ -286,13 +288,13 @@
                             </template>
                         </div>
 
-                        <p x-show="collaboratorError" x-cloak class="text-xs text-rose-600 mt-1.5 font-medium"
+                        <p x-show="collaboratorError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium"
                             x-text="collaboratorError"></p>
                         @error('collaborators')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                         @error('nurse_in_charge')
-                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                            <p class="text-sm text-rose-600 mt-1.5">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -302,24 +304,24 @@
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs relative z-10 overflow-hidden">
                 <div
                     class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div class="flex items-center space-x-2.5">
+                    <div class="flex items-center space-x-3">
                         <div
-                            class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
+                            class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
                             2
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                            <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                                 Kejadian di Ruangan Selama Supervisi
                             </h2>
-                            <p class="text-xs text-slate-500">
+                            <p class="text-sm text-slate-500">
                                 Catat insiden atau permasalahan yang ditemukan selama dinas supervisi.
                             </p>
                         </div>
                     </div>
 
                     <button type="button" @click="openModal()"
-                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                        <svg class="w-5 h-5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 4v16m8-8H4" />
                         </svg>
@@ -329,12 +331,12 @@
 
                 <!-- Incident Category Counters & Filter Chips -->
                 <div
-                    class="px-6 py-3 bg-slate-100/50 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs">
+                    class="px-6 py-3.5 bg-slate-100/50 border-b border-slate-200 flex flex-wrap items-center gap-2.5 text-sm">
                     <span class="text-slate-500 font-semibold mr-1">Ringkasan Masalah:</span>
 
                     @foreach ($incidentCategories as $cat)
                         <span
-                            class="inline-flex items-center px-2.5 py-1 rounded-full {{ $cat->badgeClasses() }} font-medium">
+                            class="inline-flex items-center px-3 py-1 rounded-full {{ $cat->badgeClasses() }} font-medium">
                             {{ $cat->incident_category }}: <strong class="ml-1"
                                 x-text="countByCategory({{ $cat->id }})">0</strong>
                         </span>
@@ -352,20 +354,20 @@
                         <div
                             class="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
                             <div
-                                class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-3">
-                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-3">
+                                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
-                            <h3 class="text-sm font-bold text-slate-800">Belum Ada Kejadian yang Dicatat</h3>
-                            <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
+                            <h3 class="text-base font-bold text-slate-800">Belum Ada Kejadian yang Dicatat</h3>
+                            <p class="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
                                 Jika terjadi keluhan pasien, kendala alat medis, atau catatan klinis penting selama
                                 dinas ini, klik tombol di bawah untuk mencatat.
                             </p>
                             <button type="button" @click="openModal()"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition">
-                                <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24"
+                                class="inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition cursor-pointer">
+                                <svg class="w-5 h-5 mr-1.5" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 4v16m8-8H4" />
@@ -376,24 +378,23 @@
                     </template>
 
                     <!-- Populated Incident Cards -->
-                    <div class="space-y-3.5" x-show="incidents.length > 0">
+                    <div class="space-y-4" x-show="incidents.length > 0">
                         <template x-for="(item, index) in incidents" :key="item.id || index">
                             <div
-                                class="p-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white shadow-2xs transition flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div class="flex-1 space-y-2">
+                                class="p-5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white shadow-2xs transition flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div class="flex-1 space-y-2.5">
                                     <!-- Badges & Timing Header -->
                                     <div class="flex flex-wrap items-center gap-2">
                                         <!-- Category Badge -->
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold"
+                                        <span class="inline-flex items-center px-3 py-1 rounded-md text-sm font-bold"
                                             :class="getCategoryStyle(item.category)"
                                             x-text="getCategoryLabel(item.category)"></span>
 
                                         <!-- Time Badge -->
                                         <template x-if="item.incident_time">
                                             <span
-                                                class="inline-flex items-center text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
-                                                <svg class="w-3.5 h-3.5 mr-1 text-slate-400" fill="none"
+                                                class="inline-flex items-center text-sm text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md font-medium">
+                                                <svg class="w-4 h-4 mr-1 text-slate-400" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2"
@@ -405,25 +406,25 @@
 
                                         <!-- Status Badge -->
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                                            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold"
                                             :class="getStatusStyle(item.status)"
                                             x-text="getStatusLabel(item.status)"></span>
                                     </div>
 
                                     <!-- Uraian Kejadian / Description -->
                                     <div>
-                                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Deskripsi
+                                        <h4 class="text-sm font-bold uppercase tracking-wider text-slate-400">Deskripsi
                                             Kejadian</h4>
-                                        <p class="text-sm text-slate-800 whitespace-pre-line mt-0.5 font-medium leading-relaxed"
+                                        <p class="text-base text-slate-800 whitespace-pre-line mt-1 font-medium leading-relaxed"
                                             x-text="item.description"></p>
                                     </div>
 
                                     <!-- Tindak Lanjut / Solusi (If Any) -->
                                     <template x-if="item.action_taken && item.action_taken.trim() !== ''">
-                                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 mt-2">
+                                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 mt-2">
                                             <h5
-                                                class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center">
-                                                <svg class="w-3.5 h-3.5 mr-1 text-emerald-600" fill="none"
+                                                class="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center">
+                                                <svg class="w-4 h-4 mr-1.5 text-emerald-600" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2"
@@ -431,7 +432,7 @@
                                                 </svg>
                                                 Tindak Lanjut / Solusi yang Diberikan:
                                             </h5>
-                                            <p class="text-xs text-slate-700 whitespace-pre-line mt-1"
+                                            <p class="text-sm text-slate-700 whitespace-pre-line mt-1"
                                                 x-text="item.action_taken"></p>
                                         </div>
                                     </template>
@@ -441,9 +442,9 @@
                                 <div
                                     class="flex items-center space-x-2 md:self-start pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                                     <button type="button" @click="editIncident(index)"
-                                        class="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                                        class="p-2.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
                                         title="Ubah butir kejadian">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                                             stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -451,9 +452,9 @@
                                     </button>
 
                                     <button type="button" @click="removeIncident(index)"
-                                        class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                        class="p-2.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                         title="Hapus butir kejadian">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                                             stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -480,27 +481,27 @@
 
             <!-- Section 3: Catatan Umum / Handover -->
             <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center space-x-2.5">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center space-x-3">
                     <div
-                        class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs">
+                        class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-sm">
                         3
                     </div>
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                         Catatan Khusus Supervisi &amp; Handover
                     </h2>
                 </div>
                 <div class="p-6">
                     <textarea name="general_notes" rows="3"
                         placeholder="Tuliskan catatan evaluasi supervisor atau pesan penting (opsional)..."
-                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">{{ old('general_notes') }}</textarea>
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">{{ old('general_notes') }}</textarea>
                 </div>
             </div>
 
             <!-- Bottom Sticky Action Bar -->
             <div
-                class="sticky bottom-4 z-20 bg-white p-4 rounded-xl border border-slate-300 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div class="flex items-center space-x-3 text-xs text-slate-600">
-                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                class="sticky bottom-4 z-20 bg-white p-4 sm:p-5 rounded-xl border border-slate-300 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center space-x-3 text-sm text-slate-600">
+                    <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
                     <div>
                         <span class="font-bold text-slate-800" x-text="incidents.length">0</span> kejadian tercatat
                         <span class="text-slate-400 mx-1">•</span>
@@ -510,12 +511,12 @@
 
                 <div class="flex items-center space-x-3">
                     <a href="{{ route('supervisi.index') }}"
-                        class="px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        class="px-5 py-3 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
                         Batal
                     </a>
                     <button type="submit"
-                        class="inline-flex items-center px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-98 transition shadow-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        class="inline-flex items-center px-6 py-3 rounded-xl text-base font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-98 transition shadow-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+                        <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                         </svg>
@@ -558,7 +559,8 @@
                                         x-text="editingIndex !== null ? 'Ubah Butir Kejadian' : 'Tambah Kejadian Ruangan'">
                                         Tambah Kejadian Ruangan
                                     </h3>
-                                    <p class="text-sm text-blue-200 mt-0.5">Isi detail insiden dan penanganan yang dilakukan.
+                                    <p class="text-sm text-blue-200 mt-0.5">Isi detail insiden dan penanganan yang
+                                        dilakukan.
                                     </p>
                                 </div>
                             </div>
@@ -598,8 +600,7 @@
                             <!-- Jam Kejadian & Status -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label
-                                        class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+                                    <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                         Perkiraan Jam Kejadian
                                     </label>
                                     <input type="time" x-model="modalData.incident_time"
@@ -607,8 +608,7 @@
                                 </div>
 
                                 <div>
-                                    <label
-                                        class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
+                                    <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">
                                         Status Penanganan
                                     </label>
                                     <select x-model="modalData.status"

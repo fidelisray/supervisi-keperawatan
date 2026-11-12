@@ -10,26 +10,26 @@
 
     <div class="max-w-7xl mx-auto space-y-8" x-data="adminRolesPage()">
         <!-- Page Title & Context Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-200">
             <div>
-                <nav class="flex text-xs text-slate-500 mb-1" aria-label="Breadcrumb">
+                <nav class="flex text-sm text-slate-500 mb-1" aria-label="Breadcrumb">
                     <ol class="inline-flex items-center space-x-1">
                         <li>Administrasi Sistem</li>
                         <li><span class="mx-1 text-slate-400">/</span></li>
                         <li class="text-teal-700 font-semibold">Manajemen Role & Hak Akses</li>
                     </ol>
                 </nav>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
                     Manajemen Role &amp; Hak Akses Pengguna
                 </h1>
-                <p class="text-sm text-slate-600 mt-0.5">
+                <p class="text-base text-slate-600 mt-1">
                     Kelola definisi role, hak akses, dan penugasan pegawai aplikasi.
                 </p>
             </div>
         </div>
 
         @if ($errors->any())
-            <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm font-medium" role="alert">
+            <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-base font-medium" role="alert">
                 {{ $errors->first() }}
             </div>
         @endif
@@ -40,19 +40,19 @@
             <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col justify-between">
                 <div>
                     <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70">
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                        <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                             1. Daftar &amp; Buat Role Baru
                         </h2>
                     </div>
 
                     <div class="p-6 space-y-4">
-                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                            <table class="w-full text-left border-collapse text-xs">
+                        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                            <table class="w-full text-left border-collapse text-sm">
                                 <thead>
-                                    <tr class="bg-slate-50 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
-                                        <th class="px-3.5 py-2.5">Role</th>
-                                        <th class="px-3.5 py-2.5">Hak Akses</th>
-                                        <th class="px-3.5 py-2.5 text-right">Aksi</th>
+                                    <tr class="bg-slate-50 text-xs font-bold uppercase text-slate-500 border-b border-slate-200">
+                                        <th class="px-4 py-3">Role</th>
+                                        <th class="px-4 py-3">Hak Akses</th>
+                                        <th class="px-4 py-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -62,46 +62,46 @@
                                             $permCount = count($rolePerms);
                                         @endphp
                                         <tr class="hover:bg-slate-50/60 transition">
-                                            <td class="px-3.5 py-2.5">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="font-mono font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
                                                         {{ $roleId }}
                                                     </span>
-                                                    <span class="font-semibold text-slate-800 text-xs">
+                                                    <span class="font-semibold text-slate-800 text-sm">
                                                         {{ $roleName }}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td class="px-3.5 py-2.5">
+                                            <td class="px-4 py-3">
                                                 @if((int) $roleId === 0)
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200" title="Administrator memiliki seluruh 7 hak akses (Super-Admin)">
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200" title="Administrator memiliki seluruh 7 hak akses (Super-Admin)">
                                                         7 Akses (Full)
                                                     </span>
                                                 @elseif((int) $roleId === 1)
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200" title="Supervisor memiliki 4 hak akses standar keperawatan">
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200" title="Supervisor memiliki 4 hak akses standar keperawatan">
                                                         4 Akses (Default)
                                                     </span>
                                                 @else
                                                     <button
                                                         type="button"
                                                         @click="openPermissionModal({{ $roleId }}, '{{ addslashes($roleName) }}', {{ json_encode($rolePerms) }})"
-                                                        class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold {{ $permCount > 0 ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100' : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100' }} transition cursor-pointer"
+                                                        class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold {{ $permCount > 0 ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100' : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100' }} transition cursor-pointer"
                                                         title="Klik untuk melihat dan mengatur hak akses"
                                                     >
-                                                        <svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                                         </svg>
                                                         {{ $permCount > 0 ? "{$permCount} Izin" : '0 Izin (Atur)' }}
                                                     </button>
                                                 @endif
                                             </td>
-                                            <td class="px-3.5 py-2.5 text-right whitespace-nowrap">
+                                            <td class="px-4 py-3 text-right whitespace-nowrap">
                                                 @if((int) $roleId > 1)
-                                                    <div class="inline-flex items-center gap-1.5">
+                                                    <div class="inline-flex items-center gap-2">
                                                         <button
                                                             type="button"
                                                             @click="openPermissionModal({{ $roleId }}, '{{ addslashes($roleName) }}', {{ json_encode($rolePerms) }})"
-                                                            class="px-2 py-1 rounded text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition cursor-pointer"
+                                                            class="px-2.5 py-1 rounded-md text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition cursor-pointer"
                                                             title="Atur hak akses role ini"
                                                         >
                                                             Hak Akses
@@ -116,14 +116,14 @@
                                                             @method('DELETE')
                                                             <button
                                                                 type="submit"
-                                                                class="px-2 py-1 rounded text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+                                                                class="px-2.5 py-1 rounded-md text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
                                                             >
                                                                 Hapus
                                                             </button>
                                                         </form>
                                                     </div>
                                                 @else
-                                                    <span class="text-[11px] text-slate-400 italic">Terkunci</span>
+                                                    <span class="text-xs text-slate-400 italic">Terkunci</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -136,15 +136,15 @@
                         <form method="POST" action="{{ route('admin.roles.store-definition') }}" class="pt-3 border-t border-slate-200 space-y-4">
                             @csrf
                             <div class="flex items-center justify-between">
-                                <p class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                <p class="text-sm font-bold uppercase tracking-wider text-slate-700">
                                     Tambah / Perbarui Definisi Role
                                 </p>
-                                <span class="text-[11px] text-slate-500">Gunakan ID Role &gt; 1 untuk role baru</span>
+                                <span class="text-xs text-slate-500">Gunakan ID Role &gt; 1 untuk role baru</span>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                                 <div>
-                                    <label for="role_id" class="block text-xs font-medium text-slate-600 mb-1">Kode Role (Angka)</label>
+                                    <label for="role_id" class="block text-sm font-medium text-slate-600 mb-1">Kode Role (Angka)</label>
                                     <input
                                         type="number"
                                         id="role_id"
@@ -153,55 +153,55 @@
                                         max="99"
                                         required
                                         placeholder="Misal: 2"
-                                        class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-mono text-slate-900 focus:ring-2 focus:ring-teal-500"
+                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-mono text-slate-900 focus:ring-2 focus:ring-teal-500"
                                     >
                                 </div>
                                 <div class="sm:col-span-2">
-                                    <label for="role_name" class="block text-xs font-medium text-slate-600 mb-1">Nama Role</label>
+                                    <label for="role_name" class="block text-sm font-medium text-slate-600 mb-1">Nama Role</label>
                                     <input
                                         type="text"
                                         id="role_name"
                                         name="role_name"
                                         required
                                         placeholder="Contoh: KEPALA RUANG"
-                                        class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
+                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
                                     >
                                 </div>
                             </div>
 
                             <!-- Permissions Selection for New Role -->
-                            <div class="space-y-2 pt-1 border-t border-slate-100">
+                            <div class="space-y-2.5 pt-2 border-t border-slate-100">
                                 <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                    <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide">
                                         Hak Akses Awal Role:
                                     </label>
-                                    <div class="flex items-center space-x-2 text-[11px]">
+                                    <div class="flex items-center space-x-2 text-xs">
                                         <button type="button" @click="selectAllNewRole()" class="text-teal-600 hover:text-teal-800 font-semibold cursor-pointer">Pilih Semua</button>
                                         <span class="text-slate-300">|</span>
                                         <button type="button" @click="clearAllNewRole()" class="text-slate-500 hover:text-slate-700 cursor-pointer">Kosongkan</button>
                                     </div>
                                 </div>
 
-                                <div class="max-h-52 overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <div class="max-h-56 overflow-y-auto space-y-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                                     @foreach($groupedPermissions as $groupName => $perms)
                                         <div class="space-y-1.5">
-                                            <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                                            <div class="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                                                <span class="w-2 h-2 rounded-full bg-teal-500"></span>
                                                 {{ $groupName }}
                                             </div>
-                                            <div class="grid grid-cols-1 gap-1.5 pl-2">
+                                            <div class="grid grid-cols-1 gap-2 pl-2">
                                                 @foreach($perms as $pKey => $pMeta)
-                                                    <label class="flex items-start space-x-2 p-1.5 rounded bg-white border border-slate-200/70 hover:border-teal-300 transition cursor-pointer">
+                                                    <label class="flex items-start space-x-2.5 p-2 rounded-lg bg-white border border-slate-200/70 hover:border-teal-300 transition cursor-pointer">
                                                         <input
                                                             type="checkbox"
                                                             name="permissions[]"
                                                             value="{{ $pKey }}"
                                                             x-model="newRolePermissions"
-                                                            class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                                            class="w-4 h-4 mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                                                         >
-                                                        <div class="text-xs">
+                                                        <div class="text-sm">
                                                             <span class="font-medium text-slate-800">{{ $pMeta['label'] }}</span>
-                                                            <span class="block text-[11px] text-slate-500 leading-tight">{{ $pMeta['description'] }}</span>
+                                                            <span class="block text-xs text-slate-500 leading-tight mt-0.5">{{ $pMeta['description'] }}</span>
                                                         </div>
                                                     </label>
                                                 @endforeach
@@ -209,14 +209,14 @@
                                         </div>
                                     @endforeach
                                 </div>
-                                <p class="text-[11px] text-slate-500 italic">
+                                <p class="text-xs text-slate-500 italic">
                                     * Role 0 (Admin) dan Role 1 (Supervisor) memiliki hak akses bawaan sistem yang terlindungi.
                                 </p>
                             </div>
 
                             <button
                                 type="submit"
-                                class="w-full px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer shadow-xs"
+                                class="w-full px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition cursor-pointer shadow-xs"
                             >
                                 Simpan Definisi Role
                             </button>
@@ -228,10 +228,10 @@
             <!-- Panel 2: Berikan Role ke Pegawai yang Belum Terdaftar -->
             <div class="lg:col-span-6 bg-white rounded-xl border border-slate-200 shadow-2xs relative z-20">
                 <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 rounded-t-xl">
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                         2. Berikan Hak Akses kepada Pegawai Baru
                     </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-sm text-slate-500 mt-0.5">
                         Pilih perawat dari data pegawai untuk diberi hak akses.
                     </p>
                 </div>
@@ -247,7 +247,7 @@
                         @csrf
 
                         <div class="relative" @click.outside="closeDropdown()">
-                            <label for="assign_employee_search" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                            <label for="assign_employee_search" class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                                 Cari Pegawai (NIP / Nama)
                             </label>
                             <div class="relative">
@@ -264,7 +264,7 @@
                                     @keydown.enter.prevent="selectHighlighted()"
                                     @keydown.escape="closeDropdown()"
                                     placeholder="Ketik NIP atau nama pegawai..." 
-                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-600 transition shadow-2xs"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-teal-500 focus:border-teal-600 transition shadow-2xs"
                                 >
                                 <input type="hidden" name="nip" :value="selectedNip" required>
 
@@ -272,7 +272,7 @@
                                 <div 
                                     x-show="isOpen" 
                                     x-cloak
-                                    class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
+                                    class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
                                 >
                                     <template x-for="(emp, eIdx) in filteredEmployees" :key="emp.nip">
                                         <button
@@ -280,32 +280,32 @@
                                             @click="selectEmployee(emp)"
                                             @mouseenter="highlightIndex = eIdx"
                                             :class="{ 'bg-teal-50 text-teal-900 font-semibold': highlightIndex === eIdx, 'text-slate-800': highlightIndex !== eIdx }"
-                                            class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-teal-50 transition cursor-pointer"
+                                            class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-teal-50 transition cursor-pointer"
                                         >
                                             <span class="font-medium truncate" x-text="emp.name"></span>
-                                            <span class="text-[11px] font-mono text-slate-500 ml-2 shrink-0" x-text="'(NIP: ' + emp.nip + ')'"></span>
+                                            <span class="text-xs font-mono text-slate-500 ml-2 shrink-0" x-text="'(NIP: ' + emp.nip + ')'"></span>
                                         </button>
                                     </template>
-                                    <div x-show="filteredEmployees.length === 0" class="px-3.5 py-2.5 text-xs text-slate-400 italic text-center">
+                                    <div x-show="filteredEmployees.length === 0" class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                         Pegawai tidak ditemukan
                                     </div>
                                 </div>
                             </div>
-                            <p x-show="employeeError" x-cloak class="text-xs text-rose-600 mt-1 font-medium" x-text="employeeError"></p>
-                            <p class="text-[11px] text-slate-500 mt-1">
+                            <p x-show="employeeError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium" x-text="employeeError"></p>
+                            <p class="text-xs text-slate-500 mt-1.5">
                                 Nama pegawai terisi otomatis.
                             </p>
                         </div>
 
                         <div>
-                            <label for="assign_role" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                            <label for="assign_role" class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                                 Pilih Hak Akses (Role)
                             </label>
                             <select
                                 id="assign_role"
                                 name="app_roles"
                                 required
-                                class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-600"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-teal-500 focus:border-teal-600"
                             >
                                 @foreach($availableRoles as $roleId => $roleName)
                                     <option value="{{ $roleId }}" {{ (int) $roleId === 1 ? 'selected' : '' }}>
@@ -318,7 +318,7 @@
                         <div class="pt-2">
                             <button
                                 type="submit"
-                                class="inline-flex items-center px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                                class="inline-flex items-center px-5 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold shadow-xs transition cursor-pointer"
                             >
                                 + Daftarkan &amp; Berikan Role Pegawai
                             </button>
@@ -332,23 +332,23 @@
         <div class="bg-white rounded-xl border border-slate-200 shadow-xs relative z-10 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800">
+                    <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                         3. Daftar Pengguna Terdaftar ({{ $appRoles->count() }} Pegawai)
                     </h2>
-                    <p class="text-xs text-slate-500">
+                    <p class="text-sm text-slate-500">
                         Ubah role atau cabut hak akses pengguna di bawah ini.
                     </p>
                 </div>
 
-                <form method="GET" action="{{ route('admin.roles.index') }}" class="flex flex-wrap items-center gap-2">
+                <form method="GET" action="{{ route('admin.roles.index') }}" class="flex flex-wrap items-center gap-2.5">
                     <input
                         type="text"
                         name="search"
                         value="{{ request('search') }}"
                         placeholder="Cari NIP atau Nama..."
-                        class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800"
+                        class="px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-800"
                     >
-                    <select name="role_filter" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800">
+                    <select name="role_filter" class="px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-800">
                         <option value="">Semua Role</option>
                         @foreach($availableRoles as $roleId => $roleName)
                             <option value="{{ $roleId }}" {{ request('role_filter') !== null && (string) request('role_filter') === (string) $roleId ? 'selected' : '' }}>
@@ -356,39 +356,39 @@
                             </option>
                         @endforeach
                     </select>
-                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold cursor-pointer">
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold cursor-pointer">
                         Cari
                     </button>
                 </form>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
+                <table class="w-full text-left border-collapse text-base">
                     <thead>
-                        <tr class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                            <th class="px-6 py-3">NIP</th>
-                            <th class="px-6 py-3">Nama Pegawai / Perawat</th>
-                            <th class="px-6 py-3">Role Saat Ini</th>
-                            <th class="px-6 py-3 text-right">Kelola Role &amp; Akses</th>
+                        <tr class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                            <th class="px-6 py-3.5">NIP</th>
+                            <th class="px-6 py-3.5">Nama Pegawai / Perawat</th>
+                            <th class="px-6 py-3.5">Role Saat Ini</th>
+                            <th class="px-6 py-3.5 text-right">Kelola Role &amp; Akses</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach($appRoles as $userRole)
                             <tr class="hover:bg-slate-50/80 transition">
-                                <td class="px-6 py-3.5 font-mono text-xs font-bold text-slate-900">
+                                <td class="px-6 py-4 font-mono text-sm font-bold text-slate-900">
                                     {{ $userRole->nip }}
                                 </td>
-                                <td class="px-6 py-3.5 font-semibold text-slate-800">
+                                <td class="px-6 py-4 font-semibold text-slate-800">
                                     {{ $userRole->description }}
                                 </td>
-                                <td class="px-6 py-3.5">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
                                         {{ (int) $userRole->app_roles === 0 ? 'bg-purple-50 text-purple-800 border border-purple-200' : ((int) $userRole->app_roles === 1 ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-teal-50 text-teal-800 border border-teal-200') }}
                                     ">
                                         {{ $userRole->roleLabel() }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-3.5 text-right whitespace-nowrap">
+                                <td class="px-6 py-4 text-right whitespace-nowrap">
                                     <div class="inline-flex items-center justify-end gap-2">
                                         <form method="POST" action="{{ route('admin.roles.update-user', $userRole) }}" class="inline-flex items-center gap-2">
                                             @csrf
@@ -396,7 +396,7 @@
                                             <select
                                                 name="app_roles"
                                                 aria-label="Ubah role untuk {{ $userRole->description }}"
-                                                class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-900"
+                                                class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
                                             >
                                                 @foreach($availableRoles as $roleId => $roleName)
                                                     <option value="{{ $roleId }}" {{ (int) $userRole->app_roles === (int) $roleId ? 'selected' : '' }}>
@@ -406,7 +406,7 @@
                                             </select>
                                             <button
                                                 type="submit"
-                                                class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition cursor-pointer"
+                                                class="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition cursor-pointer"
                                             >
                                                 Simpan
                                             </button>
@@ -423,7 +423,7 @@
                                                 @method('DELETE')
                                                 <button
                                                     type="submit"
-                                                    class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer"
+                                                    class="px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-sm font-semibold transition cursor-pointer"
                                                     title="Hapus hak akses pengguna"
                                                 >
                                                     Hapus

@@ -33,37 +33,37 @@
                     <img 
                         src="{{ Vite::asset('resources/images/web-icon.webp') }}" 
                         alt="Logo RS St. Elisabeth Semarang" 
-                        class="w-32 h-32 object-contain rounded-2xl shadow-sm mb-4"
+                        class="w-36 h-36 object-contain rounded-2xl shadow-sm mb-4"
                     >
-                    <p class="text-sm font-semibold uppercase tracking-widest text-teal-400">
+                    <p class="text-base font-semibold uppercase tracking-widest text-teal-400">
                         RS. St. Elisabeth Semarang
                     </p>
-                    <h1 class="text-2xl font-extrabold text-white tracking-tight mt-1">
+                    <h1 class="text-3xl font-extrabold text-white tracking-tight mt-1">
                         E-Supervisi Keperawatan
                     </h1>
                 </div>
 
-                <div class="mt-8 lg:mt-12 space-y-4 max-w-md mx-auto">
+                <div class="mt-8 lg:mt-12 space-y-4 max-w-lg mx-auto">
                     <div>
                         <span
-                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-950 text-teal-300 border border-teal-800">
+                            class="inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-semibold bg-teal-950 text-teal-300 border border-teal-800">
                             Supervisi Keperawatan RS. St. Elisabeth Semarang
                         </span>
                     </div>
-                    <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-snug">
                         Pencatatan Logbook &amp; Monitoring Mutu Asuhan Keperawatan
                     </h2>
-                    <p class="text-sm text-slate-300 leading-relaxed">
+                    <p class="text-base text-slate-300 leading-relaxed">
                         Gunakan Nomor Induk Pegawai (NIP) dan kata sandi yang telah terdaftar.
                     </p>
                 </div>
             </div>
 
             <div class="pt-6 border-t border-slate-800/90 space-y-2">
-                <p class="text-xs font-medium italic text-slate-300">
+                <p class="text-sm font-medium italic text-slate-300">
                     "Pancaran Cintanya Menyembuhkan Derita Sesama"
                 </p>
-                <p class="text-xs text-slate-400">
+                <p class="text-sm text-slate-400">
                     &copy; {{ date('Y') }} RS. St. Elisabeth Semarang &middot; Bidang Keperawatan
                 </p>
             </div>
@@ -72,7 +72,7 @@
         {{-- Right Panel: Login Form --}}
         <main class="lg:col-span-7 flex items-center justify-center p-6 sm:p-12 bg-slate-50">
             <div
-                class="w-full max-w-md"
+                class="w-full max-w-lg"
                 x-data="{
                     showPassword: false,
                     submitting: false,
@@ -102,12 +102,12 @@
                     });
                 "
             >
-                <div class="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+                <div class="bg-white rounded-xl border border-slate-200/80 shadow-xs p-7 sm:p-10">
                     <div class="mb-6">
-                        <h2 class="text-xl font-bold text-slate-900 tracking-tight">
+                        <h2 class="text-2xl font-bold text-slate-900 tracking-tight">
                             Masuk ke Sistem
                         </h2>
-                        <p class="text-sm text-slate-600 mt-1">
+                        <p class="text-base text-slate-600 mt-1">
                             Silakan masukkan kredensial Anda.
                         </p>
                     </div>
@@ -120,7 +120,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <div class="text-sm font-medium leading-relaxed">
+                            <div class="text-base font-medium leading-relaxed">
                                 {{ $errors->first() }}
                             </div>
                         </div>
@@ -132,26 +132,26 @@
                         @csrf
 
                         <div>
-                            <label for="nip" class="block text-sm font-medium text-slate-700 mb-1.5">
+                            <label for="nip" class="block text-base font-medium text-slate-700 mb-2">
                                 Nomor Induk Pegawai (NIP)
                             </label>
                             <input x-ref="nipInput" type="text" id="nip" name="nip" value="{{ old('nip') }}" required
                                 autofocus autocomplete="off" inputmode="numeric" placeholder="Contoh: 1927181027"
-                                class="w-full min-h-11 px-3.5 py-2.5 rounded-lg border {{ $errors->has('nip') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
+                                class="w-full min-h-12 px-4 py-3 rounded-lg border {{ $errors->has('nip') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 font-mono text-base focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
                         </div>
 
                         <div>
-                            <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">
+                            <label for="password" class="block text-base font-medium text-slate-700 mb-2">
                                 Kata Sandi
                             </label>
                             <div class="relative">
                                 <input x-ref="passwordInput" :type="showPassword ? 'text' : 'password'" id="password" name="password"
                                     required autocomplete="off" placeholder="Masukkan password"
-                                    class="w-full min-h-11 pl-3.5 pr-12 py-2.5 rounded-lg border {{ $errors->has('password') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
+                                    class="w-full min-h-12 pl-4 pr-12 py-3 rounded-lg border {{ $errors->has('password') ? 'border-rose-500 bg-rose-50/30' : 'border-slate-300 bg-white' }} text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition">
                                 <button type="button" @click="showPassword = !showPassword"
                                     :aria-pressed="showPassword.toString()"
                                     :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
-                                    class="absolute inset-y-0 right-0 min-w-11 min-h-11 px-3 flex items-center justify-center text-slate-500 hover:text-slate-700 focus:outline-none focus:text-teal-600">
+                                    class="absolute inset-y-0 right-0 min-w-12 min-h-12 px-3.5 flex items-center justify-center text-slate-500 hover:text-slate-700 focus:outline-none focus:text-teal-600">
                                     <svg x-show="!showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                                         stroke="currentColor" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -170,10 +170,10 @@
 
                         <div class="pt-2">
                             <button type="submit" :disabled="submitting"
-                                class="w-full min-h-11 inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-semibold shadow-xs transition focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 cursor-pointer">
+                                class="w-full min-h-12 inline-flex items-center justify-center px-6 py-3 rounded-lg bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-base font-semibold shadow-xs transition focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 cursor-pointer">
                                 <span x-show="!submitting">Masuk ke Sistem</span>
                                 <span x-show="submitting" x-cloak class="inline-flex items-center gap-2">
-                                    <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"
+                                    <svg class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"
                                         aria-hidden="true">
                                         <circle class="opacity-25" cx="12" cy="12" r="10"
                                             stroke="currentColor" stroke-width="4"></circle>
