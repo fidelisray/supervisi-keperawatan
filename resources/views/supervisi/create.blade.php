@@ -55,12 +55,17 @@
                 <div class="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
                     <!-- Tanggal Supervisi -->
                     <div class="md:col-span-4">
-                        <label for="report_date"
-                            class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Tanggal Supervisi
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="report_date"
+                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Tanggal Supervisi
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                                aria-label="Wajib diisi">*</span>
+                        </div>
                         <input type="date" id="report_date" name="report_date"
-                            value="{{ old('report_date', $today) }}" required
+                            value="{{ old('report_date', $today) }}" min="{{ $minReportDate }}"
+                            max="{{ $today }}" required
                             class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs">
                         @error('report_date')
                             <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
@@ -72,10 +77,14 @@
 
                     <!-- Ruangan Instalasi Perawatan (Searchable Combobox) -->
                     <div class="md:col-span-4 relative z-30" @click.outside="closeRoomDropdown()">
-                        <label for="room_search_input"
-                            class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Ruangan / Instalasi Perawatan
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="room_search_input"
+                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Ruangan / Instalasi Perawatan
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                                aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input type="text" id="room_search_input" autocomplete="off" x-model="roomSearch"
                                 @focus="isRoomOpen = true; roomHighlightIndex = 0"
@@ -92,8 +101,11 @@
                                 <template x-for="(room, rIdx) in filteredRooms" :key="room.name">
                                     <button type="button" @click="selectRoom(room.name)"
                                         @mouseenter="roomHighlightIndex = rIdx"
-                                        :class="{ 'bg-blue-50 text-blue-900 font-semibold': roomHighlightIndex ===
-                                            rIdx, 'text-slate-800': roomHighlightIndex !== rIdx }"
+                                        :class="{
+                                            'bg-blue-50 text-blue-900 font-semibold': roomHighlightIndex ===
+                                                rIdx,
+                                            'text-slate-800': roomHighlightIndex !== rIdx
+                                        }"
                                         class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-blue-50 transition cursor-pointer">
                                         <span x-text="room.name"></span>
                                         <span class="text-[11px] text-slate-400 font-normal ml-2"
@@ -115,14 +127,18 @@
 
                     <!-- Jumlah Pasien Hari Ini -->
                     <div class="md:col-span-2">
-                        <label for="patient_count"
-                            class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Jumlah Pasien (BOR)
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="patient_count"
+                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Jumlah Pasien
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                                aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input type="number" id="patient_count" name="patient_count" min="0"
                                 value="{{ old('patient_count', 0) }}" required
-                                class="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
+                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
                             <span
                                 class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
                                 Orang
@@ -135,17 +151,21 @@
 
                     <!-- Jumlah Perawat Bertugas -->
                     <div class="md:col-span-2">
-                        <label for="nurse_count"
-                            class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Perawat Bertugas
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="nurse_count"
+                                class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Perawat Bertugas
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi"
+                                aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input type="number" id="nurse_count" name="nurse_count" min="0"
                                 value="{{ old('nurse_count', 2) }}" required
-                                class="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
+                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold">
                             <span
                                 class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
-                                Ners
+                                Orang
                             </span>
                         </div>
                         @error('nurse_count')
@@ -805,7 +825,8 @@
                     const reportDate = (useDefaults ? reportDateEl?.defaultValue : reportDateEl?.value) || '';
                     const patientCount = String((useDefaults ? patientCountEl?.defaultValue : patientCountEl?.value) ?? '');
                     const nurseCount = String((useDefaults ? nurseCountEl?.defaultValue : nurseCountEl?.value) ?? '');
-                    const generalNotes = ((useDefaults ? generalNotesEl?.defaultValue : generalNotesEl?.value) || '').trim();
+                    const generalNotes = ((useDefaults ? generalNotesEl?.defaultValue : generalNotesEl?.value) || '')
+                        .trim();
 
                     return JSON.stringify({
                         reportDate,
@@ -848,7 +869,8 @@
                         const anchor = e.target.closest('a[href]');
                         if (!anchor) return;
                         const href = anchor.getAttribute('href');
-                        if (!href || href.startsWith('#') || href.startsWith('javascript:') || anchor.target === '_blank' || anchor.hasAttribute('download')) {
+                        if (!href || href.startsWith('#') || href.startsWith('javascript:') || anchor.target ===
+                            '_blank' || anchor.hasAttribute('download')) {
                             return;
                         }
                         if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
@@ -1132,6 +1154,9 @@
                     if (!this.selectedRoom || this.selectedRoom.trim() === '') {
                         this.roomError = 'Ruangan / Instalasi perawatan wajib dipilih.';
                         document.getElementById('room_search_input')?.focus();
+                        return;
+                    }
+                    if (!event.target.reportValidity()) {
                         return;
                     }
                     /*

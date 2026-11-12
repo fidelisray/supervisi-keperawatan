@@ -52,7 +52,7 @@ test('supervision create page renders master rooms, multi-collaborator picker, a
 
 test('can store a new supervision report with multiple collaborators and without explicit shift input', function () {
     $payload = [
-        'report_date' => '2026-11-05',
+        'report_date' => now()->toDateString(),
         'room_name' => 'Bangsal Maria (Wanita Dewasa)',
         'patient_count' => 12,
         'nurse_count' => 3,
@@ -258,9 +258,92 @@ test('store requires mandatory room, date, patient count, and nurse count while 
     $response->assertSessionDoesntHaveErrors(['collaborators', 'nurse_in_charge']);
 });
 
+test('patient and nurse counts accept zero but reject empty values', function () {
+    $basePayload = [
+        'report_date' => now()->toDateString(),
+        'room_name' => 'FRANSISKUS',
+    ];
+
+    $this->actingAs($this->supervisor)
+        ->post(route('supervisi.store'), [...$basePayload, 'patient_count' => '', 'nurse_count' => ''])
+        ->assertSessionHasErrors(['patient_count', 'nurse_count']);
+
+    $this->actingAs($this->supervisor)
+        ->post(route('supervisi.store'), [...$basePayload, 'patient_count' => 0, 'nurse_count' => 0])
+        ->assertSessionHasNoErrors();
+
+    $report = SupervisionReport::where('room_name', 'FRANSISKUS')->first();
+    expect($report)->not->toBeNull()
+        ->and((int) $report->patient_count)->toBe(0)
+        ->and((int) $report->nurse_count)->toBe(0);
+});
+
+test('store only accepts report dates from 7 days ago up to today', function (callable $resolveDate, bool $isAccepted) {
+    $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
+        'report_date' => $resolveDate()->toDateString(),
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 5,
+        'nurse_count' => 2,
+    ]);
+
+    if ($isAccepted) {
+        $response->assertSessionHasNoErrors();
+    } else {
+        $response->assertSessionHasErrors('report_date');
+    }
+})->with([
+    'today' => [fn () => now(), true],
+    'exactly 7 days ago' => [fn () => now()->subDays(7), true],
+    '8 days ago' => [fn () => now()->subDays(8), false],
+    'tomorrow' => [fn () => now()->addDay(), false],
+]);
+
+test('update keeps an old report date unchanged but rejects moving it outside the 7 day window', function () {
+    $oldDate = now()->subDays(30)->toDateString();
+    $report = SupervisionReport::create([
+        'report_date' => $oldDate,
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 5,
+        'nurse_count' => 2,
+        'supervisor_name' => $this->supervisor->name,
+        'status' => 'submitted',
+    ]);
+
+    $payload = [
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 6,
+        'nurse_count' => 2,
+    ];
+
+    $this->actingAs($this->supervisor)
+        ->get(route('supervisi.edit', $report))
+        ->assertSuccessful()
+        ->assertSee('min="'.$oldDate.'"', false)
+        ->assertSee('max="'.now()->toDateString().'"', false);
+
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), [...$payload, 'report_date' => $oldDate])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), [...$payload, 'report_date' => now()->subDays(20)->toDateString()])
+        ->assertSessionHasErrors('report_date');
+
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), [...$payload, 'report_date' => now()->addDay()->toDateString()])
+        ->assertSessionHasErrors('report_date');
+
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), [...$payload, 'report_date' => now()->subDays(2)->toDateString()])
+        ->assertSessionHasNoErrors();
+
+    expect($report->fresh()->report_date->toDateString())->toBe(now()->subDays(2)->toDateString());
+});
+
 test('can store and update supervision report without any collaborators and display tanpa kolaborator on detail page', function () {
     $response = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 8,
         'nurse_count' => 2,
@@ -283,7 +366,7 @@ test('can store and update supervision report without any collaborators and disp
 
     // Update report also works with zero collaborators
     $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 9,
         'nurse_count' => 3,
@@ -301,7 +384,7 @@ test('can store and update supervision report without any collaborators and disp
 // [COLLABORATOR LIMIT TEST - Aktifkan pengujian ini jika pembatasan maksimal 2 kolaborator diberlakukan kembali]
 test('rejects storing or updating supervision report with more than 2 collaborators', function () {
     $storeResponse = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 10,
         'nurse_count' => 3,
@@ -317,7 +400,7 @@ test('rejects storing or updating supervision report with more than 2 collaborat
     ]);
 
     $report = SupervisionReport::create([
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'shift' => 'pagi',
         'room_name' => 'FRANSISKUS',
         'patient_count' => 10,
@@ -328,7 +411,7 @@ test('rejects storing or updating supervision report with more than 2 collaborat
     ]);
 
     $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 10,
         'nurse_count' => 3,
@@ -362,7 +445,7 @@ test('can store and update supervision report with unlimited collaborators as a 
     ];
 
     $storeResponse = $this->actingAs($this->supervisor)->post(route('supervisi.store'), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 14,
         'nurse_count' => 6,
@@ -382,7 +465,7 @@ test('can store and update supervision report with unlimited collaborators as a 
     // Update report with a subset of 5 collaborators
     $updatedCollaborators = array_slice($manyCollaborators, 0, 5);
     $updateResponse = $this->actingAs($this->supervisor)->put(route('supervisi.update', $report), [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 15,
         'nurse_count' => 5,
@@ -429,7 +512,7 @@ test('shifts resolve accurately for pagi, siang/sore, and malam based on Asia/Ja
 
 test('validation accepts siang/sore as well as backward-compatible sore', function () {
     $basePayload = [
-        'report_date' => '2026-11-09',
+        'report_date' => now()->toDateString(),
         'room_name' => 'FRANSISKUS',
         'patient_count' => 10,
         'nurse_count' => 2,

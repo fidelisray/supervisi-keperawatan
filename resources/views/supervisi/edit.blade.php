@@ -106,14 +106,19 @@
 
                     <!-- Tanggal Supervisi -->
                     <div class="md:col-span-4">
-                        <label for="report_date" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Tanggal Supervisi
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="report_date" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Tanggal Supervisi
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                        </div>
                         <input 
                             type="date" 
                             id="report_date" 
                             name="report_date" 
                             value="{{ old('report_date', $report->report_date->format('Y-m-d')) }}"
+                            min="{{ $minReportDate }}"
+                            max="{{ $maxReportDate }}"
                             required 
                             class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs"
                         >
@@ -124,9 +129,12 @@
 
                     <!-- Ruangan Instalasi Perawatan (Searchable Combobox) -->
                     <div class="md:col-span-4 relative z-30" @click.outside="closeRoomDropdown()">
-                        <label for="room_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Ruangan / Instalasi Perawatan
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="room_search_input" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Ruangan / Instalasi Perawatan
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input 
                                 type="text" 
@@ -175,9 +183,12 @@
 
                     <!-- Jumlah Pasien -->
                     <div class="md:col-span-2">
-                        <label for="patient_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Jumlah Pasien (BOR)
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="patient_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Jumlah Pasien (BOR)
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input 
                                 type="number" 
@@ -186,7 +197,7 @@
                                 min="0" 
                                 value="{{ old('patient_count', $report->patient_count) }}"
                                 required 
-                                class="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
+                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
                             >
                             <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
                                 Orang
@@ -199,9 +210,12 @@
 
                     <!-- Jumlah Perawat Bertugas -->
                     <div class="md:col-span-2">
-                        <label for="nurse_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                            Perawat Bertugas
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="nurse_count" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                                Perawat Bertugas
+                            </label>
+                            <span class="text-rose-600 font-bold text-sm leading-none" title="Wajib diisi" aria-label="Wajib diisi">*</span>
+                        </div>
                         <div class="relative">
                             <input 
                                 type="number" 
@@ -210,7 +224,7 @@
                                 min="0" 
                                 value="{{ old('nurse_count', $report->nurse_count) }}"
                                 required 
-                                class="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
+                                class="w-full pl-3.5 pr-16 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-2xs font-semibold"
                             >
                             <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400 font-medium">
                                 Ners
@@ -1126,6 +1140,9 @@
                     if (!this.selectedRoom || this.selectedRoom.trim() === '') {
                         this.roomError = 'Ruangan / Instalasi perawatan wajib dipilih.';
                         document.getElementById('room_search_input')?.focus();
+                        return;
+                    }
+                    if (!event.target.reportValidity()) {
                         return;
                     }
                     /*

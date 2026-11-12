@@ -8,6 +8,7 @@ use App\Models\IncidentCategory;
 use App\Models\Room;
 use App\Models\SupervisionReport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -142,6 +143,7 @@ class SupervisionReportController extends Controller
             'defaultShift' => $this->resolveDefaultShift(),
             'defaultSupervisor' => $request->user()?->name ?? '',
             'today' => now()->format('Y-m-d'),
+            'minReportDate' => $this->earliestAllowedReportDate()->format('Y-m-d'),
         ]);
     }
 
@@ -257,11 +259,17 @@ class SupervisionReportController extends Controller
             ->orderBy('id')
             ->get();
 
+        $originalReportDate = $supervisionReport->report_date->copy()->startOfDay();
+        $earliestAllowedDate = $this->earliestAllowedReportDate();
+        $today = now()->startOfDay();
+
         return view('supervisi.edit', [
             'report' => $supervisionReport,
             'rooms' => $rooms,
             'nurses' => $nurses,
             'incidentCategories' => $incidentCategories,
+            'minReportDate' => $originalReportDate->min($earliestAllowedDate)->format('Y-m-d'),
+            'maxReportDate' => $originalReportDate->max($today)->format('Y-m-d'),
         ]);
     }
 
@@ -280,7 +288,7 @@ class SupervisionReportController extends Controller
         */
         abort_unless($request->user()?->hasPermission('edit_report') && $supervisionReport->isAccessibleBy($request->user()), 403);
 
-        $validated = $this->validateReportPayload($request);
+        $validated = $this->validateReportPayload($request, $supervisionReport);
         $collaboratorsList = $this->extractCollaboratorsList($request);
 
         $existingIncidents = $supervisionReport->incidents()->get()->keyBy('id');
@@ -423,15 +431,25 @@ class SupervisionReportController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateReportPayload(Request $request): array
+    private function validateReportPayload(Request $request, ?SupervisionReport $existingReport = null): array
     {
         $validCategoryIds = IncidentCategory::withTrashed()
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
 
+        $isUnchangedExistingDate = $existingReport !== null
+            && $request->input('report_date') === $existingReport->report_date->toDateString();
+
+        $reportDateRules = ['required', 'date'];
+
+        if (! $isUnchangedExistingDate) {
+            $reportDateRules[] = 'after_or_equal:'.$this->earliestAllowedReportDate()->toDateString();
+            $reportDateRules[] = 'before_or_equal:'.now()->toDateString();
+        }
+
         return $request->validate([
-            'report_date' => ['required', 'date'],
+            'report_date' => $reportDateRules,
             'shift' => ['nullable', 'in:pagi,siang/sore,sore,malam'],
             'room_name' => ['required', 'string', 'max:255'],
             'patient_count' => ['required', 'integer', 'min:0'],
@@ -452,6 +470,13 @@ class SupervisionReportController extends Controller
             // 'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
             'incidents.*.status' => ['nullable', 'in:in_progress,resolved'],
         ], [
+            'report_date.required' => 'Tanggal supervisi wajib diisi.',
+            'report_date.after_or_equal' => 'Tanggal supervisi paling lama 7 hari sebelum hari ini.',
+            'report_date.before_or_equal' => 'Tanggal supervisi tidak boleh melewati hari ini.',
+            'patient_count.required' => 'Jumlah pasien wajib diisi. Isi 0 jika tidak ada pasien.',
+            'patient_count.min' => 'Jumlah pasien tidak boleh negatif.',
+            'nurse_count.required' => 'Jumlah perawat bertugas wajib diisi. Isi 0 jika tidak ada perawat.',
+            'nurse_count.min' => 'Jumlah perawat bertugas tidak boleh negatif.',
             // 'collaborators.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
             'collaborators.*.max' => 'Nama kolaborator maksimal 255 karakter.',
             // 'nurse_in_charge.max' => 'Maksimal hanya 2 kolaborator yang dapat ditambahkan.',
@@ -500,6 +525,14 @@ class SupervisionReportController extends Controller
                 'status' => $incidentData['status'] ?? 'in_progress',
             ]);
         }
+    }
+
+    /**
+     * Earliest date a supervision report may be filed for (7 days before today).
+     */
+    private function earliestAllowedReportDate(): CarbonInterface
+    {
+        return now()->subDays(7)->startOfDay();
     }
 
     /**
