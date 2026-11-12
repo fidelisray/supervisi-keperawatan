@@ -88,26 +88,8 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await expect(page.getByText('FRANSISKUS')).toBeVisible();
     await expect(page.getByText('[E2E-TEST] Lampu ruang tindakan perlu penggantian.')).toBeVisible();
 
-    // 7. Update Status Insiden: Transisi dari Sedang Ditangani -> Selesai Ditangani
+    // 7. Verifikasi Halaman Detail bersifat Read-Only (Tombol Update Tindak Lanjut tidak lagi ditampilkan di halaman Detail)
     const updateStatusBtn = page.getByRole('button', { name: /Update Tindak Lanjut/i });
-    await updateStatusBtn.scrollIntoViewIfNeeded();
-    await updateStatusBtn.click();
-
-    const statusSelect = page.locator('select[name="status"]');
-    await expect(statusSelect).toBeVisible();
-    await statusSelect.selectOption('resolved');
-
-    const saveStatusBtn = page.getByRole('button', { name: /Simpan Status Insiden/i });
-    await saveStatusBtn.click();
-
-    // Verifikasi Pop-up Konfirmasi muncul dengan pesan peringatan
-    await expect(page.getByText(/Perubahan yang dilakukan tidak dapat diedit kembali, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
-
-    // Klik tombol konfirmasi "Ya, Simpan Perubahan"
-    await page.getByRole('button', { name: /Ya, Simpan Perubahan/i }).click();
-
-    // Verifikasi badge status berubah menjadi Selesai dan tombol Update Tindak Lanjut hilang (terkunci)
-    await expect(page.getByText(/Selesai/i).first()).toBeVisible();
     await expect(updateStatusBtn).toBeHidden();
 
     // 8. Verifikasi Navigation Blocking pada halaman Edit Logbook (/supervisi/{id}/edit)
@@ -151,8 +133,10 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     const editIncidentHeading = page.getByRole('heading', { name: /Ubah Butir Kejadian/i });
     await expect(editIncidentHeading).toBeVisible();
 
-    // Verifikasi kontrol Status Penanganan tidak ada di modal edit logbook
-    await expect(page.locator('select[name="status"]')).toBeHidden();
+    // Verifikasi kontrol Status Penanganan tersedia di modal edit logbook beserta informasi kuota 0/3
+    const modalStatusSelect = page.locator('select[x-model="modalData.status"]');
+    await expect(modalStatusSelect).toBeVisible();
+    await expect(page.getByText(/Perubahan status telah dilakukan/i)).toBeVisible();
 
     // Verifikasi radio kategori insiden dan status tercentang awal
     const categoryRadios = page.locator('input[name="modal_category"]');
@@ -164,19 +148,19 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await categoryRadios.nth(1).click({ force: true });
 
     // Verifikasi modal konfirmasi muncul dengan peringatan penggantian hanya 1 kali
-    const categoryConfirmModal = page.locator('[role="alertdialog"]');
+    const categoryConfirmModal = page.locator('[role="alertdialog"]').filter({ hasText: /Konfirmasi Perubahan Kategori/i });
     await expect(categoryConfirmModal).toBeVisible();
     await expect(page.getByText(/Penggantian kategori kejadian hanya dapat dilakukan sekali saja, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
 
     // Uji klik "Periksa Kembali" -> modal konfirmasi tertutup dan pilihan kembali ke kategori awal
-    await page.getByRole('button', { name: /Periksa Kembali/i }).click();
+    await categoryConfirmModal.getByRole('button', { name: /Periksa Kembali/i }).click();
     await expect(categoryConfirmModal).toBeHidden();
     await expect(categoryRadios.first()).toBeChecked();
 
     // Klik opsi kategori kedua lagi dan konfirmasi perubahan
     await categoryRadios.nth(1).click({ force: true });
     await expect(categoryConfirmModal).toBeVisible();
-    await page.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
+    await categoryConfirmModal.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
     await expect(categoryConfirmModal).toBeHidden();
     await expect(categoryRadios.nth(1)).toBeChecked();
 
@@ -187,7 +171,7 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
       await expect(page.getByText(/Penggantian kategori kejadian hanya dapat dilakukan sekali saja, mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat/i)).toBeVisible();
 
       // Klik "Periksa Kembali" -> pilihan tetap bertahan di kategori kedua
-      await page.getByRole('button', { name: /Periksa Kembali/i }).click();
+      await categoryConfirmModal.getByRole('button', { name: /Periksa Kembali/i }).click();
       await expect(categoryConfirmModal).toBeHidden();
       await expect(categoryRadios.nth(1)).toBeChecked();
 
@@ -199,13 +183,23 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
       // Klik kembali kategori kedua dan konfirmasi perubahan untuk disimpan ke logbook
       await categoryRadios.nth(1).click({ force: true });
       await expect(categoryConfirmModal).toBeVisible();
-      await page.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
+      await categoryConfirmModal.getByRole('button', { name: /Ya, Ubah Kategori/i }).click();
       await expect(categoryConfirmModal).toBeHidden();
       await expect(categoryRadios.nth(1)).toBeChecked();
     }
 
-    // Simpan butir insiden dari modal
+    // Ubah status penanganan menjadi Selesai Ditangani (perubahan ke-1 dari 3)
+    await modalStatusSelect.selectOption('resolved');
+
+    // Klik Simpan pada modal -> memicu pop-up konfirmasi kuota perubahan status (1 / 3)
     await page.getByRole('button', { name: 'Simpan', exact: true }).click();
+    const statusConfirmModal = page.locator('[role="alertdialog"]').filter({ hasText: /Konfirmasi Perubahan Status|Peringatan Batas Maksimal Perubahan Status/i });
+    await expect(statusConfirmModal).toBeVisible();
+    await expect(statusConfirmModal.getByText(/1 \/ 3/)).toBeVisible();
+
+    // Konfirmasi simpan perubahan status
+    await statusConfirmModal.getByRole('button', { name: /Ya, Simpan Perubahan/i }).click();
+    await expect(statusConfirmModal).toBeHidden();
     await expect(editIncidentHeading).toBeHidden();
 
     // Simpan pembaruan logbook ke backend
@@ -216,7 +210,7 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     await expect(page).toHaveURL(/.*supervisi\/\d+$/);
     await expect(page.getByText(/Perubahan logbook supervisi keperawatan berhasil disimpan/i)).toBeVisible();
 
-    // Buka kembali halaman Edit Logbook untuk memverifikasi kategori terkunci permanen
+    // Buka kembali halaman Edit Logbook untuk memverifikasi kategori terkunci permanen dan kuota status tercatat 1/3
     await page.getByRole('link', { name: /Edit Logbook/i }).click();
     await expect(page).toHaveURL(/.*supervisi\/\d+\/edit/);
 
@@ -229,6 +223,7 @@ test.describe('Supervisi Keperawatan - Siklus Pembuatan & Resolusi Insiden (CRUD
     for (let i = 0; i < radioCount; i++) {
       await expect(categoryRadios.nth(i)).toBeDisabled();
     }
+    await expect(page.getByText(/Perubahan status telah dilakukan 1\/3 kali/i)).toBeVisible();
 
     // Tutup modal edit insiden
     await page.getByRole('button', { name: /Batal/i }).click();

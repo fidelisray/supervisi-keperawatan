@@ -11,6 +11,8 @@ class Incident extends Model
 {
     use HasFactory;
 
+    public const MAX_STATUS_CHANGES = 3;
+
     /**
      * The database connection that should be used by the model.
      *
@@ -26,6 +28,13 @@ class Incident extends Model
     protected $table = 'tb_nurse_supervision_incidents';
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status_change_count' => 0,
+    ];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -36,6 +45,7 @@ class Incident extends Model
         'action_taken',
         'status',
         'is_category_locked',
+        'status_change_count',
     ];
 
     /**
@@ -47,19 +57,28 @@ class Incident extends Model
             'supervision_report_id' => 'integer',
             'category' => 'integer',
             'is_category_locked' => 'boolean',
+            'status_change_count' => 'integer',
         ];
     }
 
     /**
-     * Cegah status tindak lanjut yang sudah selesai dan kategori yang sudah pernah diubah diganti kembali pada level model.
+     * Cegah status tindak lanjut yang sudah mencapai batas perubahan dan kategori yang sudah pernah diubah diganti kembali pada level model.
      */
     protected static function booted(): void
     {
         static::updating(function (Incident $incident): void {
-            if ($incident->getOriginal('status') === 'resolved' && $incident->status !== 'resolved') {
-                throw ValidationException::withMessages([
-                    'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
-                ]);
+            if ($incident->isDirty('status')) {
+                $originalCount = (int) ($incident->getOriginal('status_change_count') ?? 0);
+
+                if ($originalCount >= self::MAX_STATUS_CHANGES) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Status tindak lanjut telah mencapai batas maksimal 3 kali perubahan dan tidak dapat diubah kembali.',
+                    ]);
+                }
+
+                if (! $incident->isDirty('status_change_count')) {
+                    $incident->status_change_count = $originalCount + 1;
+                }
             }
 
             if ($incident->getOriginal('is_category_locked') && $incident->isDirty('category')) {
@@ -73,6 +92,16 @@ class Incident extends Model
     public function isResolved(): bool
     {
         return $this->status === 'resolved';
+    }
+
+    public function isStatusLocked(): bool
+    {
+        return (int) ($this->attributes['status_change_count'] ?? 0) >= self::MAX_STATUS_CHANGES;
+    }
+
+    public function statusChangeCount(): int
+    {
+        return (int) ($this->attributes['status_change_count'] ?? 0);
     }
 
     public function isCategoryLocked(): bool

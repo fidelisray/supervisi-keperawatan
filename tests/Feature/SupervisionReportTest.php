@@ -107,16 +107,16 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         'status' => 'in_progress',
     ]);
 
-    // Collaborator can view and see edit / update controls
+    // Collaborator can view and see edit logbook control while Update Tindak Lanjut is no longer on show page
     $this->actingAs($this->collaborator)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
         ->assertSee('ICU (Intensive Care Unit)')
         ->assertSee('Edit Logbook')
-        ->assertSee('Update Tindak Lanjut')
+        ->assertDontSee('Update Tindak Lanjut')
         ->assertDontSee('Shift Pagi');
 
-    // Collaborator can update incident status
+    // Collaborator can update incident status (change 1 of 3)
     $this->actingAs($this->collaborator)
         ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
             'status' => 'resolved',
@@ -125,6 +125,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ->assertRedirect(route('supervisi.show', $report));
 
     expect($incident->fresh()->status)->toBe('resolved')
+        ->and($incident->fresh()->statusChangeCount())->toBe(1)
         ->and($incident->fresh()->action_taken)->toBe('Alat sudah diganti unit cadangan.');
 
     // Collaborator can update full logbook
@@ -198,7 +199,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ])
         ->assertForbidden();
 
-    // Admin has full view and edit access to all reports, but resolved incident is locked from further status updates
+    // Admin has full view and edit access to all reports
     $this->actingAs($this->admin)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
@@ -206,11 +207,33 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ->assertSee('Selesai')
         ->assertDontSee('Update Tindak Lanjut');
 
-    // Attempting to change or downgrade resolved incident status via patch is blocked
+    // Admin can reopen incident status (change 2 of 3) and resolve again (change 3 of 3)
     $this->actingAs($this->admin)
         ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
             'status' => 'in_progress',
-            'action_taken' => 'Percobaan downgrade status oleh Administrator.',
+            'action_taken' => 'Dibuka kembali untuk pengecekan ulang oleh teknisi.',
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($latestIncident->fresh()->status)->toBe('in_progress')
+        ->and($latestIncident->fresh()->statusChangeCount())->toBe(2);
+
+    $this->actingAs($this->admin)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'resolved',
+            'action_taken' => 'Pengecekan ulang selesai.',
+        ])
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($latestIncident->fresh()->status)->toBe('resolved')
+        ->and($latestIncident->fresh()->statusChangeCount())->toBe(3)
+        ->and($latestIncident->fresh()->isStatusLocked())->toBeTrue();
+
+    // Attempting 4th status change via patch is blocked once 3 changes have been made
+    $this->actingAs($this->admin)
+        ->patch(route('supervisi.incidents.update-status', [$report, $latestIncident]), [
+            'status' => 'in_progress',
+            'action_taken' => 'Percobaan perubahan ke-4 oleh Administrator.',
         ])
         ->assertSessionHasErrors('status');
 
@@ -224,7 +247,7 @@ test('collaborator, creator, and admin can view, edit logbook, and update incide
         ])
         ->assertSessionHasErrors('status');
 
-    // Attempting to downgrade resolved incident via update logbook is also rejected
+    // Attempting 4th status change via update logbook is also rejected
     $this->actingAs($this->admin)
         ->put(route('supervisi.update', $report), [
             'report_date' => now()->toDateString(),
@@ -662,7 +685,7 @@ test('supervision index defaults to today preset, exposes semua data chip, and m
         ->and($all->viewData('resolvedIncidentsCount'))->toBe(1);
 });
 
-test('incident status can only be updated once to resolved and is locked thereafter', function () {
+test('incident status can be changed up to 3 times on edit logbook and is locked thereafter', function () {
     $report = SupervisionReport::create([
         'report_date' => now()->toDateString(),
         'shift' => 'pagi',
@@ -681,47 +704,54 @@ test('incident status can only be updated once to resolved and is locked thereaf
         'status' => 'in_progress',
     ]);
 
-    // Initial state: can see Update Tindak Lanjut button
+    $buildUpdatePayload = fn (string $status, string $actionTaken = 'Penanganan AC.') => [
+        'report_date' => now()->toDateString(),
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 3,
+        'collaborators' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'incidents' => [
+            [
+                'id' => $incident->id,
+                'category' => 1,
+                'incident_time' => '08:30',
+                'description' => 'Keluhan kebisingan AC.',
+                'action_taken' => $actionTaken,
+                'status' => $status,
+            ],
+        ],
+    ];
+
+    // Show page no longer displays Update Tindak Lanjut button
     $this->actingAs($this->supervisor)
         ->get(route('supervisi.show', $report))
         ->assertSuccessful()
-        ->assertSee('Update Tindak Lanjut')
-        ->assertSee('Perubahan yang dilakukan tidak dapat diedit kembali');
+        ->assertDontSee('Update Tindak Lanjut');
 
-    // Update status to resolved (allowed once)
+    // Edit page displays status control and confirmation messages for 3-change quota
     $this->actingAs($this->supervisor)
-        ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
-            'status' => 'resolved',
-            'action_taken' => 'AC diperbaiki oleh teknisi.',
-        ])
+        ->get(route('supervisi.edit', $report))
+        ->assertSuccessful()
+        ->assertSee('Status Penanganan')
+        ->assertSee('Anda sudah melakukan 3 kali perubahan status penanganan, pastikan kembali bahwa status penanganan ini sudah benar karena anda sudah tidak dapat mengubahnya kembali');
+
+    // Change 1: in_progress -> resolved
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildUpdatePayload('resolved', 'AC diperbaiki oleh teknisi.'))
         ->assertRedirect(route('supervisi.show', $report));
 
     expect($incident->fresh()->status)->toBe('resolved')
-        ->and($incident->fresh()->isResolved())->toBeTrue();
+        ->and($incident->fresh()->statusChangeCount())->toBe(1)
+        ->and($incident->fresh()->isStatusLocked())->toBeFalse();
 
-    // After resolved: Update Tindak Lanjut button is hidden on detail page
+    // Saving without changing status does not increment status_change_count
     $this->actingAs($this->supervisor)
-        ->get(route('supervisi.show', $report))
-        ->assertSuccessful()
-        ->assertSee('Selesai')
-        ->assertDontSee('Update Tindak Lanjut');
+        ->put(route('supervisi.update', $report), $buildUpdatePayload('resolved', 'Catatan tambahan teknisi.'))
+        ->assertRedirect(route('supervisi.show', $report));
 
-    // Second update attempt is blocked at controller level
-    $this->actingAs($this->supervisor)
-        ->patch(route('supervisi.incidents.update-status', [$report, $incident]), [
-            'status' => 'in_progress',
-            'action_taken' => 'Mencoba membuka kembali.',
-        ])
-        ->assertSessionHasErrors('status');
+    expect($incident->fresh()->statusChangeCount())->toBe(1);
 
-    expect($incident->fresh()->status)->toBe('resolved');
-
-    // Model event guard also prevents changing status from resolved to in_progress directly
-    expect(function () use ($incident) {
-        $incident->fresh()->update(['status' => 'in_progress']);
-    })->toThrow(ValidationException::class);
-
-    // Edit logbook form cannot delete the resolved incident
+    // Edit logbook form cannot delete an incident while its status is resolved
     $this->actingAs($this->supervisor)
         ->put(route('supervisi.update', $report), [
             'report_date' => now()->toDateString(),
@@ -733,7 +763,36 @@ test('incident status can only be updated once to resolved and is locked thereaf
         ])
         ->assertSessionHasErrors('incidents');
 
-    expect($report->fresh()->incidents()->count())->toBe(1);
+    // Change 2: resolved -> in_progress (reopened)
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildUpdatePayload('in_progress', 'AC kembali bunyi, dibuka ulang.'))
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($incident->fresh()->status)->toBe('in_progress')
+        ->and($incident->fresh()->statusChangeCount())->toBe(2)
+        ->and($incident->fresh()->isStatusLocked())->toBeFalse();
+
+    // Change 3: in_progress -> resolved (reaches max 3 changes and locks status)
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildUpdatePayload('resolved', 'Kompresor AC diganti baru.'))
+        ->assertRedirect(route('supervisi.show', $report));
+
+    expect($incident->fresh()->status)->toBe('resolved')
+        ->and($incident->fresh()->statusChangeCount())->toBe(3)
+        ->and($incident->fresh()->isStatusLocked())->toBeTrue();
+
+    // Change 4 attempt via update logbook is blocked
+    $this->actingAs($this->supervisor)
+        ->put(route('supervisi.update', $report), $buildUpdatePayload('in_progress', 'Mencoba buka ke-4 kalinya.'))
+        ->assertSessionHasErrors('status');
+
+    expect($incident->fresh()->status)->toBe('resolved')
+        ->and($incident->fresh()->statusChangeCount())->toBe(3);
+
+    // Model event guard also blocks 4th status change directly
+    expect(function () use ($incident) {
+        $incident->fresh()->update(['status' => 'in_progress']);
+    })->toThrow(ValidationException::class);
 });
 
 test('supervision index renders numbering and dynamic follow-up status badges per logbook', function () {
@@ -814,7 +873,7 @@ test('incident category can only be changed once and edit logbook cannot change 
 
     expect($incident->fresh()->isCategoryLocked())->toBeFalse();
 
-    // Perubahan kategori pertama kali berhasil dan mengunci kategori, status dari form edit diabaikan
+    // Perubahan kategori pertama kali berhasil dan mengunci kategori, serta perubahan status tercatat
     $this->actingAs($this->supervisor)
         ->put(route('supervisi.update', $report), $buildPayload(2, 'resolved'))
         ->assertRedirect(route('supervisi.show', $report));
@@ -822,11 +881,12 @@ test('incident category can only be changed once and edit logbook cannot change 
     $incident->refresh();
     expect($incident->category)->toBe(2)
         ->and($incident->isCategoryLocked())->toBeTrue()
-        ->and($incident->status)->toBe('in_progress');
+        ->and($incident->status)->toBe('resolved')
+        ->and($incident->statusChangeCount())->toBe(1);
 
     // Perubahan kategori kedua ditolak
     $this->actingAs($this->supervisor)
-        ->put(route('supervisi.update', $report), $buildPayload(3))
+        ->put(route('supervisi.update', $report), $buildPayload(3, 'resolved'))
         ->assertSessionHasErrors('category');
 
     expect($incident->fresh()->category)->toBe(2);
@@ -836,7 +896,7 @@ test('incident category can only be changed once and edit logbook cannot change 
 
     // Menyimpan ulang dengan kategori yang sama tetap diizinkan
     $this->actingAs($this->supervisor)
-        ->put(route('supervisi.update', $report), $buildPayload(2))
+        ->put(route('supervisi.update', $report), $buildPayload(2, 'resolved'))
         ->assertRedirect(route('supervisi.show', $report));
 });
 

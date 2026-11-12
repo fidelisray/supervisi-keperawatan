@@ -15,6 +15,9 @@
         $initialCollaborators = old('collaborators', $report->collaboratorList());
         $lockedIds = $report->incidents->where('status', 'resolved')->pluck('id')->all();
         $categoryLockedIds = $report->incidents->filter(fn ($inc) => $inc->isCategoryLocked())->pluck('id')->all();
+        $statusLockedIds = $report->incidents->filter(fn ($inc) => $inc->isStatusLocked())->pluck('id')->all();
+        $statusChangeCounts = $report->incidents->mapWithKeys(fn ($inc) => [$inc->id => $inc->statusChangeCount()])->all();
+        $originalStatuses = $report->incidents->mapWithKeys(fn ($inc) => [$inc->id => $inc->status])->all();
         $originalCategories = $report->incidents->mapWithKeys(fn ($inc) => [$inc->id => (int) $inc->category])->all();
         $initialIncidents = collect(old('incidents', $report->incidents->map(fn ($inc) => [
             'id' => $inc->id,
@@ -26,9 +29,12 @@
             'is_locked' => $inc->status === 'resolved',
         ])->values()->all()))->map(fn ($item) => array_merge($item, [
             'id' => $item['id'] ?? null,
-            'is_locked' => $item['is_locked'] ?? in_array((int) ($item['id'] ?? 0), $lockedIds, true),
+            'is_locked' => ($item['status'] ?? 'in_progress') === 'resolved',
             'is_category_locked' => in_array((int) ($item['id'] ?? 0), $categoryLockedIds, true),
             'original_category' => $originalCategories[(int) ($item['id'] ?? 0)] ?? null,
+            'is_status_locked' => in_array((int) ($item['id'] ?? 0), $statusLockedIds, true),
+            'status_change_count' => $statusChangeCounts[(int) ($item['id'] ?? 0)] ?? 0,
+            'original_status' => $originalStatuses[(int) ($item['id'] ?? 0)] ?? null,
         ]))->values()->all();
         $categoryMeta = $incidentCategories->mapWithKeys(fn ($cat) => [
             $cat->id => [
@@ -438,7 +444,7 @@
                                     </button>
 
                                     <button 
-                                        x-show="!item.is_locked"
+                                        x-show="item.status !== 'resolved'"
                                         type="button" 
                                         @click="removeIncident(index)"
                                         class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
@@ -550,24 +556,27 @@
                                 <p class="text-[11px] text-slate-500 mt-1.5" x-show="getCategoryDescription(modalData.category)" x-text="getCategoryDescription(modalData.category)"></p>
                             </div>
 
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Perkiraan Jam Kejadian</label>
-                                <input type="time" x-model="modalData.incident_time" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
-                            </div>
-
-                            {{-- [STATUS PENANGANAN DISEMBUNYIKAN] Perubahan status tindakan hanya boleh dilakukan melalui "Update Tindak Lanjut" pada halaman Detail Laporan.
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Perkiraan Jam Kejadian</label>
+                                    <input type="time" x-model="modalData.incident_time" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm">
+                                </div>
+
+                                <div>
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Status Penanganan</label>
-                                    <select x-model="modalData.status" :disabled="modalData.is_locked" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed">
+                                    <select x-model="modalData.status" :disabled="modalData.is_status_locked" class="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed">
                                         <option value="in_progress">Sedang Ditangani</option>
                                         <option value="resolved">Selesai Ditangani</option>
-                                        <option value="escalated">Perlu Eskalasi Supervisor</option>
+                                        {{-- <option value="escalated">Perlu Eskalasi Supervisor</option> --}}
                                     </select>
-                                    <p x-show="modalData.is_locked" class="text-[11px] text-emerald-700 font-medium mt-1">Status telah selesai dan tidak dapat diubah kembali.</p>
+                                    <p x-show="modalData.is_status_locked" class="text-[11px] text-rose-600 font-medium mt-1">
+                                        Status penanganan telah dikunci secara permanen karena sudah mencapai batas 3 kali perubahan.
+                                    </p>
+                                    <p x-show="!modalData.is_status_locked && (modalData.id || modalData.original_status != null)" class="text-[11px] text-slate-500 font-medium mt-1">
+                                        Perubahan status telah dilakukan <span class="font-bold text-slate-700" x-text="modalData.status_change_count || 0"></span>/3 kali.
+                                    </p>
                                 </div>
                             </div>
-                            --}}
 
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Uraian Masalah / Kejadian *</label>
@@ -612,6 +621,36 @@
                     </button>
                     <button type="button" @click="confirmCategoryChange()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
                         Ya, Ubah Kategori
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Change Confirmation Modal -->
+        <div x-show="showStatusConfirmModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs" role="alertdialog" aria-modal="true">
+            <div @click.away="cancelStatusChange()" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-200 space-y-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" :class="getNextStatusChangeCount() >= 3 ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900" x-text="getNextStatusChangeCount() >= 3 ? 'Peringatan Batas Maksimal Perubahan Status' : 'Konfirmasi Perubahan Status'"></h4>
+                        <p x-show="getNextStatusChangeCount() < 3" class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                            Anda akan mengubah status penanganan butir kejadian ini. Perubahan dilakukan sebanyak (<span class="font-bold text-slate-900" x-text="getNextStatusChangeCount() + ' / 3'"></span>). Mohon periksa dan pastikan kembali bahwa informasi yang diberikan sudah tepat.
+                        </p>
+                        <p x-show="getNextStatusChangeCount() >= 3" class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                            Anda sudah melakukan 3 kali perubahan status penanganan, pastikan kembali bahwa status penanganan ini sudah benar karena anda sudah tidak dapat mengubahnya kembali
+                        </p>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" @click="cancelStatusChange()" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer">
+                        Periksa Kembali
+                    </button>
+                    <button type="button" @click="confirmStatusChange()" class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer">
+                        Ya, Simpan Perubahan
                     </button>
                 </div>
             </div>
@@ -719,6 +758,7 @@
                 incidents: @json($initialIncidents),
                 showIncidentModal: false,
                 showCategoryConfirmModal: false,
+                showStatusConfirmModal: false,
                 pendingCategory: null,
                 editingIndex: null,
                 modalError: '',
@@ -727,7 +767,10 @@
                     incident_time: '',
                     description: '',
                     action_taken: '',
-                    status: 'in_progress'
+                    status: 'in_progress',
+                    status_change_count: 0,
+                    is_status_locked: false,
+                    original_status: null
                 },
 
                 initialStateSnapshot: '',
@@ -990,7 +1033,10 @@
                         incident_time: `${hours}:${minutes}`,
                         description: '',
                         action_taken: '',
-                        status: 'in_progress'
+                        status: 'in_progress',
+                        status_change_count: 0,
+                        is_status_locked: false,
+                        original_status: null
                     };
                     this.showIncidentModal = true;
                     this.$nextTick(() => {
@@ -1004,6 +1050,7 @@
                 closeModal() {
                     this.showIncidentModal = false;
                     this.showCategoryConfirmModal = false;
+                    this.showStatusConfirmModal = false;
                     this.pendingCategory = null;
                     this.editingIndex = null;
                     this.modalError = '';
@@ -1078,12 +1125,39 @@
                     });
                 },
 
+                getNextStatusChangeCount() {
+                    return Number(this.modalData.status_change_count || 0) + 1;
+                },
+
                 saveIncidentFromModal() {
                     if (!this.modalData.description || this.modalData.description.trim() === '') {
                         this.modalError = 'Uraian masalah kejadian wajib diisi!';
                         return;
                     }
+
+                    const hasOriginalStatus = this.modalData.original_status != null;
+                    const isExistingIncident = Boolean(this.modalData.id) || hasOriginalStatus;
+
+                    if (isExistingIncident && hasOriginalStatus && this.modalData.status !== this.modalData.original_status) {
+                        this.showStatusConfirmModal = true;
+                        return;
+                    }
+
+                    this.commitIncidentFromModal();
+                },
+
+                confirmStatusChange() {
+                    this.showStatusConfirmModal = false;
+                    this.commitIncidentFromModal();
+                },
+
+                cancelStatusChange() {
+                    this.showStatusConfirmModal = false;
+                },
+
+                commitIncidentFromModal() {
                     this.modalData.category = Number(this.modalData.category);
+                    this.modalData.is_locked = this.modalData.status === 'resolved';
                     if (this.editingIndex !== null) {
                         this.incidents[this.editingIndex] = JSON.parse(JSON.stringify(this.modalData));
                     } else {
@@ -1093,7 +1167,7 @@
                 },
 
                 removeIncident(index) {
-                    if (this.incidents[index]?.is_locked) {
+                    if (this.incidents[index]?.status === 'resolved') {
                         return;
                     }
                     this.incidents.splice(index, 1);

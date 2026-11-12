@@ -315,11 +315,13 @@ class SupervisionReportController extends Controller
             ]);
         }
 
-        $lockedIncidentsByIndex = $lockedIncidents->values();
+        $fallbackIncidentsByIndex = $submittedIncidents->count() < $existingIncidents->count()
+            ? $lockedIncidents->values()
+            : $existingIncidents->values();
 
         $resolveExistingIncident = fn (int $idx, array $incidentData): ?Incident => $hasExplicitIds
             ? $existingIncidents->get((int) ($incidentData['id'] ?? 0))
-            : $lockedIncidentsByIndex->get($idx);
+            : $fallbackIncidentsByIndex->get($idx);
 
         foreach ($submittedIncidents as $idx => $incidentData) {
             $existingIncident = $resolveExistingIncident($idx, $incidentData);
@@ -328,9 +330,11 @@ class SupervisionReportController extends Controller
                 continue;
             }
 
-            if ($existingIncident->isResolved() && isset($incidentData['status']) && $incidentData['status'] !== 'resolved') {
+            $newStatus = $incidentData['status'] ?? $existingIncident->status;
+
+            if ($newStatus !== $existingIncident->status && $existingIncident->isStatusLocked()) {
                 throw ValidationException::withMessages([
-                    'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
+                    'status' => 'Status tindak lanjut telah mencapai batas maksimal 3 kali perubahan dan tidak dapat diubah kembali.',
                 ]);
             }
 
@@ -367,13 +371,19 @@ class SupervisionReportController extends Controller
                 $keptIncidentIds[] = $existingIncident->id;
                 $newCategory = (int) $incidentData['category'];
                 $categoryChanged = $newCategory !== (int) $existingIncident->category;
+                $newStatus = $incidentData['status'] ?? $existingIncident->status;
+                $statusChanged = $newStatus !== $existingIncident->status;
 
                 $existingIncident->update([
                     'category' => $newCategory,
                     'incident_time' => $incidentData['incident_time'] ?? null,
                     'description' => $incidentData['description'],
                     'action_taken' => $incidentData['action_taken'] ?? null,
+                    'status' => $newStatus,
                     'is_category_locked' => $existingIncident->isCategoryLocked() || $categoryChanged,
+                    'status_change_count' => $statusChanged
+                        ? $existingIncident->statusChangeCount() + 1
+                        : $existingIncident->statusChangeCount(),
                 ]);
             }
 
@@ -407,21 +417,26 @@ class SupervisionReportController extends Controller
         abort_unless($request->user()?->hasPermission('update_incident_status') && $supervisionReport->isAccessibleBy($request->user()), 403);
         abort_unless((int) $incident->supervision_report_id === (int) $supervisionReport->id, 404);
 
-        if ($incident->isResolved()) {
-            throw ValidationException::withMessages([
-                'status' => 'Status tindak lanjut yang sudah selesai tidak dapat diubah kembali.',
-            ]);
-        }
-
         $validated = $request->validate([
             // 'status' => ['required', 'in:in_progress,resolved,escalated'],
             'status' => ['required', 'in:in_progress,resolved'],
             'action_taken' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $statusChanged = $validated['status'] !== $incident->status;
+
+        if ($statusChanged && $incident->isStatusLocked()) {
+            throw ValidationException::withMessages([
+                'status' => 'Status tindak lanjut telah mencapai batas maksimal 3 kali perubahan dan tidak dapat diubah kembali.',
+            ]);
+        }
+
         $incident->update([
             'status' => $validated['status'],
             'action_taken' => $validated['action_taken'] ?? $incident->action_taken,
+            'status_change_count' => $statusChanged
+                ? $incident->statusChangeCount() + 1
+                : $incident->statusChangeCount(),
         ]);
 
         return redirect()->route('supervisi.show', $supervisionReport)
