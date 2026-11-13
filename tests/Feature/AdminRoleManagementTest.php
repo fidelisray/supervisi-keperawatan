@@ -560,3 +560,61 @@ test('administrator can rename custom role while preserving permissions and prot
         ->and(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 1)->where('role_id', '2')->value('role_name'))
         ->toBe('APP LAIN ROLE');
 });
+
+test('admin roles page renders modal triggers, active user counts, and paginates registered users while preserving search query', function () {
+    foreach (range(1, 12) as $i) {
+        $suffix = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+        $nip = '88000000'.$suffix;
+
+        DB::connection('sqlsrv')->table('tb_employees')->insert([
+            'nip' => $nip,
+            'nama' => "Perawat Pagination {$suffix}, S.Kep.Ners",
+            'status_karyawan' => 'AKTIF',
+        ]);
+
+        AppRoleAssignment::create([
+            'nip' => $nip,
+            'app_id' => AppRole::APP_ID,
+            'app_roles' => AppRole::ROLE_SUPERVISOR,
+        ]);
+    }
+
+    // Page 1: renders 10 of 15 users, modal triggers, role user counts, and page 2 link
+    $pageOne = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $pageOne->assertSuccessful()
+        ->assertSee('+ Tambah Role Baru')
+        ->assertSee('+ Daftarkan Pegawai')
+        ->assertSee('create-role-modal-title', false)
+        ->assertSee('assign-user-modal-title', false)
+        ->assertSee('Pengguna Aktif')
+        ->assertSee('14 Pegawai')
+        ->assertSee('2. Daftar Pengguna Terdaftar (15 Pegawai)')
+        ->assertSee('?page=2', false);
+
+    expect($pageOne->viewData('appRoles')->total())->toBe(15)
+        ->and($pageOne->viewData('appRoles')->count())->toBe(10);
+
+    // Page 2: renders remaining 5 users
+    $pageTwo = $this->actingAs($this->admin)->get(route('admin.roles.index', ['page' => 2]));
+    $pageTwo->assertSuccessful()
+        ->assertSee('Perawat Pagination 12, S.Kep.Ners');
+
+    expect($pageTwo->viewData('appRoles')->count())->toBe(5);
+
+    // Search + pagination preserves search query string on pagination links
+    $filteredPageOne = $this->actingAs($this->admin)->get(route('admin.roles.index', ['search' => 'Pagination']));
+    $filteredPageOne->assertSuccessful()
+        ->assertSee('2. Daftar Pengguna Terdaftar (12 Pegawai)')
+        ->assertSee('search=Pagination', false);
+
+    expect($filteredPageOne->viewData('appRoles')->total())->toBe(12)
+        ->and($filteredPageOne->viewData('appRoles')->count())->toBe(10);
+
+    $filteredPageTwo = $this->actingAs($this->admin)->get(route('admin.roles.index', ['search' => 'Pagination', 'page' => 2]));
+    $filteredPageTwo->assertSuccessful()
+        ->assertSee('Perawat Pagination 11, S.Kep.Ners')
+        ->assertSee('Perawat Pagination 12, S.Kep.Ners');
+
+    expect($filteredPageTwo->viewData('appRoles')->count())->toBe(2);
+});

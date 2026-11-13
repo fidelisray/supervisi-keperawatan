@@ -14,12 +14,16 @@ test.describe('Modul Administrator - Manajemen Kategori Insiden', () => {
 
     const uniqueCategoryName = `[E2E] Kategori-${Date.now().toString().slice(-4)}`;
 
-    // 1. Tambah Kategori Baru
-    await page.locator('input#incident_category').fill(uniqueCategoryName);
-    await page.locator('textarea#description').fill('Kategori masalah sementara dibuat oleh automation testing Playwright.');
-    await page.locator('select#is_active').selectOption('true');
+    // 1. Tambah Kategori Baru via Modal
+    await page.getByRole('button', { name: /\+ Tambah Kategori Baru/i }).click();
+    const createCategoryModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#create-category-modal-title') });
+    await expect(createCategoryModal).toBeVisible();
 
-    await page.getByRole('button', { name: /\+ Simpan Kategori Baru/i }).click();
+    await createCategoryModal.locator('input#incident_category').fill(uniqueCategoryName);
+    await createCategoryModal.locator('textarea#description').fill('Kategori masalah sementara dibuat oleh automation testing Playwright.');
+    await createCategoryModal.locator('select#is_active').selectOption('true');
+
+    await createCategoryModal.getByRole('button', { name: /\+ Simpan Kategori Baru/i }).click();
 
     // Verifikasi kategori baru muncul di daftar tabel
     await expect(page.getByText(uniqueCategoryName, { exact: true })).toBeVisible();

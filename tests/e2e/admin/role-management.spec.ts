@@ -6,10 +6,12 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
   test('administrator dapat melihat daftar role, melakukan pencarian NIP, dan filter peran', async ({ page }) => {
     await page.goto('/admin/roles');
 
-    // Verifikasi header halaman
+    // Verifikasi header halaman & trigger modal baru
     await expect(page.getByRole('heading', { name: /Manajemen Role & Hak Akses Pengguna/i })).toBeVisible();
-    await expect(page.getByText('1. Daftar & Buat Role Baru')).toBeVisible();
-    await expect(page.getByText('2. Berikan Hak Akses kepada Pegawai Baru')).toBeVisible();
+    await expect(page.getByText(/1\. Daftar Definisi Role/i)).toBeVisible();
+    await expect(page.getByText(/2\. Daftar Pengguna Terdaftar/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /\+ Tambah Role Baru/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /\+ Daftarkan Pegawai/i })).toBeVisible();
 
     // 1. Pencarian Pegawai berdasarkan NIP
     const searchInput = page.locator('input[name="search"]');
@@ -42,7 +44,10 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     for (const staleName of [INITIAL_ROLE_NAME, RENAMED_ROLE_NAME]) {
       const existingRoleRow = roleDefTable.locator('tr').filter({ hasText: staleName });
       if (await existingRoleRow.count() > 0) {
-        // Hapus assignment pegawai dengan role tersebut terlebih dahulu jika ada
+        const staleRoleId = (await existingRoleRow.locator('span.font-mono').first().innerText()).trim();
+        await page.locator('select[name="role_filter"]').selectOption(staleRoleId);
+        await page.getByRole('button', { name: /Cari/i }).click();
+
         const usersTable = page.locator('table').last();
         const usersWithRole = usersTable.locator('tr').filter({ has: page.locator(`span.rounded-full:has-text("${staleName}")`) });
         const userCount = await usersWithRole.count();
@@ -50,30 +55,38 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
           page.once('dialog', async dialog => await dialog.accept());
           await usersWithRole.first().getByRole('button', { name: /Hapus/i }).click();
           await page.waitForLoadState('networkidle');
+          if (i < userCount - 1) {
+            await page.locator('select[name="role_filter"]').selectOption(staleRoleId);
+            await page.getByRole('button', { name: /Cari/i }).click();
+          }
         }
-        page.once('dialog', async dialog => await dialog.accept());
-        await existingRoleRow.getByRole('button', { name: /Hapus/i }).click();
-        await page.waitForLoadState('networkidle');
+        await page.goto('/admin/roles');
+        const refreshedRoleRow = roleDefTable.locator('tr').filter({ hasText: staleName });
+        if (await refreshedRoleRow.count() > 0) {
+          page.once('dialog', async dialog => await dialog.accept());
+          await refreshedRoleRow.getByRole('button', { name: /Hapus/i }).click();
+          await page.waitForLoadState('networkidle');
+        }
       }
     }
 
     // =========================================================================
-    // 1. TAMBAH ROLE BARU DENGAN KODE OTOMATIS (POST /admin/roles/definitions)
+    // 1. TAMBAH ROLE BARU VIA MODAL DENGAN KODE OTOMATIS (POST /admin/roles/definitions)
     // =========================================================================
-    const roleNameInput = page.locator('input#role_name');
-    await roleNameInput.scrollIntoViewIfNeeded();
-    await roleNameInput.fill(INITIAL_ROLE_NAME);
+    await page.getByRole('button', { name: /\+ Tambah Role Baru/i }).click();
+    const createRoleModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#create-role-modal-title') });
+    await expect(createRoleModal).toBeVisible();
+
+    await createRoleModal.locator('input#role_name').fill(INITIAL_ROLE_NAME);
 
     // Pilih semua hak akses awal pada form definisi role
-    const selectAllNewRoleBtn = page.getByRole('button', { name: 'Pilih Semua' }).first();
-    await selectAllNewRoleBtn.click();
+    await createRoleModal.getByRole('button', { name: 'Pilih Semua' }).click();
 
     // Simpan definisi role baru
-    const saveRoleDefBtn = page.getByRole('button', { name: /Simpan Role Baru/i });
-    await saveRoleDefBtn.scrollIntoViewIfNeeded();
-    await saveRoleDefBtn.click();
+    await createRoleModal.getByRole('button', { name: /Simpan Role Baru/i }).click();
 
     // Verifikasi alert sukses, ekstrak kode role otomatis, dan pastikan role tampil di Panel 1
+    await expect(createRoleModal).not.toBeVisible();
     const createAlert = page.locator('div[role="alert"]');
     await expect(createAlert).toContainText(new RegExp(`Definisi role \\[\\d+ - ${INITIAL_ROLE_NAME}\\]`, 'i'));
     const createAlertText = await createAlert.innerText();
@@ -128,31 +141,36 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     await expect(roleDefRow.getByRole('button', { name: /Atur Izin \(2\)/i })).toBeVisible();
 
     // =========================================================================
-    // 3. ASSIGN ROLE KE PEGAWAI BARU (POST /admin/roles/users)
+    // 3. ASSIGN ROLE KE PEGAWAI BARU VIA MODAL (POST /admin/roles/users)
     // =========================================================================
-    const empSearchInput = page.locator('input#assign_employee_search');
-    await empSearchInput.scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: /\+ Daftarkan Pegawai/i }).click();
+    const assignModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#assign-user-modal-title') });
+    await expect(assignModal).toBeVisible();
+
+    const empSearchInput = assignModal.locator('input#assign_employee_search');
     await empSearchInput.click();
 
     // Tunggu dropdown autocomplete muncul dan klik pegawai pertama yang belum terdaftar
-    const firstEmpOption = page.locator('div[x-show="isOpen"] button').first();
+    const firstEmpOption = assignModal.locator('div[x-show="isOpen"] button').first();
     await firstEmpOption.waitFor({ state: 'visible', timeout: 5000 });
     const selectedEmpText = await firstEmpOption.innerText();
     const nipMatch = selectedEmpText.match(/NIP:\s*(\w+)/);
     const assignedNip = nipMatch ? nipMatch[1] : '';
+    expect(assignedNip).not.toBe('');
     await firstEmpOption.click();
 
     // Pilih role baru yang baru dibuat
-    const assignRoleSelect = page.locator('select#assign_role');
-    await assignRoleSelect.selectOption(createdRoleId);
+    await assignModal.locator('select#assign_role').selectOption(createdRoleId);
 
     // Submit penugasan role pegawai
-    const assignBtn = page.getByRole('button', { name: /\+ Daftarkan & Berikan Role Pegawai/i });
-    await assignBtn.scrollIntoViewIfNeeded();
-    await assignBtn.click();
+    await assignModal.getByRole('button', { name: /\+ Daftarkan & Berikan Role Pegawai/i }).click();
+    await expect(assignModal).not.toBeVisible();
 
-    // Verifikasi alert sukses dan pegawai muncul di Tabel 3 (Daftar Pengguna Terdaftar)
+    // Verifikasi alert sukses lalu filter tabel pengguna (ber-pagination) berdasarkan NIP terpilih
     await expect(page.locator('div[role="alert"]')).toContainText(/Hak akses untuk .* berhasil disimpan/i);
+    await page.locator('input[name="search"]').fill(assignedNip);
+    await page.getByRole('button', { name: /Cari/i }).click();
+
     const usersTable = page.locator('table').last();
     const assignedUserRow = usersTable.locator('tr').filter({ has: page.locator(`td:has-text("${assignedNip}")`) });
     await expect(assignedUserRow).toBeVisible();
@@ -169,8 +187,10 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     const saveUserRoleBtn = assignedUserRow.getByRole('button', { name: /Simpan/i });
     await saveUserRoleBtn.click();
 
-    // Verifikasi alert sukses dan badge role pegawai berubah menjadi Supervisor Keperawatan
+    // Verifikasi alert sukses, lalu filter ulang NIP agar baris ditemukan di halaman 1 tabel ber-pagination
     await expect(page.locator('div[role="alert"]')).toContainText(/Role untuk .* berhasil diperbarui/i);
+    await page.locator('input[name="search"]').fill(assignedNip);
+    await page.getByRole('button', { name: /Cari/i }).click();
     await expect(assignedUserRow.locator('span.rounded-full')).toContainText(/Supervisor Keperawatan/i);
 
     // =========================================================================

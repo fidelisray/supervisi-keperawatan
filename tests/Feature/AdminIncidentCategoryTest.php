@@ -24,11 +24,13 @@ test('administrator can create, update, hide, and soft delete incident categorie
         ->get(route('admin.incident-categories.index'))
         ->assertForbidden();
 
-    // Admin can view the page
+    // Admin can view the page and modal trigger
     $this->actingAs($admin)
         ->get(route('admin.incident-categories.index'))
         ->assertSuccessful()
-        ->assertSee('Manajemen Kategori Masalah & Poin Kejadian');
+        ->assertSee('Manajemen Kategori Masalah & Poin Kejadian')
+        ->assertSee('+ Tambah Kategori Baru')
+        ->assertSee('create-category-modal-title', false);
 
     // Admin creates a new category
     $this->actingAs($admin)

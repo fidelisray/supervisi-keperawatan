@@ -37,7 +37,16 @@ class RoleManagementController extends Controller
             })
             ->orderBy('app_roles')
             ->orderBy('nama')
-            ->get(['nip', 'nama', 'app_id', 'app_roles']);
+            ->paginate(10, ['nip', 'nama', 'app_id', 'app_roles'])
+            ->withQueryString();
+
+        $roleUserCounts = AppRole::query()
+            ->forSupervisiApp()
+            ->selectRaw('app_roles, COUNT(*) as aggregate')
+            ->groupBy('app_roles')
+            ->pluck('aggregate', 'app_roles')
+            ->mapWithKeys(fn (mixed $count, mixed $roleId): array => [(int) $roleId => (int) $count])
+            ->all();
 
         $registeredNips = AppRole::query()
             ->forSupervisiApp()
@@ -63,6 +72,7 @@ class RoleManagementController extends Controller
         return view('admin.roles.index', [
             'availableRoles' => $availableRoles,
             'appRoles' => $appRoles,
+            'roleUserCounts' => $roleUserCounts,
             'unregisteredEmployees' => $unregisteredEmployees,
             'groupedPermissions' => RolePermission::groupedPermissions(),
             'rolePermissionsMap' => $rolePermissionsMap,
