@@ -116,6 +116,44 @@ class RefAppRole extends Model
         return $roles;
     }
 
+    /**
+     * Generate the next monotonic role_id (>= 2) for app_id = 6 so deleted codes are never reused.
+     */
+    public static function nextAvailableRoleId(): int
+    {
+        $dbRoleIds = static::query()
+            ->forSupervisiApp()
+            ->pluck('role_id')
+            ->map(fn (mixed $id): string => is_string($id) ? trim($id) : (string) $id)
+            ->filter(fn (string $id): bool => is_numeric($id))
+            ->map(fn (string $id): int => (int) $id)
+            ->all();
+
+        $highestRoleId = max(array_merge(array_keys(self::DEFAULT_ROLE_LABELS), $dbRoleIds));
+
+        return max(1, $highestRoleId) + 1;
+    }
+
+    /**
+     * Determine whether a role name already exists within app_id = 6 (case-insensitive).
+     */
+    public static function isRoleNameTaken(string $roleName, ?int $ignoreRoleId = null): bool
+    {
+        $normalized = mb_strtoupper(trim($roleName));
+
+        foreach (self::availableRoles() as $existingRoleId => $existingRoleName) {
+            if ($ignoreRoleId !== null && (int) $existingRoleId === $ignoreRoleId) {
+                continue;
+            }
+
+            if (mb_strtoupper(trim($existingRoleName)) === $normalized) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function permissions(): HasMany
     {
         return $this->hasMany(RolePermission::class, 'role_id', 'role_id')

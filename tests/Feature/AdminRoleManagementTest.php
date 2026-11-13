@@ -32,7 +32,6 @@ test('non-admin supervisor cannot access admin role management routes', function
 
     $this->actingAs($this->supervisor)
         ->post(route('admin.roles.store-definition'), [
-            'role_id' => 2,
             'role_name' => 'KEPALA RUANG',
         ])
         ->assertForbidden();
@@ -43,21 +42,21 @@ test('administrator can create, update, and delete roles and user access on dedi
         ->get(route('admin.roles.index'))
         ->assertSuccessful()
         ->assertSee('Manajemen Role & Hak Akses Pengguna')
+        ->assertDontSee('name="role_id"', false)
         ->assertDontSee('App ID')
         ->assertDontSee('tb_master_nurse_supervision_approles')
         ->assertDontSee('ref_master_nurse_supervision_approles')
         ->assertDontSee('tb_employees');
 
-    // 1. Create a new role definition in ref_master_nurse_supervision_approles
+    // 1. Create a new role definition in ref_master_nurse_supervision_approles with auto-generated role_id
     $this->actingAs($this->admin)
         ->post(route('admin.roles.store-definition'), [
-            'role_id' => 2,
             'role_name' => 'KEPALA RUANG',
         ])
         ->assertRedirect(route('admin.roles.index'));
 
-    expect(RefAppRole::where('app_id', 6)->where('role_id', 2)->value('role_name'))
-        ->toBe('KEPALA RUANG');
+    expect(RefAppRole::where('app_id', 6)->where('role_name', 'KEPALA RUANG')->value('role_id'))
+        ->toBe(2);
 
     // 2. Assign role to an unregistered employee from tb_employees (1355010892 - Cicilia Rumini, S.Kep.Ners)
     $this->actingAs($this->admin)
@@ -132,32 +131,30 @@ test('role management supports switching write tables to tb_approles and ref_app
     $this->actingAs($this->admin)
         ->from(route('admin.roles.index'))
         ->post(route('admin.roles.store-definition'), [
-            'role_id' => 3,
             'role_name' => 'NAMA ROLE YANG SANGAT PANJANG MELEBIHI BATAS',
         ])
         ->assertSessionHasErrors('role_name');
 
-    // Valid <= 24 char role is stored in ref_approles
+    // Valid <= 24 char role is stored in ref_approles with auto-generated role_id (2)
     $this->actingAs($this->admin)
         ->post(route('admin.roles.store-definition'), [
-            'role_id' => 3,
             'role_name' => 'KEPALA INSTALASI',
         ])
         ->assertRedirect(route('admin.roles.index'));
 
-    expect(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 6)->where('role_id', 3)->value('role_name'))
+    expect(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 6)->where('role_id', 2)->value('role_name'))
         ->toBe('KEPALA INSTALASI');
 
     // Assigning user writes directly to tb_approles and appears in vAppRoles
     $this->actingAs($this->admin)
         ->post(route('admin.roles.assign-user'), [
             'nip' => '1355010892',
-            'app_roles' => 3,
+            'app_roles' => 2,
         ])
         ->assertRedirect(route('admin.roles.index'));
 
     expect(DB::connection('sqlsrv')->table('tb_approles')->where('app_id', 6)->where('nip', '1355010892')->value('app_roles'))
-        ->toBe(3)
+        ->toBe(2)
         ->and(AppRole::where('nip', '1355010892')->value('nama'))->toBe('Cicilia Rumini, S.Kep.Ners');
 
     // Deleting user removes row directly from tb_approles
@@ -208,10 +205,9 @@ test('admin roles index only pulls unregistered employees who have nursing title
 });
 
 test('administrator can define custom role with specific permissions and update permissions later', function () {
-    // 1. Create role 2 with permissions 'view_all_reports' and 'view_analytics'
+    // 1. Create custom role (auto-assigned role_id 2) with permissions 'view_all_reports' and 'view_analytics'
     $this->actingAs($this->admin)
         ->post(route('admin.roles.store-definition'), [
-            'role_id' => 2,
             'role_name' => 'AUDITOR MUTU',
             'permissions' => ['view_all_reports', 'view_analytics'],
         ])
@@ -233,6 +229,17 @@ test('administrator can define custom role with specific permissions and update 
         ->toEqualCanonicalizing(['view_all_reports', 'manage_roles'])
         ->and(RefAppRole::permissionKeysForRole(2))
         ->toEqualCanonicalizing(['view_all_reports', 'manage_roles']);
+
+    // 3. Verify rendered role definition table shows a single explicit permission button without duplicate action trigger
+    $indexResponse = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $indexResponse->assertSuccessful()
+        ->assertSee('7 Akses (Full)')
+        ->assertSee('4 Akses (Default)')
+        ->assertSee('Atur Izin (2)')
+        ->assertDontSee('title="Atur hak akses role ini"', false);
+
+    expect(substr_count($indexResponse->getContent(), 'openPermissionModal(2,'))->toBe(1);
 });
 
 test('user assigned custom role receives corresponding granular permissions and access boundaries', function () {
@@ -336,7 +343,7 @@ test('user cannot modify their own active role and storeRole blocks system roles
         ])
         ->assertSessionHasErrors('nip');
 
-    // storeRole rejects role_id 0 and 1
+    // storeRole rejects any client-supplied role_id (prohibited rule prevents tampering / silent overwrite)
     $this->actingAs($this->admin)
         ->from(route('admin.roles.index'))
         ->post(route('admin.roles.store-definition'), [
@@ -350,6 +357,14 @@ test('user cannot modify their own active role and storeRole blocks system roles
         ->post(route('admin.roles.store-definition'), [
             'role_id' => 1,
             'role_name' => 'FAKE SUPERVISOR',
+        ])
+        ->assertSessionHasErrors('role_id');
+
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 50,
+            'role_name' => 'TAMPERED CODE',
         ])
         ->assertSessionHasErrors('role_id');
 });
@@ -424,4 +439,124 @@ test('non-admin user with manage_roles cannot escalate to admin, manage role 0 a
         ->assertRedirect(route('admin.roles.index'));
 
     expect(AppRole::where('nip', '1355010892')->value('app_roles'))->toBe(1);
+});
+
+test('storeRole generates monotonic role_id without reusing deleted gaps and rejects duplicate role names', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 3,
+        'role_name' => 'ROLE TIGA',
+    ]);
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 9,
+        'role_name' => 'ROLE SEMBILAN',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_name' => 'KEPALA SHIFT',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RefAppRole::where('app_id', 6)->where('role_name', 'KEPALA SHIFT')->value('role_id'))
+        ->toBe(10);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_name' => 'KATIM',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RefAppRole::where('app_id', 6)->where('role_name', 'KATIM')->value('role_id'))
+        ->toBe(11);
+
+    // Reject duplicate custom role names and reserved system role names (case-insensitive)
+    foreach (['kepala shift', 'ADMINISTRATOR', 'supervisor keperawatan'] as $duplicateName) {
+        $this->actingAs($this->admin)
+            ->from(route('admin.roles.index'))
+            ->post(route('admin.roles.store-definition'), [
+                'role_name' => $duplicateName,
+            ])
+            ->assertSessionHasErrors('role_name');
+    }
+});
+
+test('administrator can rename custom role while preserving permissions and protecting system roles and other apps', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_name' => 'KEPALA RUANG',
+            'permissions' => ['create_report', 'view_analytics'],
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_name' => 'KATIM JAGA',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    $roleTwoUser = User::factory()->create([
+        'nip' => '1355010892',
+        'name' => 'Cicilia Rumini, S.Kep.Ners',
+        'app_roles' => 2,
+    ]);
+
+    // Prime cache before rename
+    expect($roleTwoUser->roleLabel())->toBe('KEPALA RUANG');
+
+    // Renaming to another existing role name or system role name fails
+    foreach (['katim jaga', 'administrator'] as $conflictingName) {
+        $this->actingAs($this->admin)
+            ->from(route('admin.roles.index'))
+            ->patch(route('admin.roles.update-definition', 2), [
+                'role_name' => $conflictingName,
+            ])
+            ->assertSessionHasErrors('role_name');
+    }
+
+    // Valid rename updates role_name, preserves permissions, and clears label cache
+    $this->actingAs($this->admin)
+        ->patch(route('admin.roles.update-definition', 2), [
+            'role_name' => '  koordinator ruang  ',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(RefAppRole::where('app_id', 6)->where('role_id', 2)->value('role_name'))->toBe('KOORDINATOR RUANG')
+        ->and(RefAppRole::permissionKeysForRole(2))->toEqualCanonicalizing(['create_report', 'view_analytics'])
+        ->and($roleTwoUser->roleLabel())->toBe('KOORDINATOR RUANG');
+
+    // System roles 0 and 1 cannot be renamed, and non-existent role returns 404
+    foreach ([0, 1] as $systemRoleId) {
+        $this->actingAs($this->admin)
+            ->from(route('admin.roles.index'))
+            ->patch(route('admin.roles.update-definition', $systemRoleId), [
+                'role_name' => 'UBAH SISTEM',
+            ])
+            ->assertSessionHasErrors('role_id');
+    }
+
+    $this->actingAs($this->admin)
+        ->patch(route('admin.roles.update-definition', 99), [
+            'role_name' => 'TIDAK ADA',
+        ])
+        ->assertNotFound();
+
+    // Production table switch: renaming app_id = 6 does not alter other apps in ref_approles
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+    DB::connection('sqlsrv')->table('ref_approles')->insert([
+        ['role_id' => '2', 'role_name' => 'APP LAIN ROLE', 'app_id' => 1],
+        ['role_id' => '2', 'role_name' => 'KEPALA UNIT', 'app_id' => 6],
+    ]);
+
+    $this->actingAs($this->admin)
+        ->patch(route('admin.roles.update-definition', 2), [
+            'role_name' => 'KEPALA INSTALASI',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 6)->where('role_id', '2')->value('role_name'))
+        ->toBe('KEPALA INSTALASI')
+        ->and(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 1)->where('role_id', '2')->value('role_name'))
+        ->toBe('APP LAIN ROLE');
 });

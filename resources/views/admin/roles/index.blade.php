@@ -85,13 +85,13 @@
                                                     <button
                                                         type="button"
                                                         @click="openPermissionModal({{ $roleId }}, '{{ addslashes($roleName) }}', {{ json_encode($rolePerms) }})"
-                                                        class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold {{ $permCount > 0 ? 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100' : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100' }} transition cursor-pointer"
-                                                        title="Klik untuk melihat dan mengatur hak akses"
+                                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold shadow-2xs {{ $permCount > 0 ? 'bg-teal-50 text-teal-800 border border-teal-300 hover:bg-teal-100' : 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100' }} transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        title="Klik untuk mengatur hak akses role ini"
                                                     >
-                                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                                         </svg>
-                                                        {{ $permCount > 0 ? "{$permCount} Izin" : '0 Izin (Atur)' }}
+                                                        <span>Atur Izin ({{ $permCount }})</span>
                                                     </button>
                                                 @endif
                                             </td>
@@ -100,16 +100,16 @@
                                                     <div class="inline-flex items-center gap-2">
                                                         <button
                                                             type="button"
-                                                            @click="openPermissionModal({{ $roleId }}, '{{ addslashes($roleName) }}', {{ json_encode($rolePerms) }})"
-                                                            class="px-2.5 py-1 rounded-md text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition cursor-pointer"
-                                                            title="Atur hak akses role ini"
+                                                            @click="openRenameModal({{ $roleId }}, '{{ addslashes($roleName) }}')"
+                                                            class="px-2.5 py-1 rounded-md text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition cursor-pointer"
+                                                            title="Ubah nama role ini"
                                                         >
-                                                            Hak Akses
+                                                            Edit
                                                         </button>
                                                         <form
                                                             method="POST"
                                                             action="{{ route('admin.roles.destroy-definition', $roleId) }}"
-                                                            onsubmit="return confirm('Hapus definisi role {{ $roleName }}?');"
+                                                            onsubmit="return confirm('Hapus definisi role {{ addslashes($roleName) }}?');"
                                                             class="inline"
                                                         >
                                                             @csrf
@@ -132,47 +132,31 @@
                             </table>
                         </div>
 
-                        <!-- Form Tambah / Perbarui Definisi Role -->
+                        <!-- Form Tambah Role Baru -->
                         <form method="POST" action="{{ route('admin.roles.store-definition') }}" class="pt-3 border-t border-slate-200 space-y-4">
                             @csrf
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center justify-between gap-2">
                                 <p class="text-sm font-bold uppercase tracking-wider text-slate-700">
-                                    Tambah / Perbarui Definisi Role
+                                    Tambah Role Baru
                                 </p>
-                                <span class="text-xs text-slate-500">Gunakan ID Role &gt; 1 untuk role baru</span>
+                                <span class="text-xs text-slate-500">Kode role dibuat otomatis oleh sistem</span>
                             </div>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                                <div>
-                                    <label for="role_id" class="block text-sm font-medium text-slate-600 mb-1">Kode Role (Angka)</label>
-                                    <input
-                                        type="number"
-                                        id="role_id"
-                                        name="role_id"
-                                        min="2"
-                                        max="99"
-                                        value="{{ old('role_id', $nextSuggestedRoleId ?? 2) }}"
-                                        required
-                                        placeholder="Misal: 2"
-                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-mono text-slate-900 focus:ring-2 focus:ring-teal-500"
-                                    >
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label for="role_name" class="block text-sm font-medium text-slate-600">Nama Role</label>
+                                    <span class="text-xs text-slate-400">Maks. 24 karakter</span>
                                 </div>
-                                <div class="sm:col-span-2">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <label for="role_name" class="block text-sm font-medium text-slate-600">Nama Role</label>
-                                        <span class="text-xs text-slate-400">Maks. 24 karakter</span>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        id="role_name"
-                                        name="role_name"
-                                        maxlength="24"
-                                        value="{{ old('role_name') }}"
-                                        required
-                                        placeholder="Contoh: KEPALA RUANG"
-                                        class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
-                                    >
-                                </div>
+                                <input
+                                    type="text"
+                                    id="role_name"
+                                    name="role_name"
+                                    maxlength="24"
+                                    value="{{ old('role_name') }}"
+                                    required
+                                    placeholder="Contoh: KEPALA RUANG"
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
+                                >
                             </div>
 
                             <!-- Permissions Selection for New Role -->
@@ -224,7 +208,7 @@
                                 type="submit"
                                 class="w-full px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold transition cursor-pointer shadow-xs"
                             >
-                                Simpan Definisi Role
+                                Simpan Role Baru
                             </button>
                         </form>
                     </div>
@@ -630,6 +614,103 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Ubah Nama Role -->
+        <div
+            x-show="renameModalOpen"
+            x-cloak
+            @keydown.escape.window="closeRenameModal()"
+            class="fixed inset-0 z-50 overflow-y-auto"
+            aria-labelledby="rename-modal-title"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                x-show="renameModalOpen"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+                @click="closeRenameModal()"
+            ></div>
+
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div
+                    x-show="renameModalOpen"
+                    x-transition:enter="ease-out duration-200"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-150"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200"
+                >
+                    <form :action="renameActionUrl" method="POST">
+                        @csrf
+                        @method('PATCH')
+
+                        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900" id="rename-modal-title">
+                                    Ubah Nama Role
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">
+                                    Kode Role: <span class="font-mono font-bold text-slate-700" x-text="renameRoleId"></span> (tetap / tidak berubah)
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="closeRenameModal()"
+                                class="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 transition cursor-pointer"
+                            >
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="px-6 py-5 space-y-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label for="rename_role_name" class="block text-sm font-medium text-slate-700">Nama Role Baru</label>
+                                    <span class="text-xs text-slate-400">Maks. 24 karakter</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="rename_role_name"
+                                    name="role_name"
+                                    x-model="renameRoleName"
+                                    x-ref="renameRoleInput"
+                                    maxlength="24"
+                                    required
+                                    placeholder="Contoh: KEPALA RUANG"
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-3">
+                            <button
+                                type="button"
+                                @click="closeRenameModal()"
+                                class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition cursor-pointer"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                class="px-4 py-2 rounded-xl text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition cursor-pointer shadow-xs"
+                            >
+                                Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -640,6 +721,10 @@
                 modalRoleName: '',
                 modalActionUrl: '',
                 modalPermissions: [],
+                renameModalOpen: false,
+                renameRoleId: null,
+                renameRoleName: '',
+                renameActionUrl: '',
                 newRolePermissions: [],
 
                 openPermissionModal(roleId, roleName, currentPermissions) {
@@ -652,6 +737,18 @@
 
                 closePermissionModal() {
                     this.modalOpen = false;
+                },
+
+                openRenameModal(roleId, currentRoleName) {
+                    this.renameRoleId = roleId;
+                    this.renameRoleName = currentRoleName;
+                    this.renameActionUrl = "{{ url('/admin/roles/definitions') }}/" + roleId;
+                    this.renameModalOpen = true;
+                    this.$nextTick(() => this.$refs.renameRoleInput?.focus());
+                },
+
+                closeRenameModal() {
+                    this.renameModalOpen = false;
                 },
 
                 selectAllModalPermissions() {

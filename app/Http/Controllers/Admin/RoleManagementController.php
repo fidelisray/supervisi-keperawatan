@@ -56,11 +56,6 @@ class RoleManagementController extends Controller
             $rolePermissionsMap[(int) $rId] = RefAppRole::permissionKeysForRole((int) $rId);
         }
 
-        $nextSuggestedRoleId = 2;
-        while (array_key_exists($nextSuggestedRoleId, $availableRoles) && $nextSuggestedRoleId < 99) {
-            $nextSuggestedRoleId++;
-        }
-
         $permissionLabels = collect(RolePermission::AVAILABLE_PERMISSIONS)
             ->mapWithKeys(fn (array $meta, string $key): array => [$key => $meta['label']])
             ->all();
@@ -71,7 +66,6 @@ class RoleManagementController extends Controller
             'unregisteredEmployees' => $unregisteredEmployees,
             'groupedPermissions' => RolePermission::groupedPermissions(),
             'rolePermissionsMap' => $rolePermissionsMap,
-            'nextSuggestedRoleId' => $nextSuggestedRoleId,
             'permissionLabels' => $permissionLabels,
         ]);
     }
@@ -79,35 +73,81 @@ class RoleManagementController extends Controller
     public function storeRole(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role_id' => ['required', 'integer', 'min:2', 'max:99'],
+            'role_id' => ['prohibited'],
             'role_name' => ['required', 'string', 'max:24'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'in:'.implode(',', array_keys(RolePermission::AVAILABLE_PERMISSIONS))],
         ], [
-            'role_id.min' => 'Kode role 0 (Administrator) dan 1 (Supervisor Keperawatan) adalah role dasar sistem yang terkunci. Gunakan kode role minimal 2.',
+            'role_id.prohibited' => 'Kode role dibuat otomatis oleh sistem dan tidak dapat ditentukan secara manual.',
         ]);
 
-        $roleId = (int) $validated['role_id'];
-        $roleName = strtoupper(trim((string) $validated['role_name']));
+        $roleName = mb_strtoupper(trim((string) $validated['role_name']));
 
-        RefAppRole::query()->updateOrCreate(
-            [
-                'app_id' => AppRole::APP_ID,
-                'role_id' => $roleId,
-            ],
-            [
-                'role_name' => $roleName,
-            ]
-        );
-
-        if ($roleId > 1 && isset($validated['permissions'])) {
-            RefAppRole::syncPermissions($roleId, $validated['permissions']);
+        if (RefAppRole::isRoleNameTaken($roleName)) {
+            throw ValidationException::withMessages([
+                'role_name' => "Nama role [{$roleName}] sudah terdaftar. Gunakan nama role lain yang unik.",
+            ]);
         }
+
+        $permissions = $validated['permissions'] ?? [];
+
+        $roleId = DB::connection('sqlsrv')->transaction(function () use ($roleName, $permissions): int {
+            $nextRoleId = RefAppRole::nextAvailableRoleId();
+
+            RefAppRole::query()->create([
+                'app_id' => AppRole::APP_ID,
+                'role_id' => $nextRoleId,
+                'role_name' => $roleName,
+            ]);
+
+            RefAppRole::syncPermissions($nextRoleId, $permissions);
+
+            return $nextRoleId;
+        });
+
+        return redirect()->route('admin.roles.index')
+            ->with('success', "Definisi role [{$roleId} - {$roleName}] untuk aplikasi Supervisi Keperawatan berhasil dibuat.");
+    }
+
+    public function updateRoleName(Request $request, int $roleId): RedirectResponse
+    {
+        if (array_key_exists($roleId, RefAppRole::DEFAULT_ROLE_LABELS) || $roleId <= 1) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Role dasar sistem (Administrator & Supervisor Keperawatan) terkunci dan tidak dapat diubah namanya.',
+            ]);
+        }
+
+        $roleExists = RefAppRole::query()
+            ->forSupervisiApp()
+            ->where('role_id', $roleId)
+            ->exists();
+
+        abort_unless($roleExists, 404);
+
+        $validated = $request->validate([
+            'role_name' => ['required', 'string', 'max:24'],
+        ]);
+
+        $newRoleName = mb_strtoupper(trim((string) $validated['role_name']));
+
+        if (RefAppRole::isRoleNameTaken($newRoleName, $roleId)) {
+            throw ValidationException::withMessages([
+                'role_name' => "Nama role [{$newRoleName}] sudah digunakan oleh role lain.",
+            ]);
+        }
+
+        // Scope updates explicitly by app_id + role_id because legacy ref_approles.id is not globally unique across apps.
+        RefAppRole::query()
+            ->forSupervisiApp()
+            ->where('role_id', $roleId)
+            ->update([
+                'role_name' => $newRoleName,
+            ]);
 
         RefAppRole::clearRoleCache($roleId);
 
         return redirect()->route('admin.roles.index')
-            ->with('success', "Definisi role [{$roleId} - {$roleName}] untuk aplikasi Supervisi Keperawatan berhasil disimpan.");
+            ->with('success', "Nama role dengan kode [{$roleId}] berhasil diperbarui menjadi [{$newRoleName}].");
     }
 
     public function updateRolePermissions(Request $request, int $roleId): RedirectResponse

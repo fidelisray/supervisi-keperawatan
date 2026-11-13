@@ -29,65 +29,89 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     await expect(page.locator('table').getByText(/Supervisor Keperawatan/i).first()).toBeVisible();
   });
 
-  test('siklus penuh: tambah definisi role, ubah hak akses (permissions), assign ke pegawai, ubah peran pegawai, cabut hak akses, dan hapus definisi role', async ({ page }) => {
-    const TEST_ROLE_ID = '88';
-    const TEST_ROLE_NAME = 'AUDITOR MUTU KLINIS E2E';
+  test('siklus penuh: tambah definisi role, ubah nama role, ubah hak akses (permissions), assign ke pegawai, ubah peran pegawai, cabut hak akses, dan hapus definisi role', async ({ page }) => {
+    const INITIAL_ROLE_NAME = 'AUDITOR MUTU E2E';
+    const RENAMED_ROLE_NAME = 'AUDITOR KLINIS E2E';
 
     await page.goto('/admin/roles');
     await expect(page.getByRole('heading', { name: /Manajemen Role & Hak Akses Pengguna/i })).toBeVisible();
+    await expect(page.locator('input#role_id')).toHaveCount(0);
 
     // Pembersihan awal jika role uji dari sesi sebelumnya masih tertinggal
     const roleDefTable = page.locator('table').first();
-    const existingRoleRow = roleDefTable.locator('tr').filter({ hasText: TEST_ROLE_NAME });
-    if (await existingRoleRow.count() > 0) {
-      // Hapus assignment pegawai dengan role 88 terlebih dahulu jika ada
-      const usersTable = page.locator('table').last();
-      const usersWithRole = usersTable.locator('tr').filter({ has: page.locator(`span.rounded-full:has-text("${TEST_ROLE_NAME}")`) });
-      const userCount = await usersWithRole.count();
-      for (let i = 0; i < userCount; i++) {
+    for (const staleName of [INITIAL_ROLE_NAME, RENAMED_ROLE_NAME]) {
+      const existingRoleRow = roleDefTable.locator('tr').filter({ hasText: staleName });
+      if (await existingRoleRow.count() > 0) {
+        // Hapus assignment pegawai dengan role tersebut terlebih dahulu jika ada
+        const usersTable = page.locator('table').last();
+        const usersWithRole = usersTable.locator('tr').filter({ has: page.locator(`span.rounded-full:has-text("${staleName}")`) });
+        const userCount = await usersWithRole.count();
+        for (let i = 0; i < userCount; i++) {
+          page.once('dialog', async dialog => await dialog.accept());
+          await usersWithRole.first().getByRole('button', { name: /Hapus/i }).click();
+          await page.waitForLoadState('networkidle');
+        }
         page.once('dialog', async dialog => await dialog.accept());
-        await usersWithRole.first().getByRole('button', { name: /Hapus/i }).click();
+        await existingRoleRow.getByRole('button', { name: /Hapus/i }).click();
         await page.waitForLoadState('networkidle');
       }
-      page.once('dialog', async dialog => await dialog.accept());
-      await existingRoleRow.getByRole('button', { name: /Hapus/i }).click();
-      await page.waitForLoadState('networkidle');
     }
 
     // =========================================================================
-    // 1. TAMBAH DEFINISI ROLE BARU (POST /admin/roles/definitions)
+    // 1. TAMBAH ROLE BARU DENGAN KODE OTOMATIS (POST /admin/roles/definitions)
     // =========================================================================
-    const roleIdInput = page.locator('input#role_id');
     const roleNameInput = page.locator('input#role_name');
-    await roleIdInput.scrollIntoViewIfNeeded();
-    await roleIdInput.fill(TEST_ROLE_ID);
-    await roleNameInput.fill(TEST_ROLE_NAME);
+    await roleNameInput.scrollIntoViewIfNeeded();
+    await roleNameInput.fill(INITIAL_ROLE_NAME);
 
     // Pilih semua hak akses awal pada form definisi role
     const selectAllNewRoleBtn = page.getByRole('button', { name: 'Pilih Semua' }).first();
     await selectAllNewRoleBtn.click();
 
     // Simpan definisi role baru
-    const saveRoleDefBtn = page.getByRole('button', { name: /Simpan Definisi Role/i });
+    const saveRoleDefBtn = page.getByRole('button', { name: /Simpan Role Baru/i });
     await saveRoleDefBtn.scrollIntoViewIfNeeded();
     await saveRoleDefBtn.click();
 
-    // Verifikasi alert sukses dan keberadaan role baru di tabel definisi role (Panel 1)
-    await expect(page.locator('div[role="alert"]')).toContainText(new RegExp(`Definisi role \\[${TEST_ROLE_ID} - ${TEST_ROLE_NAME}\\]`, 'i'));
-    const roleDefRow = roleDefTable.locator('tr').filter({ hasText: TEST_ROLE_NAME });
+    // Verifikasi alert sukses, ekstrak kode role otomatis, dan pastikan role tampil di Panel 1
+    const createAlert = page.locator('div[role="alert"]');
+    await expect(createAlert).toContainText(new RegExp(`Definisi role \\[\\d+ - ${INITIAL_ROLE_NAME}\\]`, 'i'));
+    const createAlertText = await createAlert.innerText();
+    const roleIdMatch = createAlertText.match(/Definisi role \[(\d+)/i);
+    expect(roleIdMatch).not.toBeNull();
+    const createdRoleId = roleIdMatch![1];
+
+    // =========================================================================
+    // 1B. UBAH NAMA ROLE VIA MODAL EDIT (PATCH /admin/roles/definitions/{id})
+    // =========================================================================
+    const initialRoleRow = roleDefTable.locator('tr').filter({ hasText: INITIAL_ROLE_NAME });
+    await expect(initialRoleRow).toBeVisible();
+    await initialRoleRow.getByRole('button', { name: /^Edit$/i }).click();
+
+    const renameModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#rename-modal-title') });
+    await expect(renameModal).toBeVisible();
+    await renameModal.locator('input#rename_role_name').fill(RENAMED_ROLE_NAME);
+    await renameModal.getByRole('button', { name: /Simpan Perubahan/i }).click();
+
+    await expect(renameModal).not.toBeVisible();
+    await expect(page.locator('div[role="alert"]')).toContainText(
+      new RegExp(`Nama role dengan kode \\[${createdRoleId}\\] berhasil diperbarui menjadi \\[${RENAMED_ROLE_NAME}\\]`, 'i')
+    );
+
+    const roleDefRow = roleDefTable.locator('tr').filter({ hasText: RENAMED_ROLE_NAME });
     await expect(roleDefRow).toBeVisible();
 
     // =========================================================================
     // 2. UBAH HAK AKSES ROLE (PERMISSIONS) VIA MODAL ALPINE.JS (PUT /admin/roles/definitions/{id}/permissions)
     // =========================================================================
-    const editPermBtn = roleDefRow.getByRole('button', { name: /Hak Akses/i });
+    const editPermBtn = roleDefRow.getByRole('button', { name: /Atur Izin/i });
     await editPermBtn.scrollIntoViewIfNeeded();
     await editPermBtn.click();
 
     // Verifikasi dialog modal terbuka
-    const permModal = page.locator('div[role="dialog"]');
+    const permModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#modal-title') });
     await expect(permModal).toBeVisible();
-    await expect(permModal.getByRole('heading', { name: new RegExp(`Kelola Hak Akses Role: ${TEST_ROLE_NAME}`, 'i') })).toBeVisible();
+    await expect(permModal.getByRole('heading', { name: new RegExp(`Kelola Hak Akses Role: ${RENAMED_ROLE_NAME}`, 'i') })).toBeVisible();
 
     // Kosongkan semua izin, kemudian pilih secara selektif 2 hak akses
     await permModal.getByRole('button', { name: /Kosongkan/i }).click();
@@ -100,8 +124,8 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
 
     // Verifikasi modal tertutup, alert sukses tampil, dan jumlah izin pada badge terupdate
     await expect(permModal).not.toBeVisible();
-    await expect(page.locator('div[role="alert"]')).toContainText(new RegExp(`Hak akses \\(permission\\) untuk role \\[${TEST_ROLE_ID} - ${TEST_ROLE_NAME}\\] berhasil diperbarui`, 'i'));
-    await expect(roleDefRow.getByText(/2 Izin/i)).toBeVisible();
+    await expect(page.locator('div[role="alert"]')).toContainText(new RegExp(`Hak akses \\(permission\\) untuk role \\[${createdRoleId} - ${RENAMED_ROLE_NAME}\\] berhasil diperbarui`, 'i'));
+    await expect(roleDefRow.getByRole('button', { name: /Atur Izin \(2\)/i })).toBeVisible();
 
     // =========================================================================
     // 3. ASSIGN ROLE KE PEGAWAI BARU (POST /admin/roles/users)
@@ -118,9 +142,9 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     const assignedNip = nipMatch ? nipMatch[1] : '';
     await firstEmpOption.click();
 
-    // Pilih role baru yang baru dibuat (88)
+    // Pilih role baru yang baru dibuat
     const assignRoleSelect = page.locator('select#assign_role');
-    await assignRoleSelect.selectOption(TEST_ROLE_ID);
+    await assignRoleSelect.selectOption(createdRoleId);
 
     // Submit penugasan role pegawai
     const assignBtn = page.getByRole('button', { name: /\+ Daftarkan & Berikan Role Pegawai/i });
@@ -132,12 +156,12 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     const usersTable = page.locator('table').last();
     const assignedUserRow = usersTable.locator('tr').filter({ has: page.locator(`td:has-text("${assignedNip}")`) });
     await expect(assignedUserRow).toBeVisible();
-    await expect(assignedUserRow.locator('span.rounded-full')).toContainText(TEST_ROLE_NAME);
+    await expect(assignedUserRow.locator('span.rounded-full')).toContainText(RENAMED_ROLE_NAME);
 
     // =========================================================================
     // 4. UBAH ROLE PEGAWAI TERDAFTAR (PATCH /admin/roles/users/{appRole})
     // =========================================================================
-    // Ubah peran pegawai dari 88 menjadi 1 (Supervisor Keperawatan)
+    // Ubah peran pegawai menjadi 1 (Supervisor Keperawatan)
     const userRoleSelect = assignedUserRow.locator('select[name="app_roles"]');
     await userRoleSelect.scrollIntoViewIfNeeded();
     await userRoleSelect.selectOption('1');
@@ -173,8 +197,8 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     await deleteRoleBtn.scrollIntoViewIfNeeded();
     await deleteRoleBtn.click();
 
-    // Verifikasi alert sukses dan definisi role 88 hilang dari Panel 1
-    await expect(page.locator('div[role="alert"]')).toContainText(new RegExp(`Definisi role dengan kode \\[${TEST_ROLE_ID}\\] berhasil dihapus`, 'i'));
-    await expect(roleDefTable.locator('tr').filter({ hasText: TEST_ROLE_NAME })).not.toBeVisible();
+    // Verifikasi alert sukses dan definisi role hilang dari Panel 1
+    await expect(page.locator('div[role="alert"]')).toContainText(new RegExp(`Definisi role dengan kode \\[${createdRoleId}\\] berhasil dihapus`, 'i'));
+    await expect(roleDefTable.locator('tr').filter({ hasText: RENAMED_ROLE_NAME })).not.toBeVisible();
   });
 });
