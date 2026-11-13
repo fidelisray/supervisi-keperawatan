@@ -583,13 +583,16 @@ test('admin roles page renders modal triggers, active user counts, and paginates
     $pageOne = $this->actingAs($this->admin)->get(route('admin.roles.index'));
 
     $pageOne->assertSuccessful()
-        ->assertSee('+ Tambah Role Baru')
-        ->assertSee('+ Daftarkan Pegawai')
+        ->assertSee('Tambah Role Baru')
+        ->assertSee('Daftarkan Pegawai')
+        ->assertSee('Daftarkan User')
         ->assertSee('create-role-modal-title', false)
         ->assertSee('assign-user-modal-title', false)
         ->assertSee('Pengguna Aktif')
         ->assertSee('14 Pegawai')
         ->assertSee('2. Daftar Pengguna Terdaftar (15 Pegawai)')
+        ->assertSee('dari <span class="font-bold text-slate-800">15</span> pegawai', false)
+        ->assertDontSee('dari <span class="font-bold text-slate-800">15</span> laporan', false)
         ->assertSee('?page=2', false);
 
     expect($pageOne->viewData('appRoles')->total())->toBe(15)
@@ -606,6 +609,7 @@ test('admin roles page renders modal triggers, active user counts, and paginates
     $filteredPageOne = $this->actingAs($this->admin)->get(route('admin.roles.index', ['search' => 'Pagination']));
     $filteredPageOne->assertSuccessful()
         ->assertSee('2. Daftar Pengguna Terdaftar (12 Pegawai)')
+        ->assertSee('dari <span class="font-bold text-slate-800">12</span> pegawai', false)
         ->assertSee('search=Pagination', false);
 
     expect($filteredPageOne->viewData('appRoles')->total())->toBe(12)

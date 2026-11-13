@@ -10,8 +10,8 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     await expect(page.getByRole('heading', { name: /Manajemen Role & Hak Akses Pengguna/i })).toBeVisible();
     await expect(page.getByText(/1\. Daftar Definisi Role/i)).toBeVisible();
     await expect(page.getByText(/2\. Daftar Pengguna Terdaftar/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /\+ Tambah Role Baru/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /\+ Daftarkan Pegawai/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Tambah Role Baru/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Daftarkan Pegawai/i })).toBeVisible();
 
     // 1. Pencarian Pegawai berdasarkan NIP
     const searchInput = page.locator('input[name="search"]');
@@ -73,7 +73,7 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     // =========================================================================
     // 1. TAMBAH ROLE BARU VIA MODAL DENGAN KODE OTOMATIS (POST /admin/roles/definitions)
     // =========================================================================
-    await page.getByRole('button', { name: /\+ Tambah Role Baru/i }).click();
+    await page.getByRole('button', { name: /Tambah Role Baru/i }).click();
     const createRoleModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#create-role-modal-title') });
     await expect(createRoleModal).toBeVisible();
 
@@ -143,7 +143,7 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     // =========================================================================
     // 3. ASSIGN ROLE KE PEGAWAI BARU VIA MODAL (POST /admin/roles/users)
     // =========================================================================
-    await page.getByRole('button', { name: /\+ Daftarkan Pegawai/i }).click();
+    await page.getByRole('button', { name: /Daftarkan Pegawai/i }).click();
     const assignModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#assign-user-modal-title') });
     await expect(assignModal).toBeVisible();
 
@@ -163,7 +163,7 @@ test.describe('Modul Administrator - Manajemen Role & Hak Akses (RBAC)', () => {
     await assignModal.locator('select#assign_role').selectOption(createdRoleId);
 
     // Submit penugasan role pegawai
-    await assignModal.getByRole('button', { name: /\+ Daftarkan & Berikan Role Pegawai/i }).click();
+    await assignModal.getByRole('button', { name: /Daftarkan User/i }).click();
     await expect(assignModal).not.toBeVisible();
 
     // Verifikasi alert sukses lalu filter tabel pengguna (ber-pagination) berdasarkan NIP terpilih

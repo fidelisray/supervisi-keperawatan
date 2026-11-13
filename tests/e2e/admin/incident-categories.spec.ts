@@ -15,7 +15,7 @@ test.describe('Modul Administrator - Manajemen Kategori Insiden', () => {
     const uniqueCategoryName = `[E2E] Kategori-${Date.now().toString().slice(-4)}`;
 
     // 1. Tambah Kategori Baru via Modal
-    await page.getByRole('button', { name: /\+ Tambah Kategori Baru/i }).click();
+    await page.getByRole('button', { name: /Tambah Kategori Baru/i }).click();
     const createCategoryModal = page.locator('div[role="dialog"]').filter({ has: page.locator('#create-category-modal-title') });
     await expect(createCategoryModal).toBeVisible();
 

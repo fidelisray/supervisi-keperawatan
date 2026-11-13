@@ -319,7 +319,7 @@
 
             @if ($appRoles->hasPages())
                 <div class="p-4 border-t border-slate-200">
-                    {{ $appRoles->links() }}
+                    {{ $appRoles->links(data: ['itemLabel' => 'pegawai']) }}
                 </div>
             @endif
         </div>
@@ -784,7 +784,7 @@
                             </button>
                             <button type="submit"
                                 class="px-4 py-2 rounded-xl text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 transition cursor-pointer shadow-xs">
-                                + Daftarkan &amp; Berikan Role Pegawai
+                                Daftarkan User
                             </button>
                         </div>
                     </form>

@@ -542,7 +542,7 @@
                 </div>
 
                 <div class="p-4 border-t border-slate-200">
-                    {{ $reports->links() }}
+                    {{ $reports->links(data: ['itemLabel' => 'laporan']) }}
                 </div>
             @endif
         </div>

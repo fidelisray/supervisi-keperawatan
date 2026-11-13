@@ -16,7 +16,7 @@
     <nav role="navigation" aria-label="Navigasi Halaman" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
         {{-- Keterangan Jumlah Data --}}
         <div class="text-slate-600 font-medium text-center sm:text-left">
-            Menampilkan <span class="font-bold text-slate-800">{{ $paginator->firstItem() }}</span> sampai <span class="font-bold text-slate-800">{{ $paginator->lastItem() }}</span> dari <span class="font-bold text-slate-800">{{ $paginator->total() }}</span> laporan
+            Menampilkan <span class="font-bold text-slate-800">{{ $paginator->firstItem() }}</span> sampai <span class="font-bold text-slate-800">{{ $paginator->lastItem() }}</span> dari <span class="font-bold text-slate-800">{{ $paginator->total() }}</span> {{ $itemLabel ?? 'data' }}
         </div>
 
         {{-- Kontrol Navigasi Halaman --}}
