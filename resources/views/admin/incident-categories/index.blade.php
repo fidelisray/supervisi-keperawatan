@@ -21,12 +21,6 @@
             </div>
         </div>
 
-        @if(session('success'))
-            <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm font-semibold" role="alert">
-                {{ session('success') }}
-            </div>
-        @endif
-
         @if($errors->any())
             <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm space-y-1">
                 <p class="font-bold">Terdapat kesalahan validasi:</p>
@@ -108,16 +102,66 @@
             </div>
 
             <!-- Right Column: Daftar Kategori Masalah -->
-            <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div
+                class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden"
+                x-data="{
+                    searchCategory: '',
+                    statusFilter: 'all',
+                    matchesFilter(name, desc, status) {
+                        const q = this.searchCategory.trim().toLowerCase();
+                        const matchSearch = !q || name.includes(q) || desc.includes(q);
+                        const matchStatus = this.statusFilter === 'all' || this.statusFilter === status;
+                        return matchSearch && matchStatus;
+                    }
+                }"
+            >
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 class="text-base font-bold uppercase tracking-wider text-slate-800">
                             Daftar Kategori Masalah Terdaftar ({{ $categories->count() }})
                         </h2>
                         <p class="text-sm text-slate-500 mt-0.5">
-                            Kategori dengan status <strong>Aktif (`true`)</strong> akan muncul sebagai pilihan radio pada modal Tambah Kejadian.
+                            Kategori dengan status <strong>Aktif</strong> akan muncul sebagai pilihan radio pada modal Tambah Kejadian.
                         </p>
                     </div>
+
+                    @if($categories->isNotEmpty())
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input
+                                type="text"
+                                x-model="searchCategory"
+                                placeholder="Cari kategori..."
+                                aria-label="Cari kategori masalah"
+                                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-600"
+                            >
+                            <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold">
+                                <button
+                                    type="button"
+                                    @click="statusFilter = 'all'"
+                                    :class="statusFilter === 'all' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-900'"
+                                    class="px-2.5 py-1 rounded-md transition cursor-pointer"
+                                >
+                                    Semua
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="statusFilter = 'active'"
+                                    :class="statusFilter === 'active' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:text-slate-900'"
+                                    class="px-2.5 py-1 rounded-md transition cursor-pointer"
+                                >
+                                    Aktif
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="statusFilter = 'hidden'"
+                                    :class="statusFilter === 'hidden' ? 'bg-amber-600 text-white' : 'text-slate-600 hover:text-slate-900'"
+                                    class="px-2.5 py-1 rounded-md transition cursor-pointer"
+                                >
+                                    Disembunyikan
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 @if($categories->isEmpty())
@@ -127,7 +171,14 @@
                 @else
                     <div class="divide-y divide-slate-200">
                         @foreach($categories as $category)
-                            <div x-data="{ editing: false }" class="p-6 space-y-4 hover:bg-slate-50/60 transition">
+                            @php
+                                $catStatus = $category->isActive() ? 'active' : 'hidden';
+                            @endphp
+                            <div
+                                x-data="{ editing: false }"
+                                x-show="matchesFilter(@js(strtolower((string) $category->incident_category)), @js(strtolower((string) $category->description)), '{{ $catStatus }}')"
+                                class="p-6 space-y-4 hover:bg-slate-50/60 transition"
+                            >
                                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                     <div class="space-y-2 flex-1">
                                         <div class="flex flex-wrap items-center gap-2">
@@ -140,11 +191,11 @@
 
                                             @if($category->isActive())
                                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    Aktif (is_active: true)
+                                                    Aktif
                                                 </span>
                                             @else
                                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                                                    Disembunyikan (is_active: false)
+                                                    Disembunyikan
                                                 </span>
                                             @endif
 
@@ -192,7 +243,7 @@
                                         <form
                                             method="POST"
                                             action="{{ route('admin.incident-categories.destroy', $category) }}"
-                                            onsubmit="return confirm('Hapus kategori {{ $category->incident_category }}? Kategori ini akan dinonaktifkan dan dicatat pada deleted_by / deleted_at.');"
+                                            onsubmit="return confirm('Hapus kategori {{ addslashes($category->incident_category) }}? Kategori ini akan dinonaktifkan dari pilihan formulir logbook.');"
                                         >
                                             @csrf
                                             @method('DELETE')
@@ -225,10 +276,10 @@
                                             </div>
 
                                             <div class="sm:col-span-5">
-                                                <label class="block text-sm font-bold text-slate-700 uppercase mb-1.5">Status Tampil (`is_active`)</label>
+                                                <label class="block text-sm font-bold text-slate-700 uppercase mb-1.5">Status Tampil</label>
                                                 <select name="is_active" class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900">
-                                                    <option value="true" {{ $category->isActive() ? 'selected' : '' }}>Aktif (true)</option>
-                                                    <option value="false" {{ ! $category->isActive() ? 'selected' : '' }}>Disembunyikan (false)</option>
+                                                    <option value="true" {{ $category->isActive() ? 'selected' : '' }}>Aktif (Tampil di Form Logbook)</option>
+                                                    <option value="false" {{ ! $category->isActive() ? 'selected' : '' }}>Disembunyikan (Tidak Tampil)</option>
                                                 </select>
                                             </div>
                                         </div>

@@ -74,7 +74,10 @@ test('administrator can create, update, hide, and soft delete incident categorie
     $this->actingAs($admin)
         ->get(route('admin.incident-categories.index'))
         ->assertSuccessful()
-        ->assertSee('Disembunyikan (is_active: false)');
+        ->assertSee('Disembunyikan')
+        ->assertDontSee('is_active: true')
+        ->assertDontSee('is_active: false')
+        ->assertDontSee('deleted_by');
 
     // Hidden category does not appear on supervision create page
     $this->actingAs($supervisor)

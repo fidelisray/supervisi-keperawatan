@@ -149,20 +149,25 @@
                                         type="number"
                                         id="role_id"
                                         name="role_id"
-                                        min="0"
+                                        min="2"
                                         max="99"
+                                        value="{{ old('role_id', $nextSuggestedRoleId ?? 2) }}"
                                         required
                                         placeholder="Misal: 2"
                                         class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm font-mono text-slate-900 focus:ring-2 focus:ring-teal-500"
                                     >
                                 </div>
                                 <div class="sm:col-span-2">
-                                    <label for="role_name" class="block text-sm font-medium text-slate-600 mb-1">Nama Role</label>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label for="role_name" class="block text-sm font-medium text-slate-600">Nama Role</label>
+                                        <span class="text-xs text-slate-400">Maks. 24 karakter</span>
+                                    </div>
                                     <input
                                         type="text"
                                         id="role_name"
                                         name="role_name"
                                         maxlength="24"
+                                        value="{{ old('role_name') }}"
                                         required
                                         placeholder="Contoh: KEPALA RUANG"
                                         class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
@@ -190,7 +195,7 @@
                                                 <span class="w-2 h-2 rounded-full bg-teal-500"></span>
                                                 {{ $groupName }}
                                             </div>
-                                            <div class="grid grid-cols-1 gap-2 pl-2">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
                                                 @foreach($perms as $pKey => $pMeta)
                                                     <label class="flex items-start space-x-2.5 p-2 rounded-lg bg-white border border-slate-200/70 hover:border-teal-300 transition cursor-pointer">
                                                         <input
@@ -275,7 +280,7 @@
                                     x-cloak
                                     class="absolute z-30 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg py-1 divide-y divide-slate-100"
                                 >
-                                    <template x-for="(emp, eIdx) in filteredEmployees" :key="emp.nip">
+                                    <template x-for="(emp, eIdx) in filteredEmployees.slice(0, 80)" :key="emp.nip">
                                         <button
                                             type="button"
                                             @click="selectEmployee(emp)"
@@ -287,6 +292,9 @@
                                             <span class="text-xs font-mono text-slate-500 ml-2 shrink-0" x-text="'(NIP: ' + emp.nip + ')'"></span>
                                         </button>
                                     </template>
+                                    <div x-show="filteredEmployees.length > 80" class="px-4 py-2 text-xs text-slate-500 bg-slate-50 text-center">
+                                        Menampilkan 80 hasil teratas. Ketik kata kunci lebih spesifik untuk mempersempit pencarian.
+                                    </div>
                                     <div x-show="filteredEmployees.length === 0" class="px-4 py-3 text-sm text-slate-400 italic text-center">
                                         Pegawai tidak ditemukan
                                     </div>
@@ -294,7 +302,7 @@
                             </div>
                             <p x-show="employeeError" x-cloak class="text-sm text-rose-600 mt-1.5 font-medium" x-text="employeeError"></p>
                             <p class="text-xs text-slate-500 mt-1.5">
-                                Nama pegawai terisi otomatis.
+                                Tersedia <span class="font-semibold text-slate-700" x-text="employees.length"></span> perawat aktif yang belum terdaftar di aplikasi.
                             </p>
                         </div>
 
@@ -305,15 +313,36 @@
                             <select
                                 id="assign_role"
                                 name="app_roles"
+                                x-model="assignRoleId"
                                 required
                                 class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-base focus:ring-2 focus:ring-teal-500 focus:border-teal-600"
                             >
                                 @foreach($availableRoles as $roleId => $roleName)
-                                    <option value="{{ $roleId }}" {{ (int) $roleId === 1 ? 'selected' : '' }}>
-                                        {{ $roleId }} - {{ $roleName }}
-                                    </option>
+                                    @if((int) $roleId !== \App\Models\AppRole::ROLE_ADMIN || auth()->user()?->isAdmin())
+                                        <option value="{{ $roleId }}" {{ (int) $roleId === 1 ? 'selected' : '' }}>
+                                            {{ $roleId }} - {{ $roleName }}
+                                        </option>
+                                    @endif
                                 @endforeach
                             </select>
+                        </div>
+
+                        <!-- Reactive Selected Role Permissions Preview -->
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                                    Ringkasan Hak Akses Role Terpilih
+                                </span>
+                                <span class="text-xs font-semibold text-teal-700" x-text="selectedRolePermissionLabels.length + ' Izin Aktif'"></span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5" x-show="selectedRolePermissionLabels.length > 0">
+                                <template x-for="permLabel in selectedRolePermissionLabels" :key="permLabel">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-white text-slate-700 border border-slate-200 shadow-2xs" x-text="permLabel"></span>
+                                </template>
+                            </div>
+                            <p x-show="selectedRolePermissionLabels.length === 0" class="text-xs text-amber-700 italic">
+                                Role ini belum memiliki hak akses modul apa pun.
+                            </p>
                         </div>
 
                         <div class="pt-2">
@@ -357,9 +386,14 @@
                             </option>
                         @endforeach
                     </select>
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold cursor-pointer">
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold cursor-pointer transition">
                         Cari
                     </button>
+                    @if(request()->filled('search') || request()->filled('role_filter'))
+                        <a href="{{ route('admin.roles.index') }}" class="px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition">
+                            Reset
+                        </a>
+                    @endif
                 </form>
             </div>
 
@@ -374,7 +408,11 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        @foreach($appRoles as $userRole)
+                        @forelse($appRoles as $userRole)
+                            @php
+                                $isCurrentUser = trim((string) auth()->user()?->nip) === trim((string) $userRole->nip);
+                                $isProtectedAdmin = ! auth()->user()?->isAdmin() && (int) $userRole->app_roles === \App\Models\AppRole::ROLE_ADMIN;
+                            @endphp
                             <tr class="hover:bg-slate-50/80 transition">
                                 <td class="px-6 py-4 font-mono text-sm font-bold text-slate-900">
                                     {{ $userRole->nip }}
@@ -390,34 +428,49 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right whitespace-nowrap">
-                                    <div class="inline-flex items-center justify-end gap-2">
-                                        <form method="POST" action="{{ route('admin.roles.update-user', $userRole->nip) }}" class="inline-flex items-center gap-2">
-                                            @csrf
-                                            @method('PATCH')
-                                            <select
-                                                name="app_roles"
-                                                aria-label="Ubah role untuk {{ $userRole->displayName() }}"
-                                                class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
-                                            >
-                                                @foreach($availableRoles as $roleId => $roleName)
-                                                    <option value="{{ $roleId }}" {{ (int) $userRole->app_roles === (int) $roleId ? 'selected' : '' }}>
-                                                        {{ $roleId }} - {{ $roleName }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <button
-                                                type="submit"
-                                                class="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition cursor-pointer"
-                                            >
-                                                Simpan
-                                            </button>
-                                        </form>
+                                    @if($isCurrentUser)
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                            Akun Anda (Aktif)
+                                        </span>
+                                    @elseif($isProtectedAdmin)
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                            Terlindungi (Administrator)
+                                        </span>
+                                    @else
+                                        <div
+                                            class="inline-flex items-center justify-end gap-2"
+                                            x-data="{ selectedRole: '{{ (int) $userRole->app_roles }}', initialRole: '{{ (int) $userRole->app_roles }}' }"
+                                        >
+                                            <form method="POST" action="{{ route('admin.roles.update-user', $userRole->nip) }}" class="inline-flex items-center gap-2">
+                                                @csrf
+                                                @method('PATCH')
+                                                <select
+                                                    name="app_roles"
+                                                    x-model="selectedRole"
+                                                    aria-label="Ubah role untuk {{ $userRole->displayName() }}"
+                                                    class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
+                                                >
+                                                    @foreach($availableRoles as $roleId => $roleName)
+                                                        @if((int) $roleId !== \App\Models\AppRole::ROLE_ADMIN || auth()->user()?->isAdmin())
+                                                            <option value="{{ $roleId }}" {{ (int) $userRole->app_roles === (int) $roleId ? 'selected' : '' }}>
+                                                                {{ $roleId }} - {{ $roleName }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                                <button
+                                                    type="submit"
+                                                    :disabled="selectedRole === initialRole"
+                                                    class="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                                                >
+                                                    Simpan
+                                                </button>
+                                            </form>
 
-                                        @if(trim((string) auth()->user()?->nip) !== trim((string) $userRole->nip))
                                             <form
                                                 method="POST"
                                                 action="{{ route('admin.roles.destroy-user', $userRole->nip) }}"
-                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ $userRole->displayName() }} (NIP: {{ $userRole->nip }})?');"
+                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ addslashes($userRole->displayName()) }} (NIP: {{ $userRole->nip }})?');"
                                                 class="inline"
                                             >
                                                 @csrf
@@ -430,11 +483,17 @@
                                                     Hapus
                                                 </button>
                                             </form>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    @endif
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">
+                                    Tidak ada pegawai terdaftar yang sesuai dengan kriteria pencarian atau filter saat ini.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -617,14 +676,22 @@
             const allEmployees = @json($unregisteredEmployeesJson);
             const oldNip = @json(old('nip', ''));
             const matchedOld = allEmployees.find(e => e.nip === oldNip);
+            const rolePermissionsMap = @json($rolePermissionsMap);
+            const permissionLabels = @json($permissionLabels);
 
             return {
                 employees: allEmployees,
                 employeeSearch: matchedOld ? `${matchedOld.name} (NIP: ${matchedOld.nip})` : (oldNip ? `NIP: ${oldNip}` : ''),
                 selectedNip: oldNip,
+                assignRoleId: @json((string) old('app_roles', '1')),
                 isOpen: false,
                 highlightIndex: 0,
                 employeeError: '',
+
+                get selectedRolePermissionLabels() {
+                    const keys = rolePermissionsMap[Number(this.assignRoleId)] || [];
+                    return keys.map(k => permissionLabels[k] || k);
+                },
 
                 get filteredEmployees() {
                     const q = (this.employeeSearch || '').trim().toLowerCase();
@@ -650,20 +717,22 @@
                 },
 
                 selectHighlighted() {
-                    if (this.filteredEmployees.length > 0 && this.highlightIndex >= 0 && this.highlightIndex < this.filteredEmployees.length) {
-                        this.selectEmployee(this.filteredEmployees[this.highlightIndex]);
-                    } else if (this.filteredEmployees.length > 0) {
-                        this.selectEmployee(this.filteredEmployees[0]);
+                    const visible = this.filteredEmployees.slice(0, 80);
+                    if (visible.length > 0 && this.highlightIndex >= 0 && this.highlightIndex < visible.length) {
+                        this.selectEmployee(visible[this.highlightIndex]);
+                    } else if (visible.length > 0) {
+                        this.selectEmployee(visible[0]);
                     }
                 },
 
                 highlightNext() {
+                    const visibleLength = Math.min(this.filteredEmployees.length, 80);
                     if (!this.isOpen) {
                         this.isOpen = true;
                         this.highlightIndex = 0;
                         return;
                     }
-                    if (this.highlightIndex < this.filteredEmployees.length - 1) {
+                    if (this.highlightIndex < visibleLength - 1) {
                         this.highlightIndex++;
                     }
                 },

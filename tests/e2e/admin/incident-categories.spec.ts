@@ -26,14 +26,14 @@ test.describe('Modul Administrator - Manajemen Kategori Insiden', () => {
 
     // 2. Toggle Status Aktif / Sembunyikan pada baris spesifik kategori tersebut
     const categoryCard = page.locator('div[x-data*="editing"]').filter({ hasText: uniqueCategoryName });
-    await expect(categoryCard.getByText('Aktif (is_active: true)')).toBeVisible();
+    await expect(categoryCard.getByText('Aktif', { exact: true })).toBeVisible();
 
     const toggleBtn = categoryCard.getByRole('button', { name: /Sembunyikan/i });
     await expect(toggleBtn).toBeVisible();
     await toggleBtn.click();
 
     // Verifikasi badge status berubah menjadi Disembunyikan
-    await expect(categoryCard.getByText('Disembunyikan (is_active: false)')).toBeVisible();
+    await expect(categoryCard.getByText('Disembunyikan', { exact: true })).toBeVisible();
 
     // 3. Hapus Kategori Uji untuk Menjaga Kebersihan Database
     const deleteBtn = categoryCard.getByRole('button', { name: /Hapus/i });

@@ -317,3 +317,111 @@ test('deleting custom role also cleans up its associated role permissions', func
     expect(RefAppRole::where('role_id', 5)->exists())->toBeFalse()
         ->and(RolePermission::where('role_id', 5)->count())->toBe(0);
 });
+
+test('user cannot modify their own active role and storeRole blocks system roles 0 and 1', function () {
+    // Admin cannot self-demote via updateUserRole
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->patch(route('admin.roles.update-user', $this->admin->nip), [
+            'app_roles' => 1,
+        ])
+        ->assertSessionHasErrors('nip');
+
+    // Admin cannot self-demote via assignUserRole
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => $this->admin->nip,
+            'app_roles' => 1,
+        ])
+        ->assertSessionHasErrors('nip');
+
+    // storeRole rejects role_id 0 and 1
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 0,
+            'role_name' => 'FAKE ADMIN',
+        ])
+        ->assertSessionHasErrors('role_id');
+
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 1,
+            'role_name' => 'FAKE SUPERVISOR',
+        ])
+        ->assertSessionHasErrors('role_id');
+});
+
+test('non-admin user with manage_roles cannot escalate to admin, manage role 0 accounts, assign undefined roles, or assign non-nurses', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 2,
+        'role_name' => 'KOORDINATOR ROLE',
+    ]);
+    RefAppRole::syncPermissions(2, ['manage_roles']);
+
+    $coordinator = User::factory()->create([
+        'nip' => '2351151100',
+        'name' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'app_roles' => 2,
+    ]);
+
+    // 1. Cannot promote another user to Role 0 (Admin) via assignUserRole or updateUserRole
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 0,
+        ])
+        ->assertSessionHasErrors('app_roles');
+
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->patch(route('admin.roles.update-user', '1672010896'), [
+            'app_roles' => 0,
+        ])
+        ->assertSessionHasErrors('app_roles');
+
+    // 2. Cannot alter or revoke an existing Role 0 Administrator account
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->patch(route('admin.roles.update-user', $this->admin->nip), [
+            'app_roles' => 1,
+        ])
+        ->assertSessionHasErrors('app_roles');
+
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->delete(route('admin.roles.destroy-user', $this->admin->nip))
+        ->assertSessionHasErrors('nip');
+
+    // 3. Cannot assign or update to an undefined role ID (orphan role)
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 88,
+        ])
+        ->assertSessionHasErrors('app_roles');
+
+    // 4. Cannot assign a non-nursing employee
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '9000000001',
+            'app_roles' => 1,
+        ])
+        ->assertSessionHasErrors('nip');
+
+    // 5. Can legitimately assign a nurse to Role 1
+    $this->actingAs($coordinator)
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 1,
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(AppRole::where('nip', '1355010892')->value('app_roles'))->toBe(1);
+});

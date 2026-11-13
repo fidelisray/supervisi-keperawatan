@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -48,7 +49,6 @@ class RoleManagementController extends Controller
             ->nurses()
             ->whereNotIn('nip', $registeredNips)
             ->orderBy('nama')
-            ->limit(500)
             ->get(['nip', 'nama']);
 
         $rolePermissionsMap = [];
@@ -56,22 +56,35 @@ class RoleManagementController extends Controller
             $rolePermissionsMap[(int) $rId] = RefAppRole::permissionKeysForRole((int) $rId);
         }
 
+        $nextSuggestedRoleId = 2;
+        while (array_key_exists($nextSuggestedRoleId, $availableRoles) && $nextSuggestedRoleId < 99) {
+            $nextSuggestedRoleId++;
+        }
+
+        $permissionLabels = collect(RolePermission::AVAILABLE_PERMISSIONS)
+            ->mapWithKeys(fn (array $meta, string $key): array => [$key => $meta['label']])
+            ->all();
+
         return view('admin.roles.index', [
             'availableRoles' => $availableRoles,
             'appRoles' => $appRoles,
             'unregisteredEmployees' => $unregisteredEmployees,
             'groupedPermissions' => RolePermission::groupedPermissions(),
             'rolePermissionsMap' => $rolePermissionsMap,
+            'nextSuggestedRoleId' => $nextSuggestedRoleId,
+            'permissionLabels' => $permissionLabels,
         ]);
     }
 
     public function storeRole(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'role_id' => ['required', 'integer', 'min:0', 'max:99'],
+            'role_id' => ['required', 'integer', 'min:2', 'max:99'],
             'role_name' => ['required', 'string', 'max:24'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'in:'.implode(',', array_keys(RolePermission::AVAILABLE_PERMISSIONS))],
+        ], [
+            'role_id.min' => 'Kode role 0 (Administrator) dan 1 (Supervisor Keperawatan) adalah role dasar sistem yang terkunci. Gunakan kode role minimal 2.',
         ]);
 
         $roleId = (int) $validated['role_id'];
@@ -153,21 +166,46 @@ class RoleManagementController extends Controller
 
     public function assignUserRole(Request $request): RedirectResponse
     {
+        $availableRoleIds = array_keys(RefAppRole::availableRoles());
+
         $validated = $request->validate([
             'nip' => ['required', 'string', 'max:30'],
-            'app_roles' => ['required', 'integer', 'min:0', 'max:99'],
+            'app_roles' => ['required', 'integer', Rule::in($availableRoleIds)],
+        ], [
+            'app_roles.in' => 'Role yang dipilih belum terdaftar di dalam definisi role sistem.',
         ]);
 
         $nip = trim((string) $validated['nip']);
         $roleId = (int) $validated['app_roles'];
+        $currentUserNip = trim((string) $request->user()?->nip);
+
+        if ($currentUserNip !== '' && $currentUserNip === $nip) {
+            throw ValidationException::withMessages([
+                'nip' => 'Anda tidak dapat mengubah role akun Anda sendiri yang sedang aktif digunakan.',
+            ]);
+        }
+
+        $existingAppRole = AppRole::query()
+            ->forSupervisiApp()
+            ->where('nip', $nip)
+            ->first(['nip', 'app_roles']);
+
+        if (! $request->user()?->isAdmin()) {
+            if ($roleId === AppRole::ROLE_ADMIN || ($existingAppRole !== null && (int) $existingAppRole->app_roles === AppRole::ROLE_ADMIN)) {
+                throw ValidationException::withMessages([
+                    'app_roles' => 'Hanya Administrator utama yang dapat memberikan atau mengubah hak akses level Administrator.',
+                ]);
+            }
+        }
 
         $employee = Employee::query()
+            ->nurses()
             ->where('nip', $nip)
             ->first(['nip', 'nama']);
 
         if ($employee === null) {
             throw ValidationException::withMessages([
-                'nip' => 'Pegawai dengan NIP tersebut tidak ditemukan di master pegawai rumah sakit.',
+                'nip' => 'Pegawai perawat dengan NIP tersebut tidak ditemukan di master pegawai rumah sakit.',
             ]);
         }
 
@@ -195,17 +233,34 @@ class RoleManagementController extends Controller
     public function updateUserRole(Request $request, string $nip): RedirectResponse
     {
         $targetNip = trim($nip);
+        $currentUserNip = trim((string) $request->user()?->nip);
+
+        if ($currentUserNip !== '' && $currentUserNip === $targetNip) {
+            throw ValidationException::withMessages([
+                'nip' => 'Anda tidak dapat mengubah role akun Anda sendiri yang sedang aktif digunakan.',
+            ]);
+        }
 
         $appRole = AppRole::query()
             ->forSupervisiApp()
             ->where('nip', $targetNip)
             ->firstOrFail(['nip', 'nama', 'app_id', 'app_roles']);
 
+        $availableRoleIds = array_keys(RefAppRole::availableRoles());
+
         $validated = $request->validate([
-            'app_roles' => ['required', 'integer', 'min:0', 'max:99'],
+            'app_roles' => ['required', 'integer', Rule::in($availableRoleIds)],
+        ], [
+            'app_roles.in' => 'Role yang dipilih belum terdaftar di dalam definisi role sistem.',
         ]);
 
         $roleId = (int) $validated['app_roles'];
+
+        if (! $request->user()?->isAdmin() && ((int) $appRole->app_roles === AppRole::ROLE_ADMIN || $roleId === AppRole::ROLE_ADMIN)) {
+            throw ValidationException::withMessages([
+                'app_roles' => 'Hanya Administrator utama yang dapat memberikan atau mengubah hak akses level Administrator.',
+            ]);
+        }
 
         AppRoleAssignment::query()->updateOrCreate(
             [
@@ -243,6 +298,12 @@ class RoleManagementController extends Controller
         if ($currentUserNip !== '' && $currentUserNip === $targetNip) {
             throw ValidationException::withMessages([
                 'nip' => 'Anda tidak dapat menghapus hak akses akun Anda sendiri yang sedang aktif digunakan.',
+            ]);
+        }
+
+        if (! $request->user()?->isAdmin() && (int) $appRole->app_roles === AppRole::ROLE_ADMIN) {
+            throw ValidationException::withMessages([
+                'nip' => 'Hanya Administrator utama yang dapat mencabut hak akses akun Administrator.',
             ]);
         }
 
