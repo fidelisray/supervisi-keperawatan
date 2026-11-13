@@ -18,7 +18,7 @@ class SsoLoginRequest extends FormRequest
     {
         return [
             'nip' => ['required', 'string', 'max:30'],
-            'password' => ['required', 'string'],
+            'password' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -31,6 +31,7 @@ class SsoLoginRequest extends FormRequest
             'nip.required' => 'Nomor Induk Pegawai (NIP) wajib diisi.',
             'nip.max' => 'Nomor Induk Pegawai (NIP) maksimal 30 karakter.',
             'password.required' => 'Kata sandi SSO wajib diisi.',
+            'password.max' => 'Kata sandi SSO maksimal 255 karakter.',
         ];
     }
 }

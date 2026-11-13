@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -231,7 +232,16 @@ class RoleManagementController extends Controller
         $deletedDescription = $appRole->description;
         $appRole->delete();
 
-        User::query()->where('nip', $targetNip)->delete();
+        $targetUser = User::query()->where('nip', $targetNip)->first();
+        if ($targetUser !== null) {
+            if (config('session.driver') === 'database') {
+                DB::table(config('session.table', 'sessions'))
+                    ->where('user_id', $targetUser->id)
+                    ->delete();
+            }
+
+            $targetUser->delete();
+        }
 
         return redirect()->route('admin.roles.index')
             ->with('success', "Hak akses untuk {$deletedDescription} (NIP: {$targetNip}) berhasil dicabut dan dihapus.");
