@@ -57,11 +57,50 @@ abstract class TestCase extends BaseTestCase
                     'status_karyawan' => 'AKTIF',
                 ],
                 [
+                    'nip' => '1672010896',
+                    'nama' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+                    'id_profesi' => '888',
+                    'id_golongan' => '4A1',
+                    'status_karyawan' => 'AKTIF',
+                ],
+                [
+                    'nip' => '2351151100',
+                    'nama' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+                    'id_profesi' => '888',
+                    'id_golongan' => '4A1',
+                    'status_karyawan' => 'AKTIF',
+                ],
+                [
                     'nip' => '1355010892',
                     'nama' => 'Cicilia Rumini, S.Kep.Ners',
                     'id_profesi' => '888',
                     'id_golongan' => '4A1',
                     'status_karyawan' => 'AKTIF',
+                ],
+                [
+                    'nip' => '9000000001',
+                    'nama' => 'Pegawai Aplikasi Lain',
+                    'id_profesi' => '999',
+                    'id_golongan' => '3A',
+                    'status_karyawan' => 'AKTIF',
+                ],
+            ]);
+        }
+
+        if (! $schema->hasTable('tb_apps')) {
+            $schema->create('tb_apps', function (Blueprint $table) {
+                $table->integer('id')->primary();
+                $table->string('app_name', 128);
+            });
+
+            DB::connection('sqlsrv')->table('tb_apps')->insert([
+                [
+                    'id' => 1,
+                    'app_name' => 'Aplikasi SIMRS Lain',
+                ],
+                [
+                    'id' => 6,
+                    'app_name' => 'Supervisi Keperawatan',
                 ],
             ]);
         }
@@ -95,7 +134,7 @@ abstract class TestCase extends BaseTestCase
                     'nip' => '2351151100',
                     'app_id' => 6,
                     'app_roles' => 1,
-                    'description' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+                    'description' => null,
                     'push_token' => null,
                 ],
                 [
@@ -107,6 +146,20 @@ abstract class TestCase extends BaseTestCase
                 ],
             ]);
         }
+
+        DB::connection('sqlsrv')->statement('
+            CREATE VIEW IF NOT EXISTS vAppRoles AS
+            SELECT
+                tb_approles.nip,
+                tb_employees.nama,
+                tb_approles.app_id,
+                tb_apps.app_name,
+                tb_approles.app_roles,
+                tb_approles.description
+            FROM tb_approles
+            INNER JOIN tb_employees ON tb_approles.nip = tb_employees.nip
+            INNER JOIN tb_apps ON tb_approles.app_id = tb_apps.id
+        ');
 
         if (! $schema->hasTable('tb_globalaccount')) {
             $schema->create('tb_globalaccount', function (Blueprint $table) {

@@ -40,18 +40,32 @@ class SsoAuthController extends Controller
             ->where('nip', $nip)
             ->first(['id', 'nip', 'kata_sandi']);
 
-        if ($globalAccount === null || ! $globalAccount->verifyPassword($password)) {
+        $appRole = AppRole::query()
+            ->forSupervisiApp()
+            ->where('nip', $nip)
+            ->first(['nip', 'nama', 'app_id', 'app_roles']);
+
+        if ($globalAccount === null) {
             $this->hitRateLimiters($request, $nip);
+
+            if ($appRole !== null) {
+                throw ValidationException::withMessages([
+                    'nip' => 'NIP Anda sudah terdaftar pada aplikasi Supervisi Keperawatan, namun belum memiliki akun SSO Rumah Sakit (Global Account). Silakan hubungi bagian IT / Administrator untuk aktivasi akun SSO Anda.',
+                ]);
+            }
 
             throw ValidationException::withMessages([
                 'nip' => 'NIP atau kata sandi SSO yang Anda masukkan tidak sesuai.',
             ]);
         }
 
-        $appRole = AppRole::query()
-            ->forSupervisiApp()
-            ->where('nip', $nip)
-            ->first(['id', 'nip', 'app_id', 'app_roles', 'description']);
+        if (! $globalAccount->verifyPassword($password)) {
+            $this->hitRateLimiters($request, $nip);
+
+            throw ValidationException::withMessages([
+                'nip' => 'NIP atau kata sandi SSO yang Anda masukkan tidak sesuai.',
+            ]);
+        }
 
         if ($appRole === null) {
             $this->hitRateLimiters($request, $nip);
@@ -66,7 +80,7 @@ class SsoAuthController extends Controller
         $user = User::query()->updateOrCreate(
             ['nip' => $appRole->nip],
             [
-                'name' => trim((string) $appRole->description),
+                'name' => $appRole->displayName(),
                 'app_roles' => (int) $appRole->app_roles,
             ]
         );

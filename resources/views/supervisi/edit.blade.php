@@ -7,8 +7,8 @@
             'installation' => $r->instalasi ? 'Instalasi ' . $r->instalasi : '',
         ])->values();
 
-        $nursesJson = $nurses->filter(fn ($n) => ! empty($n->description))->map(fn ($n) => [
-            'name' => $n->description,
+        $nursesJson = $nurses->filter(fn ($n) => ! empty($n->nama))->map(fn ($n) => [
+            'name' => $n->nama,
             'nip' => $n->nip,
         ])->values();
 

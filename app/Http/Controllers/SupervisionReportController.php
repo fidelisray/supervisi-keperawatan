@@ -102,8 +102,8 @@ class SupervisionReportController extends Controller
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
             ->forSupervisiApp()
-            ->orderBy('description')
-            ->get(['id', 'nip', 'description', 'app_roles']);
+            ->orderBy('nama')
+            ->get(['nip', 'nama', 'app_roles']);
 
         return view('supervisi.index', [
             'reports' => $reports,
@@ -129,8 +129,8 @@ class SupervisionReportController extends Controller
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
             ->operationalNurses()
-            ->orderBy('description')
-            ->get(['id', 'nip', 'description', 'app_roles']);
+            ->orderBy('nama')
+            ->get(['nip', 'nama', 'app_roles']);
         $incidentCategories = IncidentCategory::query()
             ->active()
             ->orderBy('id')
@@ -242,8 +242,8 @@ class SupervisionReportController extends Controller
         $rooms = Room::orderBy('nama_ruangan')->get(['id_ruang', 'nama_ruangan', 'instalasi']);
         $nurses = AppRole::query()
             ->operationalNurses()
-            ->orderBy('description')
-            ->get(['id', 'nip', 'description', 'app_roles']);
+            ->orderBy('nama')
+            ->get(['nip', 'nama', 'app_roles']);
 
         $usedCategoryIds = $supervisionReport->incidents->pluck('category')->map(fn ($id) => (int) $id)->unique()->all();
 

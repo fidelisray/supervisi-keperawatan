@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AppRole;
+use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -238,11 +239,10 @@ test('revoking user role deletes active database sessions and local user record 
         'app_roles' => 1,
     ]);
 
-    $appRole = AppRole::query()->create([
+    $appRole = AppRoleAssignment::query()->create([
         'nip' => '1355010892',
         'app_id' => AppRole::APP_ID,
         'app_roles' => 1,
-        'description' => 'Cicilia Rumini, S.Kep.Ners',
     ]);
 
     config()->set('session.driver', 'database');
@@ -257,9 +257,66 @@ test('revoking user role deletes active database sessions and local user record 
     ]);
 
     $this->actingAs($admin)
-        ->delete(route('admin.roles.destroy-user', $appRole))
+        ->delete(route('admin.roles.destroy-user', $appRole->nip))
         ->assertRedirect(route('admin.roles.index'));
 
     expect(User::where('nip', '1355010892')->exists())->toBeFalse()
         ->and(DB::table('sessions')->where('user_id', $targetUser->id)->exists())->toBeFalse();
+});
+
+test('employee pre-registered in app_id 6 without globalaccount receives specific confirmation message on login and can login after globalaccount is created', function () {
+    $admin = User::factory()->create([
+        'nip' => '5508150824',
+        'name' => 'Purwanto Ali Sastra, S.Kom',
+        'app_roles' => 0,
+    ]);
+
+    // Step 1: Admin registers employee 1355010892 (who is in tb_employees, but NOT in tb_globalaccount yet)
+    $this->actingAs($admin)
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 1,
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    auth()->logout();
+
+    // Step 2: Employee 1355010892 attempts to login before having a GlobalAccount
+    $preGlobalResponse = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => '1355010892',
+        'password' => 'apapun123',
+    ]);
+
+    $preGlobalResponse->assertRedirect(route('login'));
+    $preGlobalResponse->assertSessionHasErrors([
+        'nip' => 'NIP Anda sudah terdaftar pada aplikasi Supervisi Keperawatan, namun belum memiliki akun SSO Rumah Sakit (Global Account). Silakan hubungi bagian IT / Administrator untuk aktivasi akun SSO Anda.',
+    ]);
+    $this->assertGuest();
+
+    // Step 3: Base vAppRoles nurse 2351151100 (with NULL description in tb_approles and no GlobalAccount yet) also receives confirmation message
+    $basePreGlobalResponse = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => '2351151100',
+        'password' => 'apapun123',
+    ]);
+
+    $basePreGlobalResponse->assertSessionHasErrors([
+        'nip' => 'NIP Anda sudah terdaftar pada aplikasi Supervisi Keperawatan, namun belum memiliki akun SSO Rumah Sakit (Global Account). Silakan hubungi bagian IT / Administrator untuk aktivasi akun SSO Anda.',
+    ]);
+
+    // Step 4: IT registers 2351151100 in tb_globalaccount -> login succeeds and syncs name from vAppRoles.nama even when description is null
+    DB::connection('sqlsrv')->table('tb_globalaccount')->insert([
+        'nip' => '2351151100',
+        'kata_sandi' => base64_encode('ners2026'),
+        'device_id' => null,
+    ]);
+
+    $loginSuccessResponse = $this->post(route('login.store'), [
+        'nip' => '2351151100',
+        'password' => 'ners2026',
+    ]);
+
+    $loginSuccessResponse->assertRedirect(route('supervisi.create'));
+    $this->assertAuthenticated();
+    expect(User::where('nip', '2351151100')->value('name'))
+        ->toBe('Anastasia Naning Sudiar, S.Kep.Ners');
 });

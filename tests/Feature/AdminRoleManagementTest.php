@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AppRole;
+use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\RolePermission;
 use App\Models\User;
@@ -68,17 +69,19 @@ test('administrator can create, update, and delete roles and user access on dedi
 
     $newAppRole = AppRole::where('app_id', 6)->where('nip', '1355010892')->first();
     expect($newAppRole)->not->toBeNull()
-        ->and($newAppRole->description)->toBe('Cicilia Rumini, S.Kep.Ners')
-        ->and($newAppRole->app_roles)->toBe(1);
+        ->and($newAppRole->nama)->toBe('Cicilia Rumini, S.Kep.Ners')
+        ->and($newAppRole->displayName())->toBe('Cicilia Rumini, S.Kep.Ners')
+        ->and($newAppRole->app_roles)->toBe(1)
+        ->and(AppRoleAssignment::where('nip', '1355010892')->value('description'))->toBeNull();
 
     // 3. Update role of an existing user to role 2
     $this->actingAs($this->admin)
-        ->patch(route('admin.roles.update-user', $newAppRole), [
+        ->patch(route('admin.roles.update-user', $newAppRole->nip), [
             'app_roles' => 2,
         ])
         ->assertRedirect(route('admin.roles.index'));
 
-    expect($newAppRole->fresh()->app_roles)->toBe(2);
+    expect(AppRole::where('app_id', 6)->where('nip', '1355010892')->value('app_roles'))->toBe(2);
 
     // 4. Cannot delete role 2 while a user is still assigned to it
     $this->actingAs($this->admin)
@@ -88,10 +91,11 @@ test('administrator can create, update, and delete roles and user access on dedi
 
     // 5. Delete the user's access from tb_master_nurse_supervision_approles
     $this->actingAs($this->admin)
-        ->delete(route('admin.roles.destroy-user', $newAppRole))
+        ->delete(route('admin.roles.destroy-user', $newAppRole->nip))
         ->assertRedirect(route('admin.roles.index'));
 
-    expect(AppRole::where('nip', '1355010892')->exists())->toBeFalse();
+    expect(AppRole::where('nip', '1355010892')->exists())->toBeFalse()
+        ->and(AppRoleAssignment::where('nip', '1355010892')->exists())->toBeFalse();
 
     // 6. Now role 2 can be deleted cleanly
     $this->actingAs($this->admin)
@@ -104,8 +108,66 @@ test('administrator can create, update, and delete roles and user access on dedi
     $adminAppRole = AppRole::where('nip', '5508150824')->first();
     $this->actingAs($this->admin)
         ->from(route('admin.roles.index'))
-        ->delete(route('admin.roles.destroy-user', $adminAppRole))
+        ->delete(route('admin.roles.destroy-user', $adminAppRole->nip))
         ->assertSessionHasErrors('nip');
+});
+
+test('revoking base vAppRoles user in development mode marks app_roles as -1 in temporary table without deleting from tb_approles', function () {
+    expect(AppRole::where('nip', '2351151100')->exists())->toBeTrue();
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.roles.destroy-user', '2351151100'))
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(AppRole::where('nip', '2351151100')->exists())->toBeFalse()
+        ->and(AppRoleAssignment::where('nip', '2351151100')->value('app_roles'))->toBe(AppRoleAssignment::ROLE_REVOKED_DEV)
+        ->and(DB::connection('sqlsrv')->table('tb_approles')->where('nip', '2351151100')->exists())->toBeTrue();
+});
+
+test('role management supports switching write tables to tb_approles and ref_approles in production mode and enforces 24 char role_name limit', function () {
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+
+    // Role name > 24 chars is rejected
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 3,
+            'role_name' => 'NAMA ROLE YANG SANGAT PANJANG MELEBIHI BATAS',
+        ])
+        ->assertSessionHasErrors('role_name');
+
+    // Valid <= 24 char role is stored in ref_approles
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.store-definition'), [
+            'role_id' => 3,
+            'role_name' => 'KEPALA INSTALASI',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(DB::connection('sqlsrv')->table('ref_approles')->where('app_id', 6)->where('role_id', 3)->value('role_name'))
+        ->toBe('KEPALA INSTALASI');
+
+    // Assigning user writes directly to tb_approles and appears in vAppRoles
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 3,
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(DB::connection('sqlsrv')->table('tb_approles')->where('app_id', 6)->where('nip', '1355010892')->value('app_roles'))
+        ->toBe(3)
+        ->and(AppRole::where('nip', '1355010892')->value('nama'))->toBe('Cicilia Rumini, S.Kep.Ners');
+
+    // Deleting user removes row directly from tb_approles
+    $this->actingAs($this->admin)
+        ->delete(route('admin.roles.destroy-user', '1355010892'))
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect(DB::connection('sqlsrv')->table('tb_approles')->where('app_id', 6)->where('nip', '1355010892')->exists())
+        ->toBeFalse()
+        ->and(AppRole::where('nip', '1355010892')->exists())->toBeFalse();
 });
 
 test('RefAppRoleSeeder initializes dedicated tables from tb_approles and ref_approles where app_id is 6', function () {

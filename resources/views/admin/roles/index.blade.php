@@ -162,6 +162,7 @@
                                         type="text"
                                         id="role_name"
                                         name="role_name"
+                                        maxlength="24"
                                         required
                                         placeholder="Contoh: KEPALA RUANG"
                                         class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 uppercase focus:ring-2 focus:ring-teal-500"
@@ -379,7 +380,7 @@
                                     {{ $userRole->nip }}
                                 </td>
                                 <td class="px-6 py-4 font-semibold text-slate-800">
-                                    {{ $userRole->description }}
+                                    {{ $userRole->displayName() }}
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
@@ -390,12 +391,12 @@
                                 </td>
                                 <td class="px-6 py-4 text-right whitespace-nowrap">
                                     <div class="inline-flex items-center justify-end gap-2">
-                                        <form method="POST" action="{{ route('admin.roles.update-user', $userRole) }}" class="inline-flex items-center gap-2">
+                                        <form method="POST" action="{{ route('admin.roles.update-user', $userRole->nip) }}" class="inline-flex items-center gap-2">
                                             @csrf
                                             @method('PATCH')
                                             <select
                                                 name="app_roles"
-                                                aria-label="Ubah role untuk {{ $userRole->description }}"
+                                                aria-label="Ubah role untuk {{ $userRole->displayName() }}"
                                                 class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
                                             >
                                                 @foreach($availableRoles as $roleId => $roleName)
@@ -415,8 +416,8 @@
                                         @if(trim((string) auth()->user()?->nip) !== trim((string) $userRole->nip))
                                             <form
                                                 method="POST"
-                                                action="{{ route('admin.roles.destroy-user', $userRole) }}"
-                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ $userRole->description }} (NIP: {{ $userRole->nip }})?');"
+                                                action="{{ route('admin.roles.destroy-user', $userRole->nip) }}"
+                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ $userRole->displayName() }} (NIP: {{ $userRole->nip }})?');"
                                                 class="inline"
                                             >
                                                 @csrf

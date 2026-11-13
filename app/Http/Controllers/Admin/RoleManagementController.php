@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppRole;
+use App\Models\AppRoleAssignment;
 use App\Models\Employee;
 use App\Models\RefAppRole;
 use App\Models\RolePermission;
@@ -27,15 +28,15 @@ class RoleManagementController extends Controller
                 $search = trim((string) $request->string('search'));
                 $query->where(function (Builder $sub) use ($search): void {
                     $sub->where('nip', 'like', '%'.$search.'%')
-                        ->orWhere('description', 'like', '%'.$search.'%');
+                        ->orWhere('nama', 'like', '%'.$search.'%');
                 });
             })
             ->when($request->filled('role_filter'), function (Builder $query) use ($request): void {
                 $query->where('app_roles', (int) $request->input('role_filter'));
             })
             ->orderBy('app_roles')
-            ->orderBy('description')
-            ->get(['id', 'nip', 'app_id', 'app_roles', 'description']);
+            ->orderBy('nama')
+            ->get(['nip', 'nama', 'app_id', 'app_roles']);
 
         $registeredNips = AppRole::query()
             ->forSupervisiApp()
@@ -68,7 +69,7 @@ class RoleManagementController extends Controller
     {
         $validated = $request->validate([
             'role_id' => ['required', 'integer', 'min:0', 'max:99'],
-            'role_name' => ['required', 'string', 'max:100'],
+            'role_name' => ['required', 'string', 'max:24'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', 'in:'.implode(',', array_keys(RolePermission::AVAILABLE_PERMISSIONS))],
         ]);
@@ -170,14 +171,13 @@ class RoleManagementController extends Controller
             ]);
         }
 
-        AppRole::query()->updateOrCreate(
+        AppRoleAssignment::query()->updateOrCreate(
             [
                 'app_id' => AppRole::APP_ID,
                 'nip' => $employee->nip,
             ],
             [
                 'app_roles' => $roleId,
-                'description' => trim((string) $employee->nama),
             ]
         );
 
@@ -192,9 +192,14 @@ class RoleManagementController extends Controller
             ->with('success', "Hak akses untuk {$employee->nama} (NIP: {$employee->nip}) berhasil disimpan.");
     }
 
-    public function updateUserRole(Request $request, AppRole $appRole): RedirectResponse
+    public function updateUserRole(Request $request, string $nip): RedirectResponse
     {
-        abort_unless((int) $appRole->app_id === AppRole::APP_ID, 403);
+        $targetNip = trim($nip);
+
+        $appRole = AppRole::query()
+            ->forSupervisiApp()
+            ->where('nip', $targetNip)
+            ->firstOrFail(['nip', 'nama', 'app_id', 'app_roles']);
 
         $validated = $request->validate([
             'app_roles' => ['required', 'integer', 'min:0', 'max:99'],
@@ -202,9 +207,15 @@ class RoleManagementController extends Controller
 
         $roleId = (int) $validated['app_roles'];
 
-        $appRole->update([
-            'app_roles' => $roleId,
-        ]);
+        AppRoleAssignment::query()->updateOrCreate(
+            [
+                'app_id' => AppRole::APP_ID,
+                'nip' => $appRole->nip,
+            ],
+            [
+                'app_roles' => $roleId,
+            ]
+        );
 
         User::query()
             ->where('nip', $appRole->nip)
@@ -212,16 +223,22 @@ class RoleManagementController extends Controller
                 'app_roles' => $roleId,
             ]);
 
+        $displayName = $appRole->displayName();
+
         return redirect()->route('admin.roles.index')
-            ->with('success', "Role untuk {$appRole->description} (NIP: {$appRole->nip}) berhasil diperbarui.");
+            ->with('success', "Role untuk {$displayName} (NIP: {$appRole->nip}) berhasil diperbarui.");
     }
 
-    public function destroyUserRole(Request $request, AppRole $appRole): RedirectResponse
+    public function destroyUserRole(Request $request, string $nip): RedirectResponse
     {
-        abort_unless((int) $appRole->app_id === AppRole::APP_ID, 403);
+        $targetNip = trim($nip);
+
+        $appRole = AppRole::query()
+            ->forSupervisiApp()
+            ->where('nip', $targetNip)
+            ->firstOrFail(['nip', 'nama', 'app_id', 'app_roles']);
 
         $currentUserNip = trim((string) $request->user()?->nip);
-        $targetNip = trim((string) $appRole->nip);
 
         if ($currentUserNip !== '' && $currentUserNip === $targetNip) {
             throw ValidationException::withMessages([
@@ -229,8 +246,38 @@ class RoleManagementController extends Controller
             ]);
         }
 
-        $deletedDescription = $appRole->description;
-        $appRole->delete();
+        $deletedName = $appRole->displayName();
+
+        if (AppRoleAssignment::usesTemporaryWriteTable()) {
+            $readTable = (new AppRole)->getTable();
+            $existsInBaseView = DB::connection('sqlsrv')
+                ->table($readTable)
+                ->where('app_id', AppRole::APP_ID)
+                ->where('nip', $targetNip)
+                ->exists();
+
+            if ($existsInBaseView) {
+                AppRoleAssignment::query()->updateOrCreate(
+                    [
+                        'app_id' => AppRole::APP_ID,
+                        'nip' => $targetNip,
+                    ],
+                    [
+                        'app_roles' => AppRoleAssignment::ROLE_REVOKED_DEV,
+                    ]
+                );
+            } else {
+                AppRoleAssignment::query()
+                    ->forSupervisiApp()
+                    ->where('nip', $targetNip)
+                    ->delete();
+            }
+        } else {
+            AppRoleAssignment::query()
+                ->forSupervisiApp()
+                ->where('nip', $targetNip)
+                ->delete();
+        }
 
         $targetUser = User::query()->where('nip', $targetNip)->first();
         if ($targetUser !== null) {
@@ -244,6 +291,6 @@ class RoleManagementController extends Controller
         }
 
         return redirect()->route('admin.roles.index')
-            ->with('success', "Hak akses untuk {$deletedDescription} (NIP: {$targetNip}) berhasil dicabut dan dihapus.");
+            ->with('success', "Hak akses untuk {$deletedName} (NIP: {$targetNip}) berhasil dicabut dan dihapus.");
     }
 }

@@ -1,14 +1,15 @@
 <?php
 
 use App\Models\AppRole;
+use App\Models\AppRoleAssignment;
 use App\Models\Employee;
 use App\Models\GlobalAccount;
 use App\Models\RefAppRole;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\MassAssignmentException;
 
-test('employee, room, and global account models throw exception when attempting to create, update, or delete', function () {
-    foreach ([Employee::class, Room::class, GlobalAccount::class] as $modelClass) {
+test('employee, room, global account, and app role models throw exception when attempting to create, update, or delete', function () {
+    foreach ([Employee::class, Room::class, GlobalAccount::class, AppRole::class] as $modelClass) {
         expect(function () use ($modelClass) {
             $modelClass::create(['nip' => '9999999999']);
         })->toThrow(MassAssignmentException::class);
@@ -26,16 +27,16 @@ test('employee, room, and global account models throw exception when attempting 
     }
 });
 
-test('AppRole and RefAppRole use dedicated supervision master tables and block writes for app_id other than 6', function () {
-    expect((new AppRole)->getTable())->toBe('tb_master_nurse_supervision_approles')
+test('AppRole reads from vAppRoles while AppRoleAssignment and RefAppRole use configured master tables and block writes for app_id other than 6', function () {
+    expect((new AppRole)->getTable())->toBe('vAppRoles')
+        ->and((new AppRoleAssignment)->getTable())->toBe('tb_master_nurse_supervision_approles')
         ->and((new RefAppRole)->getTable())->toBe('ref_master_nurse_supervision_approles');
 
     expect(function () {
-        AppRole::create([
+        AppRoleAssignment::create([
             'nip' => '12345',
             'app_id' => 1,
             'app_roles' => 1,
-            'description' => 'Wrong App',
         ]);
     })->toThrow(BadMethodCallException::class);
 

@@ -38,8 +38,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/roles/definitions/{roleId}/permissions', [RoleManagementController::class, 'updateRolePermissions'])->name('roles.update-permissions');
         Route::delete('/roles/definitions/{roleId}', [RoleManagementController::class, 'destroyRole'])->name('roles.destroy-definition');
         Route::post('/roles/users', [RoleManagementController::class, 'assignUserRole'])->name('roles.assign-user');
-        Route::patch('/roles/users/{appRole}', [RoleManagementController::class, 'updateUserRole'])->name('roles.update-user');
-        Route::delete('/roles/users/{appRole}', [RoleManagementController::class, 'destroyUserRole'])->name('roles.destroy-user');
+        Route::patch('/roles/users/{nip}', [RoleManagementController::class, 'updateUserRole'])->name('roles.update-user');
+        Route::delete('/roles/users/{nip}', [RoleManagementController::class, 'destroyUserRole'])->name('roles.destroy-user');
 
         Route::get('/incident-categories', [IncidentCategoryController::class, 'index'])->name('incident-categories.index');
         Route::post('/incident-categories', [IncidentCategoryController::class, 'store'])->name('incident-categories.store');

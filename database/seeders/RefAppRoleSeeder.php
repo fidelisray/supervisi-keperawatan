@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AppRole;
+use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\RolePermission;
 use Illuminate\Database\Seeder;
@@ -52,7 +53,7 @@ class RefAppRoleSeeder extends Seeder
             $sourceAppRoles = $connection->table('tb_approles')
                 ->where('app_id', AppRole::APP_ID)
                 ->orderBy('id')
-                ->get(['nip', 'app_id', 'app_roles', 'description', 'push_token']);
+                ->get(['nip', 'app_id', 'app_roles', 'push_token']);
 
             foreach ($sourceAppRoles as $row) {
                 $nip = trim((string) $row->nip);
@@ -60,14 +61,13 @@ class RefAppRoleSeeder extends Seeder
                     continue;
                 }
 
-                AppRole::query()->updateOrCreate(
+                AppRoleAssignment::query()->updateOrCreate(
                     [
                         'app_id' => AppRole::APP_ID,
                         'nip' => $nip,
                     ],
                     [
                         'app_roles' => (int) $row->app_roles,
-                        'description' => $row->description !== null ? trim((string) $row->description) : null,
                         'push_token' => $row->push_token,
                     ]
                 );

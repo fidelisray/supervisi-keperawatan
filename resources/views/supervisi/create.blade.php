@@ -727,10 +727,10 @@
             ->values();
 
         $nursesJson = $nurses
-            ->filter(fn($n) => !empty($n->description))
+            ->filter(fn($n) => !empty($n->nama))
             ->map(
                 fn($n) => [
-                    'name' => $n->description,
+                    'name' => $n->nama,
                     'nip' => $n->nip,
                 ],
             )

@@ -19,6 +19,11 @@ class RefAppRole extends Model
 
     public $timestamps = false;
 
+    public function getTable(): string
+    {
+        return (string) config('supervisi.ref_app_roles_table', 'ref_master_nurse_supervision_approles');
+    }
+
     /**
      * @var list<string>
      */
@@ -62,7 +67,8 @@ class RefAppRole extends Model
      */
     public static function resolveRoleName(int $roleId): string
     {
-        $cacheKey = "ref_master_nurse_supervision_approles.app_6.role_{$roleId}";
+        $tableName = (new self)->getTable();
+        $cacheKey = "{$tableName}.app_6.role_{$roleId}";
 
         try {
             $roleName = Cache::remember($cacheKey, now()->addHour(), function () use ($roleId): ?string {
@@ -179,15 +185,17 @@ class RefAppRole extends Model
 
     public static function clearRoleCache(?int $roleId = null): void
     {
+        $tableName = (new self)->getTable();
+
         if ($roleId !== null) {
-            Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$roleId}");
+            Cache::forget("{$tableName}.app_6.role_{$roleId}");
             Cache::forget("supervisi.role_permissions.role_{$roleId}");
 
             return;
         }
 
         foreach (array_keys(self::availableRoles()) as $id) {
-            Cache::forget("ref_master_nurse_supervision_approles.app_6.role_{$id}");
+            Cache::forget("{$tableName}.app_6.role_{$id}");
             Cache::forget("supervisi.role_permissions.role_{$id}");
         }
     }
