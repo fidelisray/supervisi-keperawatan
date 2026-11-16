@@ -4,9 +4,12 @@ namespace App\Providers;
 
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -27,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
         // 1. Larang seluruh perintah destruktif di lingkungan Production
         DB::prohibitDestructiveCommands($this->app->isProduction());
 
+        $this->configureTrustedProxies();
+        $this->configureRequestSchemeResolution();
+
         $this->loadMigrationsFrom(database_path('migrations/pgsql'));
 
         // 2. Pasang Anti-Disaster Safeguard multi-lapis untuk database SQL Server RSSES
@@ -34,6 +40,84 @@ class AppServiceProvider extends ServiceProvider
 
         // 3. Daftarkan template pagination kustom
         Paginator::defaultView('vendor.pagination.custom');
+    }
+
+    /**
+     * Mengonfigurasi daftar reverse proxy tepercaya dari config agar kompatibel dengan config:cache.
+     */
+    public function configureTrustedProxies(): void
+    {
+        $trustedProxies = config('supervisi.trusted_proxies');
+        if (! is_string($trustedProxies) || trim($trustedProxies) === '') {
+            return;
+        }
+
+        $trimmed = trim($trustedProxies);
+        $proxies = ($trimmed === '*' || $trimmed === '**')
+            ? $trimmed
+            : array_values(array_filter(array_map('trim', explode(',', $trimmed))));
+
+        if ($proxies === []) {
+            return;
+        }
+
+        TrustProxies::at($proxies);
+        TrustProxies::withHeaders(
+            Request::HEADER_X_FORWARDED_FOR |
+            Request::HEADER_X_FORWARDED_HOST |
+            Request::HEADER_X_FORWARDED_PROTO |
+            Request::HEADER_X_FORWARDED_PREFIX
+        );
+    }
+
+    /**
+     * Menyinkronkan status HTTPS pada Request dan UrlGenerator setelah TrustProxies berjalan.
+     */
+    public function configureRequestSchemeResolution(): void
+    {
+        $this->app->rebinding('request', function ($app, Request $request): void {
+            $this->synchronizeRequestScheme($request);
+        });
+
+        if ($this->app->bound('request') && $this->app['request'] instanceof Request) {
+            $this->synchronizeRequestScheme($this->app['request']);
+        }
+    }
+
+    /**
+     * Menentukan apakah request harus diperlakukan sebagai HTTPS (via header proxy atau Host-Aware APP_URL).
+     */
+    public function synchronizeRequestScheme(Request $request): void
+    {
+        $forwardedScheme = strtolower(trim((string) $request->headers->get('X-Forwarded-Scheme', '')));
+        if ($request->isFromTrustedProxy() && in_array($forwardedScheme, ['https', 'on', 'ssl', '1'], true)) {
+            $request->server->set('HTTPS', 'on');
+        }
+
+        $shouldForceHttps = $request->isSecure();
+
+        if (! $shouldForceHttps && (bool) config('supervisi.force_https', false)) {
+            $requestHost = strtolower($request->getHost());
+            $appUrl = (string) config('app.url', '');
+            $appUrlScheme = strtolower((string) parse_url($appUrl, PHP_URL_SCHEME));
+            $appUrlHost = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+
+            $isConfiguredHttpsHost = $appUrlScheme === 'https' && $appUrlHost !== '' && $requestHost === $appUrlHost;
+            $isNonLocalDomainHost = $requestHost !== ''
+                && $requestHost !== 'localhost'
+                && filter_var($requestHost, FILTER_VALIDATE_IP) === false;
+
+            if ($isConfiguredHttpsHost || $isNonLocalDomainHost) {
+                $request->server->set('HTTPS', 'on');
+                $shouldForceHttps = true;
+            }
+        }
+
+        URL::forceScheme($shouldForceHttps ? 'https' : null);
+
+        if ($this->app->resolved('url')) {
+            $this->app['url']->setRequest($request);
+        }
     }
 
     /**

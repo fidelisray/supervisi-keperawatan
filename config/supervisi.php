@@ -18,4 +18,18 @@ return [
     'app_roles_write_table' => env('SUPERVISI_APP_ROLES_WRITE_TABLE', 'tb_master_nurse_supervision_approles'),
 
     'ref_app_roles_table' => env('SUPERVISI_REF_APP_ROLES_TABLE', 'ref_master_nurse_supervision_approles'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reverse Proxy & HTTPS Scheme Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Stored in config so TrustProxies and Host-Aware HTTPS resolution remain
+    | deterministic when config:cache is enabled in production containers.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    'force_https' => filter_var(env('APP_FORCE_HTTPS', false), FILTER_VALIDATE_BOOLEAN),
 ];

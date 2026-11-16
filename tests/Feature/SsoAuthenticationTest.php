@@ -4,12 +4,16 @@ use App\Models\AppRole;
 use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\User;
+use App\Providers\AppServiceProvider;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -551,4 +555,140 @@ test('direct http mode ignores forged forwarded proxy headers', function () {
     expect(request()->isSecure())->toBeFalse()
         ->and(request()->getHost())->toBe('172.17.12.3')
         ->and(request()->ip())->toBe('127.0.0.1');
+});
+
+test('trusted reverse proxy https headers emit https urls and secure cookies', function () {
+    try {
+        config([
+            'supervisi.trusted_proxies' => '*',
+            'supervisi.force_https' => false,
+            'session.secure' => null,
+        ]);
+        app()->getProvider(AppServiceProvider::class)->configureTrustedProxies();
+
+        $response = $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'supervisi.rs-elisabeth.com',
+            'X-Forwarded-For' => '192.168.10.25',
+        ])->get('http://supervisi.rs-elisabeth.com/login');
+
+        $response->assertSuccessful();
+        $response->assertSee('https://supervisi.rs-elisabeth.com/build/assets/', false);
+        $response->assertSee('https://supervisi.rs-elisabeth.com/favicon.ico', false);
+        $response->assertSee('action="https://supervisi.rs-elisabeth.com/login"', false);
+        $response->assertDontSee('http://supervisi.rs-elisabeth.com/', false);
+
+        expect(request()->isSecure())->toBeTrue()
+            ->and(request()->getHost())->toBe('supervisi.rs-elisabeth.com')
+            ->and(request()->ip())->toBe('192.168.10.25');
+
+        $cookies = $response->headers->getCookies();
+        expect($cookies)->not->toBeEmpty();
+        foreach ($cookies as $cookie) {
+            expect($cookie->isSecure())->toBeTrue();
+        }
+
+        $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'supervisi.rs-elisabeth.com',
+        ])->get('http://supervisi.rs-elisabeth.com/')
+            ->assertRedirect('https://supervisi.rs-elisabeth.com/login');
+    } finally {
+        TrustProxies::flushState();
+        URL::forceScheme(null);
+    }
+});
+
+test('host-aware force https fallback secures domain without breaking direct ip http access', function () {
+    try {
+        config([
+            'app.url' => 'https://supervisi.rs-elisabeth.com',
+            'supervisi.trusted_proxies' => '*',
+            'supervisi.force_https' => true,
+            'session.secure' => null,
+        ]);
+        app()->getProvider(AppServiceProvider::class)->configureTrustedProxies();
+
+        $domainResponse = $this->get('http://supervisi.rs-elisabeth.com/login');
+
+        $domainResponse->assertSuccessful();
+        $domainResponse->assertSee('https://supervisi.rs-elisabeth.com/build/assets/', false);
+        $domainResponse->assertSee('action="https://supervisi.rs-elisabeth.com/login"', false);
+        $domainResponse->assertDontSee('http://supervisi.rs-elisabeth.com/', false);
+
+        expect(request()->isSecure())->toBeTrue()
+            ->and(Paginator::resolveCurrentPath())->toBe('https://supervisi.rs-elisabeth.com/login')
+            ->and(session()->previousUrl())->toBe('https://supervisi.rs-elisabeth.com/login');
+
+        foreach ($domainResponse->headers->getCookies() as $cookie) {
+            expect($cookie->isSecure())->toBeTrue();
+        }
+
+        $ipResponse = $this->get('http://172.17.12.3:2693/login');
+
+        $ipResponse->assertSuccessful();
+        $ipResponse->assertSee('http://172.17.12.3:2693/build/assets/', false);
+        $ipResponse->assertSee('action="http://172.17.12.3:2693/login"', false);
+        $ipResponse->assertDontSee('https://172.17.12.3:2693/', false);
+
+        expect(request()->isSecure())->toBeFalse()
+            ->and(Paginator::resolveCurrentPath())->toBe('http://172.17.12.3:2693/login')
+            ->and(session()->previousUrl())->toBe('http://172.17.12.3:2693/login');
+
+        foreach ($ipResponse->headers->getCookies() as $cookie) {
+            expect($cookie->isSecure())->toBeFalse();
+        }
+    } finally {
+        TrustProxies::flushState();
+        URL::forceScheme(null);
+    }
+});
+
+test('trusted proxy ignores forwarded port header so internal port does not leak into https urls', function () {
+    try {
+        config([
+            'supervisi.trusted_proxies' => '*',
+            'supervisi.force_https' => false,
+        ]);
+        app()->getProvider(AppServiceProvider::class)->configureTrustedProxies();
+
+        $response = $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Scheme' => 'https',
+            'X-Forwarded-Host' => 'supervisi.rs-elisabeth.com',
+            'X-Forwarded-Port' => '2693',
+        ])->get('http://supervisi.rs-elisabeth.com/login');
+
+        $response->assertSuccessful();
+        expect(request()->getHttpHost())->toBe('supervisi.rs-elisabeth.com');
+        $response->assertSee('action="https://supervisi.rs-elisabeth.com/login"', false);
+        $response->assertDontSee('supervisi.rs-elisabeth.com:2693', false);
+    } finally {
+        TrustProxies::flushState();
+        URL::forceScheme(null);
+    }
+});
+
+test('scoped trusted proxy ip rejects forged forwarded headers from untrusted caller', function () {
+    try {
+        config([
+            'supervisi.trusted_proxies' => '10.10.10.5',
+            'supervisi.force_https' => false,
+        ]);
+        app()->getProvider(AppServiceProvider::class)->configureTrustedProxies();
+
+        $response = $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'evil.example.test',
+            'X-Forwarded-For' => '10.20.30.40',
+        ])->get('http://172.17.12.3:2693/login');
+
+        $response->assertSuccessful();
+        expect(request()->isSecure())->toBeFalse()
+            ->and(request()->getHost())->toBe('172.17.12.3')
+            ->and(request()->ip())->toBe('127.0.0.1');
+    } finally {
+        TrustProxies::flushState();
+        URL::forceScheme(null);
+    }
 });
