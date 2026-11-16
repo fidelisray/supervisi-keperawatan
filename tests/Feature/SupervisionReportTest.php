@@ -41,8 +41,12 @@ test('supervision create page renders master rooms, multi-collaborator picker, a
     $response->assertSuccessful();
     $response->assertSee('Logbook Supervisi');
     $response->assertSee('Formulir Logbook Supervisi');
-    $response->assertDontSee('fonts.googleapis.com', false);
-    $response->assertDontSee('fonts.gstatic.com', false);
+    $response->assertSee('rel="icon"', false);
+    $response->assertSee('favicon.ico', false);
+    $response->assertSee('favicon-32x32', false);
+    $response->assertSee('favicon-192x192', false);
+    $response->assertSee('apple-touch-icon', false);
+    $response->assertSee('fonts.googleapis.com/css2?family=Outfit', false);
     $response->assertSee('Kolaborator Supervisi (Dapat Lebih dari Satu)');
     $response->assertSee('Keluar');
     $response->assertDontSee('Keluar Sesi SSO');

@@ -4,11 +4,9 @@ use App\Models\AppRole;
 use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\User;
-use App\Providers\AppServiceProvider;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
@@ -32,8 +30,17 @@ test('login page renders split-screen sso authentication form with autocomplete 
     $response->assertSee('Nomor Induk Pegawai (NIP)');
     $response->assertSee('Kata Sandi');
     $response->assertSee('autocomplete="off"', false);
-    $response->assertDontSee('fonts.googleapis.com', false);
-    $response->assertDontSee('fonts.gstatic.com', false);
+    $response->assertSee('rel="icon"', false);
+    $response->assertSee('favicon.ico', false);
+    $response->assertSee('favicon-32x32', false);
+    $response->assertSee('favicon-192x192', false);
+    $response->assertSee('apple-touch-icon', false);
+    $response->assertSee('fonts.googleapis.com/css2?family=Outfit', false);
+    $response->assertSee('JetBrains+Mono', false);
+
+    $icoHeader = bin2hex((string) file_get_contents(public_path('favicon.ico'), false, null, 0, 6));
+    expect(filesize(public_path('favicon.ico')))->toBeGreaterThan(0)
+        ->and($icoHeader)->toBe('000001000300');
 
     $cacheControl = (string) $response->headers->get('Cache-Control');
     expect($cacheControl)
@@ -533,56 +540,15 @@ test('sso login rejects non-numeric, empty, or negative app_roles so they never 
     'decimal string near zero' => ['0.5'],
 ]);
 
-test('trusted proxies configured via supervisi config trust forwarded https headers', function () {
-    $previousProxies = config('supervisi.trusted_proxies');
-    $provider = app()->getProvider(AppServiceProvider::class);
+test('direct http mode ignores forged forwarded proxy headers', function () {
+    $response = $this->withHeaders([
+        'X-Forwarded-Proto' => 'https',
+        'X-Forwarded-Host' => 'evil.example.test',
+        'X-Forwarded-For' => '10.20.30.40',
+    ])->get('http://172.17.12.3:2693/login');
 
-    try {
-        config()->set('supervisi.trusted_proxies', '*');
-        $provider?->configureTrustedProxies();
-
-        $response = $this->withHeaders([
-            'X-Forwarded-Proto' => 'https',
-            'X-Forwarded-Host' => 'supervisi.rses.local',
-            'X-Forwarded-For' => '10.20.30.40',
-        ])->get('http://supervisi-keperawatan.test/login');
-
-        $response->assertSuccessful();
-        expect(request()->isSecure())->toBeTrue()
-            ->and(request()->getHost())->toBe('supervisi.rses.local')
-            ->and(request()->ip())->toBe('10.20.30.40');
-
-        TrustProxies::flushState();
-        config()->set('supervisi.trusted_proxies', '127.0.0.1, 172.17.12.17');
-        $provider?->configureTrustedProxies();
-
-        $listResponse = $this->flushHeaders()->withHeaders([
-            'X-Forwarded-Proto' => 'https',
-            'X-Forwarded-Host' => 'supervisi.rses.local',
-            'X-Forwarded-For' => '192.168.5.10',
-        ])->get('http://supervisi-keperawatan.test/login');
-
-        $listResponse->assertSuccessful();
-        expect(request()->isSecure())->toBeTrue()
-            ->and(request()->getHost())->toBe('supervisi.rses.local')
-            ->and(request()->ip())->toBe('192.168.5.10');
-
-        TrustProxies::flushState();
-        config()->set('supervisi.trusted_proxies', '172.17.12.17');
-        $provider?->configureTrustedProxies();
-
-        $untrustedResponse = $this->flushHeaders()->withHeaders([
-            'X-Forwarded-Proto' => 'https',
-            'X-Forwarded-Host' => 'evil.example.test',
-            'X-Forwarded-For' => '192.168.5.10',
-        ])->get('http://supervisi-keperawatan.test/login');
-
-        $untrustedResponse->assertSuccessful();
-        expect(request()->isSecure())->toBeFalse()
-            ->and(request()->getHost())->toBe('supervisi-keperawatan.test');
-    } finally {
-        TrustProxies::flushState();
-        config()->set('supervisi.trusted_proxies', $previousProxies);
-        $provider?->configureTrustedProxies();
-    }
+    $response->assertSuccessful();
+    expect(request()->isSecure())->toBeFalse()
+        ->and(request()->getHost())->toBe('172.17.12.3')
+        ->and(request()->ip())->toBe('127.0.0.1');
 });

@@ -18,16 +18,4 @@ return [
     'app_roles_write_table' => env('SUPERVISI_APP_ROLES_WRITE_TABLE', 'tb_master_nurse_supervision_approles'),
 
     'ref_app_roles_table' => env('SUPERVISI_REF_APP_ROLES_TABLE', 'ref_master_nurse_supervision_approles'),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Trusted Reverse Proxies
-    |--------------------------------------------------------------------------
-    |
-    | Stored in config so TrustProxies remains deterministic when config:cache
-    | is enabled in production containers behind a hospital HTTPS reverse proxy.
-    |
-    */
-
-    'trusted_proxies' => env('TRUSTED_PROXIES'),
 ];

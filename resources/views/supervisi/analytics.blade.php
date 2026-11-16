@@ -968,7 +968,7 @@
                                     beginAtZero: true,
                                     ticks: {
                                         stepSize: 1,
-                                        font: { family: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", size: 11 }
+                                        font: { family: 'Outfit, sans-serif', size: 11 }
                                     },
                                     grid: {
                                         color: '#f1f5f9'
@@ -977,7 +977,7 @@
                                 x: {
                                     grid: { display: false },
                                     ticks: {
-                                        font: { family: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", size: 11 }
+                                        font: { family: 'Outfit, sans-serif', size: 11 }
                                     }
                                 }
                             },
@@ -1033,7 +1033,7 @@
                                     beginAtZero: true,
                                     ticks: {
                                         stepSize: 1,
-                                        font: { family: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", size: 11 }
+                                        font: { family: 'Outfit, sans-serif', size: 11 }
                                     },
                                     grid: {
                                         color: '#f1f5f9'
@@ -1042,7 +1042,7 @@
                                 x: {
                                     grid: { display: false },
                                     ticks: {
-                                        font: { family: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", size: 11 }
+                                        font: { family: 'Outfit, sans-serif', size: 11 }
                                     }
                                 }
                             },
