@@ -23,6 +23,10 @@ class RoleManagementController extends Controller
     {
         $availableRoles = RefAppRole::availableRoles();
 
+        $orderExpression = DB::connection('sqlsrv')->getDriverName() === 'sqlsrv'
+            ? 'TRY_CAST(app_roles AS INT) ASC'
+            : 'CAST(app_roles AS INTEGER) ASC';
+
         $appRoles = AppRole::query()
             ->forSupervisiApp()
             ->when($request->filled('search'), function (Builder $query) use ($request): void {
@@ -33,9 +37,9 @@ class RoleManagementController extends Controller
                 });
             })
             ->when($request->filled('role_filter'), function (Builder $query) use ($request): void {
-                $query->where('app_roles', (int) $request->input('role_filter'));
+                $query->where('app_roles', AppRole::roleFilterValue((int) $request->input('role_filter')));
             })
-            ->orderBy('app_roles')
+            ->orderByRaw($orderExpression)
             ->orderBy('nama')
             ->paginate(10, ['nip', 'nama', 'app_id', 'app_roles'])
             ->withQueryString();
@@ -45,7 +49,8 @@ class RoleManagementController extends Controller
             ->selectRaw('app_roles, COUNT(*) as aggregate')
             ->groupBy('app_roles')
             ->pluck('aggregate', 'app_roles')
-            ->mapWithKeys(fn (mixed $count, mixed $roleId): array => [(int) $roleId => (int) $count])
+            ->filter(fn (mixed $count, mixed $roleId): bool => is_numeric(trim((string) $roleId)))
+            ->mapWithKeys(fn (mixed $count, mixed $roleId): array => [(int) trim((string) $roleId) => (int) $count])
             ->all();
 
         $registeredNips = AppRole::query()
@@ -104,11 +109,7 @@ class RoleManagementController extends Controller
         $roleId = DB::connection('sqlsrv')->transaction(function () use ($roleName, $permissions): int {
             $nextRoleId = RefAppRole::nextAvailableRoleId();
 
-            RefAppRole::query()->create([
-                'app_id' => AppRole::APP_ID,
-                'role_id' => $nextRoleId,
-                'role_name' => $roleName,
-            ]);
+            RefAppRole::upsertForSupervisiRole($nextRoleId, $roleName);
 
             RefAppRole::syncPermissions($nextRoleId, $permissions);
 
@@ -129,7 +130,7 @@ class RoleManagementController extends Controller
 
         $roleExists = RefAppRole::query()
             ->forSupervisiApp()
-            ->where('role_id', $roleId)
+            ->where('role_id', RefAppRole::roleIdFilterValue($roleId))
             ->exists();
 
         abort_unless($roleExists, 404);
@@ -149,7 +150,7 @@ class RoleManagementController extends Controller
         // Scope updates explicitly by app_id + role_id because legacy ref_approles.id is not globally unique across apps.
         RefAppRole::query()
             ->forSupervisiApp()
-            ->where('role_id', $roleId)
+            ->where('role_id', RefAppRole::roleIdFilterValue($roleId))
             ->update([
                 'role_name' => $newRoleName,
             ]);
@@ -189,7 +190,7 @@ class RoleManagementController extends Controller
 
         $usersCount = AppRole::query()
             ->forSupervisiApp()
-            ->where('app_roles', $roleId)
+            ->where('app_roles', AppRole::roleFilterValue($roleId))
             ->count();
 
         if ($usersCount > 0) {
@@ -205,7 +206,7 @@ class RoleManagementController extends Controller
 
         RefAppRole::query()
             ->forSupervisiApp()
-            ->where('role_id', $roleId)
+            ->where('role_id', RefAppRole::roleIdFilterValue($roleId))
             ->delete();
 
         RefAppRole::clearRoleCache($roleId);
@@ -219,7 +220,7 @@ class RoleManagementController extends Controller
         $availableRoleIds = array_keys(RefAppRole::availableRoles());
 
         $validated = $request->validate([
-            'nip' => ['required', 'string', 'max:30'],
+            'nip' => ['required', 'string', 'max:24'],
             'app_roles' => ['required', 'integer', Rule::in($availableRoleIds)],
         ], [
             'app_roles.in' => 'Role yang dipilih belum terdaftar di dalam definisi role sistem.',
@@ -259,15 +260,7 @@ class RoleManagementController extends Controller
             ]);
         }
 
-        AppRoleAssignment::query()->updateOrCreate(
-            [
-                'app_id' => AppRole::APP_ID,
-                'nip' => $employee->nip,
-            ],
-            [
-                'app_roles' => $roleId,
-            ]
-        );
+        AppRoleAssignment::upsertForSupervisiUser($employee->nip, $roleId);
 
         User::query()
             ->where('nip', $employee->nip)
@@ -312,15 +305,7 @@ class RoleManagementController extends Controller
             ]);
         }
 
-        AppRoleAssignment::query()->updateOrCreate(
-            [
-                'app_id' => AppRole::APP_ID,
-                'nip' => $appRole->nip,
-            ],
-            [
-                'app_roles' => $roleId,
-            ]
-        );
+        AppRoleAssignment::upsertForSupervisiUser($appRole->nip, $roleId);
 
         User::query()
             ->where('nip', $appRole->nip)
@@ -363,20 +348,12 @@ class RoleManagementController extends Controller
             $readTable = (new AppRole)->getTable();
             $existsInBaseView = DB::connection('sqlsrv')
                 ->table($readTable)
-                ->where('app_id', AppRole::APP_ID)
+                ->where('app_id', AppRoleAssignment::appIdFilterValue($readTable))
                 ->where('nip', $targetNip)
                 ->exists();
 
             if ($existsInBaseView) {
-                AppRoleAssignment::query()->updateOrCreate(
-                    [
-                        'app_id' => AppRole::APP_ID,
-                        'nip' => $targetNip,
-                    ],
-                    [
-                        'app_roles' => AppRoleAssignment::ROLE_REVOKED_DEV,
-                    ]
-                );
+                AppRoleAssignment::upsertForSupervisiUser($targetNip, AppRoleAssignment::ROLE_REVOKED_DEV);
             } else {
                 AppRoleAssignment::query()
                     ->forSupervisiApp()

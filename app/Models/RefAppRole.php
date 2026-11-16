@@ -52,13 +52,79 @@ class RefAppRole extends Model
         ];
     }
 
+    public static function usesLegacyTable(): bool
+    {
+        return (new self)->getTable() === 'ref_approles';
+    }
+
+    /**
+     * Determine whether queries target legacy SQL Server varchar(24) columns on ref_approles.
+     */
+    public static function usesLegacyVarcharColumns(): bool
+    {
+        $instance = new self;
+
+        return $instance->getConnection()->getDriverName() === 'sqlsrv'
+            && self::usesLegacyTable();
+    }
+
+    public static function appIdFilterValue(): int|string
+    {
+        return self::usesLegacyVarcharColumns()
+            ? (string) AppRole::APP_ID
+            : AppRole::APP_ID;
+    }
+
+    public static function roleIdFilterValue(int $roleId): int|string
+    {
+        return self::usesLegacyVarcharColumns()
+            ? (string) $roleId
+            : $roleId;
+    }
+
+    /**
+     * Insert or update a role definition strictly scoped by app_id + role_id
+     * so duplicate legacy identity values across apps are never overwritten.
+     */
+    public static function upsertForSupervisiRole(int $roleId, string $roleName): void
+    {
+        $normalizedName = trim($roleName);
+        $query = self::query()
+            ->forSupervisiApp()
+            ->where('role_id', self::roleIdFilterValue($roleId));
+
+        if ($query->exists()) {
+            $query->update([
+                'role_name' => $normalizedName,
+            ]);
+
+            return;
+        }
+
+        self::query()->create([
+            'app_id' => AppRole::APP_ID,
+            'role_id' => self::roleIdFilterValue($roleId),
+            'role_name' => $normalizedName,
+        ]);
+    }
+
     /**
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
     public function scopeForSupervisiApp(Builder $query): Builder
     {
-        return $query->where('app_id', AppRole::APP_ID);
+        return $query->where('app_id', self::appIdFilterValue());
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        return parent::setKeysForSaveQuery($query)
+            ->where('app_id', self::appIdFilterValue());
     }
 
     /**
@@ -73,8 +139,8 @@ class RefAppRole extends Model
         try {
             $roleName = Cache::remember($cacheKey, now()->addHour(), function () use ($roleId): ?string {
                 return static::query()
-                    ->where('app_id', AppRole::APP_ID)
-                    ->where('role_id', $roleId)
+                    ->forSupervisiApp()
+                    ->where('role_id', self::roleIdFilterValue($roleId))
                     ->value('role_name');
             });
 
@@ -100,18 +166,25 @@ class RefAppRole extends Model
         try {
             $dbRoles = static::query()
                 ->forSupervisiApp()
-                ->orderBy('role_id')
                 ->pluck('role_name', 'role_id')
                 ->all();
 
             foreach ($dbRoles as $roleId => $roleName) {
-                $roles[(int) $roleId] = trim((string) $roleName);
+                $normalizedRoleId = trim((string) $roleId);
+                if ($normalizedRoleId === '' || ! is_numeric($normalizedRoleId)) {
+                    continue;
+                }
+
+                $trimmedName = trim((string) $roleName);
+                if ($trimmedName !== '') {
+                    $roles[(int) $normalizedRoleId] = $trimmedName;
+                }
             }
         } catch (Throwable) {
             // Keep default roles if query fails.
         }
 
-        ksort($roles);
+        ksort($roles, SORT_NUMERIC);
 
         return $roles;
     }

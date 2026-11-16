@@ -111,6 +111,6 @@ class RolePermission extends Model
     public function role(): BelongsTo
     {
         return $this->belongsTo(RefAppRole::class, 'role_id', 'role_id')
-            ->where('app_id', AppRole::APP_ID);
+            ->where('app_id', RefAppRole::appIdFilterValue());
     }
 }

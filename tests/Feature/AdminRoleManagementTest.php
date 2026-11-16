@@ -6,8 +6,10 @@ use App\Models\RefAppRole;
 use App\Models\RolePermission;
 use App\Models\User;
 use Database\Seeders\RefAppRoleSeeder;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -621,4 +623,186 @@ test('admin roles page renders modal triggers, active user counts, and paginates
         ->assertSee('Perawat Pagination 12, S.Kep.Ners');
 
     expect($filteredPageTwo->viewData('appRoles')->count())->toBe(2);
+});
+
+test('production mode isolates writes across duplicate ids in tb_approles and ref_approles', function () {
+    $schema = Schema::connection('sqlsrv');
+    $connection = DB::connection('sqlsrv');
+
+    $connection->statement('DROP VIEW IF EXISTS vAppRoles');
+    $schema->dropIfExists('tb_approles');
+    $schema->dropIfExists('ref_approles');
+
+    $schema->create('tb_approles', function (Blueprint $table): void {
+        $table->integer('id')->nullable();
+        $table->string('nip', 24);
+        $table->integer('app_id');
+        $table->integer('app_roles');
+        $table->string('description', 128)->nullable();
+        $table->string('push_token', 128)->nullable();
+    });
+
+    $connection->statement('
+        CREATE VIEW vAppRoles AS
+        SELECT
+            tb_approles.nip,
+            tb_employees.nama,
+            tb_approles.app_id,
+            tb_apps.app_name,
+            tb_approles.app_roles,
+            tb_approles.description
+        FROM tb_approles
+        INNER JOIN tb_employees ON tb_approles.nip = tb_employees.nip
+        INNER JOIN tb_apps ON tb_approles.app_id = tb_apps.id
+    ');
+
+    $schema->create('ref_approles', function (Blueprint $table): void {
+        $table->integer('id')->nullable();
+        $table->integer('role_id');
+        $table->string('role_name', 24);
+        $table->integer('app_id');
+    });
+
+    $connection->table('tb_approles')->insert([
+        ['id' => 1, 'nip' => '9000000001', 'app_id' => 1, 'app_roles' => 1, 'description' => 'App Lain Row 1', 'push_token' => null],
+        ['id' => 1, 'nip' => '5508150824', 'app_id' => 6, 'app_roles' => 0, 'description' => 'Purwanto Ali', 'push_token' => null],
+        ['id' => 2, 'nip' => '9000000002', 'app_id' => 1, 'app_roles' => 2, 'description' => 'App Lain Row 2', 'push_token' => null],
+        ['id' => 2, 'nip' => '1672010896', 'app_id' => 6, 'app_roles' => 1, 'description' => 'V. Erny Kristiana', 'push_token' => null],
+    ]);
+
+    $connection->table('ref_approles')->insert([
+        ['id' => 1, 'role_id' => 0, 'role_name' => 'ADMINISTRATOR', 'app_id' => 6],
+        ['id' => 2, 'role_id' => 1, 'role_name' => 'SUPERVISOR KEPERAWATAN', 'app_id' => 6],
+        ['id' => 3, 'role_id' => 2, 'role_name' => 'APP LAIN ROLE DUPLIKAT', 'app_id' => 1],
+        ['id' => 3, 'role_id' => 2, 'role_name' => 'KEPALA UNIT', 'app_id' => 6],
+    ]);
+
+    config()->set('supervisi.app_roles_read_table', 'vAppRoles');
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+
+    // 1. Renaming role_id = 2 in app_id = 6 does not mutate app_id = 1 sharing id = 3
+    $this->actingAs($this->admin)
+        ->patch(route('admin.roles.update-definition', 2), [
+            'role_name' => 'KEPALA INSTALASI',
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    // 2. Assigning and updating user role in app_id = 6 does not mutate app_id = 1 sharing id = 2
+    $this->actingAs($this->admin)
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1355010892',
+            'app_roles' => 2,
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    $this->actingAs($this->admin)
+        ->patch(route('admin.roles.update-user', '1672010896'), [
+            'app_roles' => 2,
+        ])
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect($connection->table('tb_approles')->where('app_id', 1)->where('nip', '9000000002')->value('app_roles'))->toBe(2)
+        ->and($connection->table('tb_approles')->where('app_id', 6)->where('nip', '1672010896')->value('app_roles'))->toBe(2);
+
+    // 3. Direct model save() also preserves app_id = 1 row sharing identical id = 2 via setKeysForSaveQuery()
+    $model = AppRoleAssignment::query()->forSupervisiApp()->where('nip', '1672010896')->firstOrFail();
+    $model->app_roles = 1;
+    $model->save();
+
+    expect($connection->table('tb_approles')->where('app_id', 1)->where('nip', '9000000002')->value('app_roles'))->toBe(2)
+        ->and($connection->table('tb_approles')->where('app_id', 6)->where('nip', '1672010896')->value('app_roles'))->toBe(1);
+
+    // 4. Revoke user then destroy custom role in app_id = 6 without deleting app_id = 1 row sharing id = 3
+    $this->actingAs($this->admin)
+        ->delete(route('admin.roles.destroy-user', '1355010892'))
+        ->assertRedirect(route('admin.roles.index'));
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.roles.destroy-definition', 2))
+        ->assertRedirect(route('admin.roles.index'));
+
+    expect($connection->table('ref_approles')->where('app_id', 6)->where('role_id', 2)->exists())->toBeFalse()
+        ->and($connection->table('ref_approles')->where('app_id', 1)->where('role_id', 2)->value('role_name'))
+        ->toBe('APP LAIN ROLE DUPLIKAT');
+});
+
+test('production mode tolerates non-numeric legacy role values in other apps and sorts numeric roles correctly', function () {
+    $connection = DB::connection('sqlsrv');
+
+    config()->set('supervisi.app_roles_read_table', 'vAppRoles');
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+
+    $connection->table('ref_approles')->insert([
+        ['role_id' => 10, 'role_name' => 'KOORDINATOR RUANG', 'app_id' => 6],
+        ['role_id' => 2, 'role_name' => 'KEPALA UNIT', 'app_id' => 6],
+    ]);
+
+    $connection->table('tb_approles')->insert([
+        ['nip' => '9000000001', 'app_id' => 9, 'app_roles' => 'PERAWAT', 'description' => 'Non-numeric external role'],
+        ['nip' => '1355010892', 'app_id' => 6, 'app_roles' => 10, 'description' => 'Cicilia Rumini'],
+    ]);
+
+    $connection->table('tb_approles')
+        ->where('app_id', 6)
+        ->where('nip', '2351151100')
+        ->update(['app_roles' => 2]);
+
+    RefAppRole::clearRoleCache();
+
+    expect(array_keys(RefAppRole::availableRoles()))->toBe([0, 1, 2, 10])
+        ->and(AppRole::query()->operationalNurses()->pluck('nip')->all())->toBe(['1672010896']);
+
+    $indexResponse = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+    $indexResponse->assertSuccessful();
+
+    $orderedRoleIds = $indexResponse->viewData('appRoles')
+        ->getCollection()
+        ->pluck('app_roles')
+        ->map(fn (mixed $id): int => (int) $id)
+        ->all();
+
+    expect($orderedRoleIds)->toBe([0, 1, 2, 10]);
+
+    $filteredResponse = $this->actingAs($this->admin)->get(route('admin.roles.index', ['role_filter' => 10]));
+    $filteredResponse->assertSuccessful();
+
+    expect($filteredResponse->viewData('appRoles')->getCollection()->pluck('nip')->all())
+        ->toBe(['1355010892']);
+});
+
+test('ref app role seeder syncs ref_approles without modifying tb_approles or temp overlay when in production mode', function () {
+    $connection = DB::connection('sqlsrv');
+
+    config()->set('supervisi.app_roles_read_table', 'vAppRoles');
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+
+    $connection->table('ref_approles')->where('app_id', 6)->delete();
+    $connection->table('ref_approles')->insert([
+        'role_id' => 0,
+        'role_name' => 'ADMIN APLIKASI LAIN',
+        'app_id' => 1,
+    ]);
+    $connection->table('tb_master_nurse_supervision_approles')->delete();
+
+    $initialProdUsers = $connection->table('tb_approles')
+        ->where('app_id', 6)
+        ->orderBy('nip')
+        ->pluck('app_roles', 'nip')
+        ->all();
+
+    $this->seed(RefAppRoleSeeder::class);
+
+    expect($connection->table('ref_approles')->where('app_id', 6)->orderBy('role_id')->pluck('role_name', 'role_id')->all())
+        ->toBe([
+            0 => 'ADMINISTRATOR',
+            1 => 'SUPERVISOR KEPERAWATAN',
+        ])
+        ->and($connection->table('ref_approles')->where('app_id', 1)->where('role_id', 0)->value('role_name'))
+        ->toBe('ADMIN APLIKASI LAIN')
+        ->and($connection->table('tb_master_nurse_supervision_approles')->count())->toBe(0)
+        ->and($connection->table('tb_approles')->where('app_id', 6)->orderBy('nip')->pluck('app_roles', 'nip')->all())
+        ->toBe($initialProdUsers);
 });

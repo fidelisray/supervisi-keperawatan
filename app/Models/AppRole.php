@@ -34,6 +34,34 @@ class AppRole extends Model
         return (string) config('supervisi.app_roles_read_table', 'vAppRoles');
     }
 
+    public function usesOverlaySubquery(): bool
+    {
+        return AppRoleAssignment::usesTemporaryWriteTable()
+            && $this->getTable() !== (new AppRoleAssignment)->getTable();
+    }
+
+    public static function appIdFilterValue(): int|string
+    {
+        $instance = new self;
+
+        if ($instance->usesOverlaySubquery()) {
+            return self::APP_ID;
+        }
+
+        return AppRoleAssignment::appIdFilterValue($instance->getTable());
+    }
+
+    public static function roleFilterValue(int $roleId): int|string
+    {
+        $instance = new self;
+
+        if ($instance->usesOverlaySubquery()) {
+            return $roleId;
+        }
+
+        return AppRoleAssignment::roleFilterValue($roleId, $instance->getTable());
+    }
+
     /**
      * @return Builder<static>
      */
@@ -41,31 +69,31 @@ class AppRole extends Model
     {
         $builder = parent::newQuery();
 
-        if (AppRoleAssignment::usesTemporaryWriteTable()) {
+        if ($this->usesOverlaySubquery()) {
             $readTable = $this->getTable();
             $writeTable = (new AppRoleAssignment)->getTable();
+            $connection = $this->getConnection();
+            $isSqlSrv = $connection->getDriverName() === 'sqlsrv';
+            $readAppIdSelect = $isSqlSrv ? 'TRY_CAST(v.app_id AS INT) as app_id' : 'v.app_id';
+            $readAppRolesSelect = $isSqlSrv ? 'TRY_CAST(v.app_roles AS INT) as app_roles' : 'v.app_roles';
 
-            if ($readTable !== $writeTable) {
-                $connection = $this->getConnection();
+            $baseQuery = $connection->table($readTable.' as v')
+                ->selectRaw("v.nip, v.nama, {$readAppIdSelect}, v.app_name, {$readAppRolesSelect}, v.description")
+                ->where('v.app_id', AppRoleAssignment::appIdFilterValue($readTable))
+                ->whereNotExists(function ($sub) use ($writeTable): void {
+                    $sub->selectRaw('1')
+                        ->from($writeTable.' as m')
+                        ->whereColumn('m.nip', 'v.nip')
+                        ->where('m.app_id', AppRoleAssignment::appIdFilterValue($writeTable));
+                });
 
-                $baseQuery = $connection->table($readTable.' as v')
-                    ->selectRaw('v.nip, v.nama, v.app_id, v.app_name, v.app_roles, v.description')
-                    ->where('v.app_id', self::APP_ID)
-                    ->whereNotExists(function ($sub) use ($writeTable): void {
-                        $sub->selectRaw('1')
-                            ->from($writeTable.' as m')
-                            ->whereColumn('m.nip', 'v.nip')
-                            ->where('m.app_id', self::APP_ID);
-                    });
+            $overlayQuery = $connection->table($writeTable.' as m')
+                ->join('tb_employees as e', 'e.nip', '=', 'm.nip')
+                ->selectRaw("m.nip, e.nama, m.app_id, 'Supervisi Keperawatan' as app_name, m.app_roles, m.description")
+                ->where('m.app_id', AppRoleAssignment::appIdFilterValue($writeTable))
+                ->where('m.app_roles', '>=', 0);
 
-                $overlayQuery = $connection->table($writeTable.' as m')
-                    ->join('tb_employees as e', 'e.nip', '=', 'm.nip')
-                    ->selectRaw("m.nip, e.nama, m.app_id, 'Supervisi Keperawatan' as app_name, m.app_roles, m.description")
-                    ->where('m.app_id', self::APP_ID)
-                    ->where('m.app_roles', '>=', 0);
-
-                $builder->fromSub($baseQuery->unionAll($overlayQuery), $readTable);
-            }
+            $builder->fromSub($baseQuery->unionAll($overlayQuery), $readTable);
         }
 
         return $builder;
@@ -97,7 +125,7 @@ class AppRole extends Model
      */
     public function scopeForSupervisiApp(Builder $query): Builder
     {
-        return $query->where('app_id', self::APP_ID);
+        return $query->where('app_id', self::appIdFilterValue());
     }
 
     /**
@@ -109,8 +137,8 @@ class AppRole extends Model
     public function scopeOperationalNurses(Builder $query): Builder
     {
         return $query
-            ->where('app_id', self::APP_ID)
-            ->where('app_roles', self::ROLE_SUPERVISOR);
+            ->where('app_id', self::appIdFilterValue())
+            ->where('app_roles', self::roleFilterValue(self::ROLE_SUPERVISOR));
     }
 
     /**
@@ -119,7 +147,7 @@ class AppRole extends Model
     public function refRole(): BelongsTo
     {
         return $this->belongsTo(RefAppRole::class, 'app_roles', 'role_id')
-            ->where('app_id', self::APP_ID);
+            ->where('app_id', RefAppRole::appIdFilterValue());
     }
 
     public function roleLabel(): string

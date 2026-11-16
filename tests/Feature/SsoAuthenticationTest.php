@@ -443,3 +443,26 @@ test('login and logout endpoints enforce csrf token protection against cross-sit
     $forgedLogoutResponse->assertStatus(419);
     $this->assertAuthenticated();
 });
+
+test('sso login in production mode reads directly from vAppRoles without temporary write table overlay', function () {
+    config()->set('supervisi.app_roles_read_table', 'vAppRoles');
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+    config()->set('supervisi.ref_app_roles_table', 'ref_approles');
+
+    // Put a conflicting revoked row inside temporary dev table; production login must ignore it
+    DB::connection('sqlsrv')->table('tb_master_nurse_supervision_approles')
+        ->where('app_id', AppRole::APP_ID)
+        ->where('nip', '1672010896')
+        ->update([
+            'app_roles' => AppRoleAssignment::ROLE_REVOKED_DEV,
+        ]);
+
+    $response = $this->post(route('login.store'), [
+        'nip' => '1672010896',
+        'password' => 'rahasia123',
+    ]);
+
+    $response->assertRedirect(route('supervisi.create'));
+    $this->assertAuthenticated();
+    expect(User::where('nip', '1672010896')->value('app_roles'))->toBe(AppRole::ROLE_SUPERVISOR);
+});
