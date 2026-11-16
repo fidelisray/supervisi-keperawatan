@@ -3,6 +3,7 @@
 use App\Models\Incident;
 use App\Models\SupervisionReport;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
@@ -38,8 +39,10 @@ test('supervision create page renders master rooms, multi-collaborator picker, a
     $response = $this->actingAs($this->supervisor)->get(route('supervisi.create'));
 
     $response->assertSuccessful();
-    $response->assertSee('Logbook Supervisi Ruang Perawatan');
+    $response->assertSee('Logbook Supervisi');
     $response->assertSee('Formulir Logbook Supervisi');
+    $response->assertDontSee('fonts.googleapis.com', false);
+    $response->assertDontSee('fonts.gstatic.com', false);
     $response->assertSee('Kolaborator Supervisi (Dapat Lebih dari Satu)');
     $response->assertSee('Keluar');
     $response->assertDontSee('Keluar Sesi SSO');
@@ -636,6 +639,44 @@ test('authorized user can stream supervision report pdf while unauthorized user 
     $this->actingAs($this->otherSupervisor)
         ->get(route('supervisi.pdf', $report))
         ->assertForbidden();
+});
+
+test('pdf export recovers from empty cached logo file and supports png blade fallback cleanly', function () {
+    $cacheFile = storage_path('framework/cache/pdf-logo-web-icon.png');
+    if (! is_dir(dirname($cacheFile))) {
+        @mkdir(dirname($cacheFile), 0755, true);
+    }
+    file_put_contents($cacheFile, '');
+
+    $report = SupervisionReport::create([
+        'report_date' => '2026-11-10',
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 8,
+        'nurse_count' => 3,
+        'supervisor_name' => $this->supervisor->name,
+        'nurse_in_charge' => ['Anastasia Naning Sudiar, S.Kep.Ners'],
+        'status' => 'submitted',
+    ]);
+
+    $pdfResponse = $this->actingAs($this->supervisor)->get(route('supervisi.pdf', $report));
+
+    $pdfResponse->assertSuccessful();
+    expect($pdfResponse->headers->get('Content-Type'))->toContain('application/pdf')
+        ->and($pdfResponse->getContent())->toStartWith('%PDF-')
+        ->and(filesize($cacheFile))->toBeGreaterThan(0);
+
+    $fallbackOutput = Pdf::loadView('supervisi.pdf', [
+        'report' => $report->load(['incidents.incidentCategory']),
+        'logoBase64' => null,
+        'printedAt' => now(),
+        'printedBy' => $this->supervisor->name,
+    ])
+        ->setOption('enable_font_subsetting', true)
+        ->setPaper('a4', 'portrait')
+        ->output();
+
+    expect($fallbackOutput)->toStartWith('%PDF-');
 });
 
 test('supervision index defaults to today preset, exposes semua data chip, and metric cards follow the active filter', function () {

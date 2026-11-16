@@ -40,31 +40,28 @@ return new class extends Migration
         }
 
         if ($schema->hasTable('tb_nurse_supervision_incidents')) {
-            $connection->table('tb_nurse_supervision_incidents')->delete();
-        }
+            $hasCategoryForeignKey = collect($schema->getForeignKeys('tb_nurse_supervision_incidents'))
+                ->contains(fn (array $foreignKey): bool => in_array('category', $foreignKey['columns'] ?? [], true));
 
-        if ($schema->hasTable('tb_nurse_supervision_reports')) {
-            $connection->table('tb_nurse_supervision_reports')->delete();
-        }
+            if (! $hasCategoryForeignKey && $connection->table('tb_nurse_supervision_incidents')->count() === 0) {
+                $schema->dropIfExists('tb_nurse_supervision_incidents');
 
-        if ($schema->hasTable('tb_nurse_supervision_incidents')) {
-            $schema->dropIfExists('tb_nurse_supervision_incidents');
+                $schema->create('tb_nurse_supervision_incidents', function (Blueprint $table): void {
+                    $table->id();
+                    $table->foreignId('supervision_report_id')
+                        ->constrained('tb_nurse_supervision_reports')
+                        ->cascadeOnDelete();
+                    $table->foreignId('category')
+                        ->constrained('tb_master_nurse_supervision_incidents_category');
+                    $table->string('incident_time')->nullable();
+                    $table->text('description');
+                    $table->text('action_taken')->nullable();
+                    $table->string('status')->default('in_progress');
+                    $table->timestamps();
 
-            $schema->create('tb_nurse_supervision_incidents', function (Blueprint $table): void {
-                $table->id();
-                $table->foreignId('supervision_report_id')
-                    ->constrained('tb_nurse_supervision_reports')
-                    ->cascadeOnDelete();
-                $table->foreignId('category')
-                    ->constrained('tb_master_nurse_supervision_incidents_category');
-                $table->string('incident_time')->nullable();
-                $table->text('description');
-                $table->text('action_taken')->nullable();
-                $table->string('status')->default('in_progress');
-                $table->timestamps();
-
-                $table->index(['supervision_report_id', 'category']);
-            });
+                    $table->index(['supervision_report_id', 'category']);
+                });
+            }
         }
     }
 

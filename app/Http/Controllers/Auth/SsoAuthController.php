@@ -75,13 +75,26 @@ class SsoAuthController extends Controller
             ]);
         }
 
+        $rawRole = $appRole->getRawOriginal('app_roles');
+        $normalizedRole = is_string($rawRole) || is_int($rawRole)
+            ? trim((string) $rawRole)
+            : '';
+
+        if ($normalizedRole === '' || ! ctype_digit($normalizedRole)) {
+            $this->hitRateLimiters($request, $nip);
+
+            throw ValidationException::withMessages([
+                'nip' => 'Konfigurasi role akun Anda tidak valid. Silakan hubungi Administrator.',
+            ]);
+        }
+
         $this->clearRateLimiters($request, $nip);
 
         $user = User::query()->updateOrCreate(
             ['nip' => $appRole->nip],
             [
                 'name' => $appRole->displayName(),
-                'app_roles' => (int) $appRole->app_roles,
+                'app_roles' => (int) $normalizedRole,
             ]
         );
 

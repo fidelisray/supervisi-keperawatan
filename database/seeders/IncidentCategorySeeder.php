@@ -48,4 +48,3 @@ class IncidentCategorySeeder extends Seeder
         }
     }
 }
-

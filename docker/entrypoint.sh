@@ -11,34 +11,39 @@ case "$1" in
         ;;
 esac
 
-# Hapus sentinel lama
-rm -f /tmp/app_healthy
-
 echo "================================================================"
 echo " Supervisi Keperawatan — Container Bootstrap"
 echo "================================================================"
 
-echo "[1/4] Caching application configuration..."
+# Pastikan direktori runtime Laravel tersedia (termasuk saat storage di-mount ke volume)
+mkdir -p /var/www/html/storage/fonts \
+    /var/www/html/storage/logs \
+    /var/www/html/storage/framework/cache/data \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/views \
+    /var/www/html/storage/app/public
+
+echo "[1/5] Caching application configuration..."
 php artisan config:cache
 
-echo "[2/4] Caching routes..."
+echo "[2/5] Caching routes..."
 php artisan route:cache
 
-echo "[3/4] Caching views..."
+echo "[3/5] Caching views..."
 php artisan view:cache
 
-echo "[4/4] Creating storage symlink..."
+echo "[4/5] Running PostgreSQL migrations..."
+php artisan migrate --database=pgsql --path=database/migrations/pgsql --force
+
+echo "[5/5] Creating storage symlink..."
 php artisan storage:link --force 2>/dev/null || true
 
-# Pastikan permission folder krusial tetap dimiliki www-data
+# Pastikan kepemilikan seluruh runtime storage/cache dipegang www-data setelah bootstrap artisan
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Sentinel file: menandai bahwa bootstrap selesai (digunakan Docker healthcheck)
-touch /tmp/app_healthy
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 echo "================================================================"
 echo " Bootstrap complete! Starting Supervisord (PHP-FPM & Nginx)..."
 echo "================================================================"
 
 exec "$@"
-

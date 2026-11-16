@@ -7,12 +7,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Masuk - Supervisi Keperawatan RS. St. Elisabeth Semarang</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet">
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>

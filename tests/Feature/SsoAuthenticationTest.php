@@ -4,9 +4,11 @@ use App\Models\AppRole;
 use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\User;
+use App\Providers\AppServiceProvider;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
@@ -30,6 +32,8 @@ test('login page renders split-screen sso authentication form with autocomplete 
     $response->assertSee('Nomor Induk Pegawai (NIP)');
     $response->assertSee('Kata Sandi');
     $response->assertSee('autocomplete="off"', false);
+    $response->assertDontSee('fonts.googleapis.com', false);
+    $response->assertDontSee('fonts.gstatic.com', false);
 
     $cacheControl = (string) $response->headers->get('Cache-Control');
     expect($cacheControl)
@@ -465,4 +469,120 @@ test('sso login in production mode reads directly from vAppRoles without tempora
     $response->assertRedirect(route('supervisi.create'));
     $this->assertAuthenticated();
     expect(User::where('nip', '1672010896')->value('app_roles'))->toBe(AppRole::ROLE_SUPERVISOR);
+});
+
+test('sso login rejects non-numeric, empty, or negative app_roles so they never coerce to administrator role 0', function (mixed $invalidRole) {
+    $connection = DB::connection('sqlsrv');
+    $schema = Schema::connection('sqlsrv');
+
+    $connection->statement('DROP VIEW IF EXISTS vAppRoles');
+    $schema->dropIfExists('tb_approles');
+
+    $connection->statement('
+        CREATE TABLE tb_approles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nip VARCHAR(30) NOT NULL,
+            app_id INTEGER NOT NULL,
+            app_roles VARCHAR(24) NULL,
+            description VARCHAR(255) NULL,
+            push_token VARCHAR(255) NULL
+        )
+    ');
+
+    $connection->statement('
+        CREATE VIEW vAppRoles AS
+        SELECT
+            tb_approles.nip,
+            tb_employees.nama,
+            tb_approles.app_id,
+            tb_apps.app_name,
+            tb_approles.app_roles,
+            tb_approles.description
+        FROM tb_approles
+        INNER JOIN tb_employees ON tb_approles.nip = tb_employees.nip
+        INNER JOIN tb_apps ON tb_approles.app_id = tb_apps.id
+    ');
+
+    $connection->table('tb_approles')->insert([
+        'nip' => '1672010896',
+        'app_id' => 6,
+        'app_roles' => $invalidRole,
+        'description' => 'Invalid Role Entry',
+    ]);
+
+    config()->set('supervisi.app_roles_read_table', 'vAppRoles');
+    config()->set('supervisi.app_roles_write_table', 'tb_approles');
+
+    $response = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => '1672010896',
+        'password' => 'rahasia123',
+    ]);
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHasErrors([
+        'nip' => 'Konfigurasi role akun Anda tidak valid. Silakan hubungi Administrator.',
+    ]);
+    $this->assertGuest();
+    expect(User::where('nip', '1672010896')->exists())->toBeFalse();
+})->with([
+    'non-numeric text' => ['PERAWAT'],
+    'empty string' => [''],
+    'whitespace only' => ['   '],
+    'null value' => [null],
+    'negative integer string' => ['-1'],
+    'decimal string near zero' => ['0.5'],
+]);
+
+test('trusted proxies configured via supervisi config trust forwarded https headers', function () {
+    $previousProxies = config('supervisi.trusted_proxies');
+    $provider = app()->getProvider(AppServiceProvider::class);
+
+    try {
+        config()->set('supervisi.trusted_proxies', '*');
+        $provider?->configureTrustedProxies();
+
+        $response = $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'supervisi.rses.local',
+            'X-Forwarded-For' => '10.20.30.40',
+        ])->get('http://supervisi-keperawatan.test/login');
+
+        $response->assertSuccessful();
+        expect(request()->isSecure())->toBeTrue()
+            ->and(request()->getHost())->toBe('supervisi.rses.local')
+            ->and(request()->ip())->toBe('10.20.30.40');
+
+        TrustProxies::flushState();
+        config()->set('supervisi.trusted_proxies', '127.0.0.1, 172.17.12.17');
+        $provider?->configureTrustedProxies();
+
+        $listResponse = $this->flushHeaders()->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'supervisi.rses.local',
+            'X-Forwarded-For' => '192.168.5.10',
+        ])->get('http://supervisi-keperawatan.test/login');
+
+        $listResponse->assertSuccessful();
+        expect(request()->isSecure())->toBeTrue()
+            ->and(request()->getHost())->toBe('supervisi.rses.local')
+            ->and(request()->ip())->toBe('192.168.5.10');
+
+        TrustProxies::flushState();
+        config()->set('supervisi.trusted_proxies', '172.17.12.17');
+        $provider?->configureTrustedProxies();
+
+        $untrustedResponse = $this->flushHeaders()->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+            'X-Forwarded-Host' => 'evil.example.test',
+            'X-Forwarded-For' => '192.168.5.10',
+        ])->get('http://supervisi-keperawatan.test/login');
+
+        $untrustedResponse->assertSuccessful();
+        expect(request()->isSecure())->toBeFalse()
+            ->and(request()->getHost())->toBe('supervisi-keperawatan.test');
+    } finally {
+        TrustProxies::flushState();
+        config()->set('supervisi.trusted_proxies', $previousProxies);
+        $provider?->configureTrustedProxies();
+    }
 });

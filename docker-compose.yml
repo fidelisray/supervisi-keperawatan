@@ -3,7 +3,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        image: 172.17.12.17:5051/fidelisray/supervisi-keperawatan/supervisi-keperawatan-app:latest
+        image: 172.17.12.17:5051/fidelisray/supervisi-keperawatan/supervisi-keperawatan-app:${APP_IMAGE_TAG:-latest}
         container_name: supervisi-keperawatan-app
         restart: unless-stopped
         working_dir: /var/www/html
@@ -18,11 +18,11 @@ services:
         security_opt:
             - no-new-privileges:true
         healthcheck:
-            test: ["CMD-SHELL", "test -f /tmp/app_healthy || exit 1"]
+            test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up || exit 1"]
             interval: 10s
             timeout: 5s
             retries: 5
-            start_period: 30s
+            start_period: 40s
         depends_on:
             spv-nurse-postgres:
                 condition: service_healthy
@@ -38,11 +38,10 @@ services:
         # spv-nurse-app terhubung secara internal via Docker network 'supervisi-keperawatan-network'.
         # ports:
         #     - "127.0.0.1:5432:5432"
+        env_file:
+            - .env.production
         environment:
             TZ: Asia/Jakarta
-            POSTGRES_DB: ${DB_DATABASE}
-            POSTGRES_USER: ${DB_USERNAME}
-            POSTGRES_PASSWORD: ${DB_PASSWORD}
         volumes:
             - postgres_data:/var/lib/postgresql/data
         security_opt:
@@ -51,7 +50,7 @@ services:
             test:
                 [
                     "CMD-SHELL",
-                    "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}",
+                    'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
                 ]
             interval: 5s
             timeout: 5s

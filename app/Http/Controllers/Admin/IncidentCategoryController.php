@@ -101,4 +101,3 @@ class IncidentCategoryController extends Controller
             ->with('success', sprintf('Kategori masalah "%s" berhasil dihapus.', $categoryName));
     }
 }
-

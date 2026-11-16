@@ -510,14 +510,12 @@
                                         @elseif ($resolvedPercentage >= 50)
                                             <span
                                                 class="inline-flex items-center px-3 py-1 rounded-md text-sm font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                {{ $resolvedReportIncidents }} dari {{ $totalReportIncidents }}
-                                                terselesaikan
+                                                {{ $resolvedReportIncidents }} dari {{ $totalReportIncidents }} terselesaikan
                                             </span>
                                         @else
                                             <span
                                                 class="inline-flex items-center px-3 py-1 rounded-md text-sm font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                                {{ $resolvedReportIncidents }} dari {{ $totalReportIncidents }}
-                                                terselesaikan
+                                                {{ $resolvedReportIncidents }} dari {{ $totalReportIncidents }} terselesaikan
                                             </span>
                                         @endif
                                     </td>

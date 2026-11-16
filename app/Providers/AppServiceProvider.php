@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -27,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         // 1. Larang seluruh perintah destruktif di lingkungan Production
         DB::prohibitDestructiveCommands($this->app->isProduction());
 
+        $this->configureTrustedProxies();
+
         $this->loadMigrationsFrom(database_path('migrations/pgsql'));
 
         // 2. Pasang Anti-Disaster Safeguard multi-lapis untuk database SQL Server RSSES
@@ -34,6 +37,22 @@ class AppServiceProvider extends ServiceProvider
 
         // 3. Daftarkan template pagination kustom
         Paginator::defaultView('vendor.pagination.custom');
+    }
+
+    public function configureTrustedProxies(): void
+    {
+        $trustedProxies = config('supervisi.trusted_proxies');
+        if (! is_string($trustedProxies) || trim($trustedProxies) === '') {
+            return;
+        }
+
+        $proxies = trim($trustedProxies) === '*'
+            ? '*'
+            : array_values(array_filter(array_map('trim', explode(',', $trustedProxies))));
+
+        if ($proxies !== []) {
+            TrustProxies::at($proxies);
+        }
     }
 
     /**

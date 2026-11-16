@@ -40,4 +40,3 @@ return new class extends Migration
         Schema::connection('sqlsrv')->dropIfExists('ref_master_nurse_supervision_role_permissions');
     }
 };
-

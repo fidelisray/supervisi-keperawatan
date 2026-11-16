@@ -212,7 +212,9 @@ class SupervisionReportController extends Controller
             'logoBase64' => $logoBase64,
             'printedAt' => now(),
             'printedBy' => $request->user()?->name ?: '-',
-        ])->setPaper('a4', 'portrait');
+        ])
+            ->setOption('enable_font_subsetting', true)
+            ->setPaper('a4', 'portrait');
 
         $filename = sprintf(
             'Laporan-Supervisi-RPT-%s.pdf',
@@ -576,37 +578,47 @@ class SupervisionReportController extends Controller
     private function resolvePdfLogo(): ?string
     {
         $logoPath = resource_path('images/web-icon.webp');
+        $fallbackLogoPath = resource_path('images/logo.png');
 
-        if (! is_file($logoPath)) {
-            return null;
-        }
+        if (is_file($logoPath)) {
+            $cacheDir = storage_path('framework/cache');
+            if (! is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
 
-        $cacheDir = storage_path('framework/cache');
-        if (! is_dir($cacheDir)) {
-            @mkdir($cacheDir, 0755, true);
-        }
+            $cacheFile = $cacheDir.'/pdf-logo-web-icon.png';
 
-        $cacheFile = $cacheDir.'/pdf-logo-web-icon.png';
+            if ((! is_file($cacheFile) || filesize($cacheFile) === 0 || filemtime($cacheFile) < filemtime($logoPath)) && function_exists('imagecreatefromwebp')) {
+                $src = @imagecreatefromwebp($logoPath);
+                if ($src !== false) {
+                    $w = imagesx($src);
+                    $h = imagesy($src);
+                    $targetW = 200;
+                    $targetH = (int) round(($h / max($w, 1)) * $targetW);
+                    $thumb = imagecreatetruecolor($targetW, $targetH);
+                    if ($thumb !== false) {
+                        imagealphablending($thumb, false);
+                        imagesavealpha($thumb, true);
+                        imagecopyresampled($thumb, $src, 0, 0, 0, 0, $targetW, $targetH, $w, $h);
+                        $tmpCacheFile = $cacheFile.'.'.uniqid('tmp_', true);
+                        if (@imagepng($thumb, $tmpCacheFile) && is_file($tmpCacheFile) && filesize($tmpCacheFile) > 0) {
+                            @rename($tmpCacheFile, $cacheFile);
+                        } else {
+                            @unlink($tmpCacheFile);
+                        }
+                    }
+                }
+            }
 
-        if (! file_exists($cacheFile) || filemtime($cacheFile) < filemtime($logoPath)) {
-            $src = @imagecreatefromwebp($logoPath);
-            if ($src) {
-                $w = imagesx($src);
-                $h = imagesy($src);
-                $targetW = 200;
-                $targetH = (int) round(($h / max($w, 1)) * $targetW);
-                $thumb = imagecreatetruecolor($targetW, $targetH);
-                imagealphablending($thumb, false);
-                imagesavealpha($thumb, true);
-                imagecopyresampled($thumb, $src, 0, 0, 0, 0, $targetW, $targetH, $w, $h);
-                imagepng($thumb, $cacheFile);
+            if (is_file($cacheFile) && filesize($cacheFile) > 0) {
+                return 'data:image/png;base64,'.base64_encode((string) file_get_contents($cacheFile));
             }
         }
 
-        if (file_exists($cacheFile)) {
-            return 'data:image/png;base64,'.base64_encode((string) file_get_contents($cacheFile));
+        if (is_file($fallbackLogoPath)) {
+            return 'data:image/png;base64,'.base64_encode((string) file_get_contents($fallbackLogoPath));
         }
 
-        return 'data:image/webp;base64,'.base64_encode((string) file_get_contents($logoPath));
+        return null;
     }
 }

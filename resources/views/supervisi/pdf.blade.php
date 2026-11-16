@@ -311,9 +311,9 @@
     @php
         $logoImage =
             $logoBase64 ??
-            (is_file(resource_path('images/web-icon.webp'))
-                ? 'data:image/webp;base64,' .
-                    base64_encode((string) file_get_contents(resource_path('images/web-icon.webp')))
+            (is_file(resource_path('images/logo.png'))
+                ? 'data:image/png;base64,' .
+                    base64_encode((string) file_get_contents(resource_path('images/logo.png')))
                 : null);
     @endphp
     <table class="letterhead-table">

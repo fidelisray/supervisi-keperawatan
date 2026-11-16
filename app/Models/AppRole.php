@@ -74,8 +74,12 @@ class AppRole extends Model
             $writeTable = (new AppRoleAssignment)->getTable();
             $connection = $this->getConnection();
             $isSqlSrv = $connection->getDriverName() === 'sqlsrv';
-            $readAppIdSelect = $isSqlSrv ? 'TRY_CAST(v.app_id AS INT) as app_id' : 'v.app_id';
-            $readAppRolesSelect = $isSqlSrv ? 'TRY_CAST(v.app_roles AS INT) as app_roles' : 'v.app_roles';
+            $readAppIdSelect = $isSqlSrv
+                ? "TRY_CAST(NULLIF(LTRIM(RTRIM(v.app_id)), '') AS INT) as app_id"
+                : 'v.app_id';
+            $readAppRolesSelect = $isSqlSrv
+                ? "TRY_CAST(NULLIF(LTRIM(RTRIM(v.app_roles)), '') AS INT) as app_roles"
+                : 'v.app_roles';
 
             $baseQuery = $connection->table($readTable.' as v')
                 ->selectRaw("v.nip, v.nama, {$readAppIdSelect}, v.app_name, {$readAppRolesSelect}, v.description")
