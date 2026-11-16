@@ -502,7 +502,7 @@ class SupervisionAnalyticsController extends Controller
                         $incidents = $report->incidents;
 
                         if ($incidents->isEmpty()) {
-                            fputcsv($handle, [
+                            fputcsv($handle, $this->sanitizeCsvRow([
                                 $rowNumber++,
                                 $report->id,
                                 $report->report_date?->format('d/m/Y') ?? '-',
@@ -520,7 +520,7 @@ class SupervisionAnalyticsController extends Controller
                                 'Tidak ada kejadian khusus yang dilaporkan',
                                 '-',
                                 '-',
-                            ], ';');
+                            ]), ';');
                         } else {
                             foreach ($incidents as $incident) {
                                 $statusLabel = match ($incident->status) {
@@ -530,7 +530,7 @@ class SupervisionAnalyticsController extends Controller
                                     default => ucfirst((string) $incident->status),
                                 };
 
-                                fputcsv($handle, [
+                                fputcsv($handle, $this->sanitizeCsvRow([
                                     $rowNumber++,
                                     $report->id,
                                     $report->report_date?->format('d/m/Y') ?? '-',
@@ -548,7 +548,7 @@ class SupervisionAnalyticsController extends Controller
                                     $incident->description ?: '-',
                                     $incident->action_taken ?: '-',
                                     $statusLabel,
-                                ], ';');
+                                ]), ';');
                             }
                         }
                     }
@@ -558,5 +558,29 @@ class SupervisionAnalyticsController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * @param  list<mixed>  $row
+     * @return list<mixed>
+     */
+    private function sanitizeCsvRow(array $row): array
+    {
+        return array_map(fn (mixed $value): mixed => $this->sanitizeCsvValue($value), $row);
+    }
+
+    private function sanitizeCsvValue(mixed $value): mixed
+    {
+        if (! is_string($value) || $value === '' || $value === '-') {
+            return $value;
+        }
+
+        $trimmed = ltrim($value);
+
+        if ($trimmed !== '' && in_array($trimmed[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 }

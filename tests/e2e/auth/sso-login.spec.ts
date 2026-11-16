@@ -69,4 +69,41 @@ test.describe('SSO Authentication Flow', () => {
     await expect(page).not.toHaveURL(/.*\/login/);
     await expect(page.locator('input#password')).toHaveCount(0);
   });
+
+  test('menolak percobaan SQL Injection pada form login tanpa membocorkan error database', async ({ page }) => {
+    await page.goto('/login');
+
+    await page.locator('input#nip').fill("5508150824' OR '1'='1");
+    await page.locator('input#password').fill("' OR '1'='1 --");
+    await page.getByRole('button', { name: /Masuk ke Sistem|Masuk ke Aplikasi/i }).click();
+
+    await expect(page).toHaveURL(/.*\/login/);
+    const alertBox = page.locator('[role="alert"]');
+    await expect(alertBox).toBeVisible();
+    await expect(alertBox).toContainText(/NIP atau kata sandi SSO yang Anda masukkan tidak sesuai/i);
+  });
+
+  test('merender token CSRF yang sinkron dan menolak permintaan POST login lintas situs dengan token tidak valid (HTTP 419)', async ({ page }) => {
+    await page.goto('/login');
+
+    const metaToken = await page.locator('meta[name="csrf-token"]').getAttribute('content');
+    const inputToken = await page.locator('form input[name="_token"]').inputValue();
+
+    expect(metaToken).toBeTruthy();
+    expect(inputToken).toBe(metaToken);
+
+    const forgedResponse = await page.request.post('/login', {
+      headers: {
+        'Sec-Fetch-Site': 'cross-site',
+        Origin: 'https://attacker.example.com',
+      },
+      form: {
+        _token: 'forged-invalid-csrf-token',
+        nip: '1672010896',
+        password: '123456',
+      },
+    });
+
+    expect(forgedResponse.status()).toBe(419);
+  });
 });

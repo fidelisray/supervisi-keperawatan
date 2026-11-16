@@ -166,7 +166,7 @@
 
                                     <form method="POST"
                                         action="{{ route('admin.incident-categories.destroy', $category) }}"
-                                        onsubmit="return confirm('Hapus kategori {{ addslashes($category->incident_category) }}? Kategori ini akan dinonaktifkan dari pilihan formulir logbook.');">
+                                        onsubmit="return confirm(@js('Hapus kategori '.$category->incident_category.'? Kategori ini akan dinonaktifkan dari pilihan formulir logbook.'));">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"

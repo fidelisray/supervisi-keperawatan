@@ -116,7 +116,7 @@
                                         </span>
                                     @else
                                         <button type="button"
-                                            @click="openPermissionModal({{ $roleId }}, '{{ addslashes($roleName) }}', {{ json_encode($rolePerms) }})"
+                                            @click="openPermissionModal({{ (int) $roleId }}, @js($roleName), @js($rolePerms))"
                                             class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold shadow-2xs {{ $permCount > 0 ? 'bg-teal-50 text-teal-800 border border-teal-300 hover:bg-teal-100' : 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100' }} transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500"
                                             title="Klik untuk mengatur hak akses role ini">
                                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24"
@@ -138,14 +138,14 @@
                                     @if ((int) $roleId > 1)
                                         <div class="inline-flex items-center gap-2">
                                             <button type="button"
-                                                @click="openRenameModal({{ $roleId }}, '{{ addslashes($roleName) }}')"
+                                                @click="openRenameModal({{ (int) $roleId }}, @js($roleName))"
                                                 class="px-2.5 py-1 rounded-md text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition cursor-pointer"
                                                 title="Ubah nama role ini">
                                                 Edit
                                             </button>
                                             <form method="POST"
                                                 action="{{ route('admin.roles.destroy-definition', $roleId) }}"
-                                                onsubmit="return confirm('Hapus definisi role {{ addslashes($roleName) }}?');"
+                                                onsubmit="return confirm(@js('Hapus definisi role '.$roleName.'?'));"
                                                 class="inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -291,7 +291,7 @@
 
                                             <form method="POST"
                                                 action="{{ route('admin.roles.destroy-user', $userRole->nip) }}"
-                                                onsubmit="return confirm('Cabut dan hapus hak akses untuk {{ addslashes($userRole->displayName()) }} (NIP: {{ $userRole->nip }})?');"
+                                                onsubmit="return confirm(@js('Cabut dan hapus hak akses untuk '.$userRole->displayName().' (NIP: '.$userRole->nip.')?'));"
                                                 class="inline">
                                                 @csrf
                                                 @method('DELETE')

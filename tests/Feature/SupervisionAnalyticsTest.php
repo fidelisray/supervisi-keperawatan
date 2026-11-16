@@ -395,3 +395,76 @@ test('analytics defaults to today preset, supports semua data chip, and shows fo
         ->and($all->viewData('totalIncidents'))->toBe(1)
         ->and($all->viewData('resolvedCount'))->toBe(1);
 });
+
+test('analytics csv export neutralizes spreadsheet formula injection payloads while keeping dash placeholders intact', function () {
+    $admin = User::factory()->create([
+        'nip' => '5508150824',
+        'name' => 'Purwanto Ali',
+        'app_roles' => 0,
+    ]);
+
+    $report = SupervisionReport::create([
+        'report_date' => now()->toDateString(),
+        'shift' => 'pagi',
+        'room_name' => 'FRANSISKUS',
+        'patient_count' => 10,
+        'nurse_count' => 2,
+        'supervisor_name' => $admin->name,
+        'nurse_in_charge' => 'Perawat 1',
+        'general_notes' => "=cmd|' /C calc'!A0",
+        'status' => 'submitted',
+    ]);
+
+    Incident::create([
+        'supervision_report_id' => $report->id,
+        'category' => 1,
+        'incident_time' => null,
+        'description' => '@SUM(1+1) Keluhan pasien',
+        'action_taken' => '-Koordinasi kepala ruang',
+        'status' => 'in_progress',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('supervisi.analytics.export', ['scope' => 'all']));
+    $response->assertSuccessful();
+
+    $csv = $response->streamedContent();
+
+    expect($csv)
+        ->toContain("\"'=cmd|' /C calc'!A0\"")
+        ->toContain("'@SUM(1+1) Keluhan pasien")
+        ->toContain("'-Koordinasi kepala ruang")
+        ->toContain(';-;')
+        ->not->toContain("';-;");
+});
+
+test('supervision report rejects incident description and action taken exceeding 2000 characters', function () {
+    $supervisor = User::factory()->create([
+        'nip' => '1672010896',
+        'name' => 'V. Erny Kristiana Santoso, S.Kep.Ners, M.Kep',
+        'app_roles' => 1,
+    ]);
+
+    $response = $this->actingAs($supervisor)
+        ->from(route('supervisi.create'))
+        ->post(route('supervisi.store'), [
+            'report_date' => now()->toDateString(),
+            'shift' => 'pagi',
+            'room_name' => 'FRANSISKUS',
+            'patient_count' => 10,
+            'nurse_count' => 2,
+            'incidents' => [
+                [
+                    'category' => 1,
+                    'description' => str_repeat('A', 2001),
+                    'action_taken' => str_repeat('B', 2001),
+                    'status' => 'in_progress',
+                ],
+            ],
+        ]);
+
+    $response->assertRedirect(route('supervisi.create'));
+    $response->assertSessionHasErrors([
+        'incidents.0.description',
+        'incidents.0.action_taken',
+    ]);
+});

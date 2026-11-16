@@ -480,8 +480,8 @@ class SupervisionReportController extends Controller
             'incidents.*.id' => ['nullable', 'integer'],
             'incidents.*.category' => ['required_with:incidents', 'integer', Rule::in($validCategoryIds)],
             'incidents.*.incident_time' => ['nullable', 'string', 'max:20'],
-            'incidents.*.description' => ['required_with:incidents', 'string'],
-            'incidents.*.action_taken' => ['nullable', 'string'],
+            'incidents.*.description' => ['required_with:incidents', 'string', 'max:2000'],
+            'incidents.*.action_taken' => ['nullable', 'string', 'max:2000'],
             // 'incidents.*.status' => ['nullable', 'in:in_progress,resolved,escalated'],
             'incidents.*.status' => ['nullable', 'in:in_progress,resolved'],
         ], [

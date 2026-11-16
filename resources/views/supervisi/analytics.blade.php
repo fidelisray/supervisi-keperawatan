@@ -328,7 +328,7 @@
                             @foreach($categoryStats as $stat)
                                 <button 
                                     type="button"
-                                    @click="openDrilldown({ category_id: '{{ $stat['id'] }}', title: 'Kategori: {{ addslashes($stat['label']) }}' })"
+                                    @click="openDrilldown({ category_id: @js((string) $stat['id']), title: @js('Kategori: '.$stat['label']) })"
                                     class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 text-left transition flex items-center justify-between group cursor-pointer"
                                 >
                                     <div class="flex items-center gap-2.5 min-w-0">
@@ -377,7 +377,7 @@
                             @foreach($statusStats as $key => $stat)
                                 <button
                                     type="button"
-                                    @click="openDrilldown({ status: '{{ $key }}', title: 'Status: {{ addslashes($stat['label']) }}' })"
+                                    @click="openDrilldown({ status: @js((string) $key), title: @js('Status: '.$stat['label']) })"
                                     class="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-center transition cursor-pointer"
                                 >
                                     <div class="w-3 h-3 mx-auto rounded-full mb-1.5" style="background-color: {{ $stat['hex'] }}"></div>
@@ -505,7 +505,7 @@
                                     <td class="px-4 py-4 text-right">
                                         <button 
                                             type="button"
-                                            @click="openDrilldown({ room: '{{ addslashes($roomStat['room_name']) }}', title: 'Ruangan: {{ addslashes($roomStat['room_name']) }}' })"
+                                            @click="openDrilldown({ room: @js((string) $roomStat['room_name']), title: @js('Ruangan: '.$roomStat['room_name']) })"
                                             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 hover:border-teal-300 transition cursor-pointer"
                                         >
                                             <span>Rincian</span>

@@ -4,9 +4,13 @@ use App\Models\AppRole;
 use App\Models\AppRoleAssignment;
 use App\Models\RefAppRole;
 use App\Models\User;
+use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -319,4 +323,123 @@ test('employee pre-registered in app_id 6 without globalaccount receives specifi
     $this->assertAuthenticated();
     expect(User::where('nip', '2351151100')->value('name'))
         ->toBe('Anastasia Naning Sudiar, S.Kep.Ners');
+});
+
+test('login resists sql injection payloads on nip and password and preserves database integrity', function (string $maliciousNip, string $maliciousPassword) {
+    $normalizedNip = Str::transliterate(Str::lower($maliciousNip));
+    RateLimiter::clear("sso-login:{$normalizedNip}|127.0.0.1");
+    RateLimiter::clear("sso-login-nip:{$normalizedNip}");
+
+    $initialGlobalAccountCount = DB::connection('sqlsrv')->table('tb_globalaccount')->count();
+    $initialAppRolesCount = DB::connection('sqlsrv')->table('tb_approles')->count();
+
+    $response = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => $maliciousNip,
+        'password' => $maliciousPassword,
+    ]);
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHasErrors([
+        'nip' => 'NIP atau kata sandi SSO yang Anda masukkan tidak sesuai.',
+    ]);
+    $this->assertGuest();
+
+    expect(DB::connection('sqlsrv')->table('tb_globalaccount')->count())->toBe($initialGlobalAccountCount)
+        ->and(DB::connection('sqlsrv')->table('tb_approles')->count())->toBe($initialAppRolesCount)
+        ->and(Schema::hasTable('users'))->toBeTrue();
+})->with([
+    'classic OR tautology' => ["' OR '1'='1", "' OR '1'='1"],
+    'numeric OR tautology with SQL comment' => ["' OR 1=1 --", 'sembarang123'],
+    'parenthesized tautology' => ["') OR ('1'='1", 'sembarang123'],
+    'admin NIP comment truncation' => ["5508150824' --", 'sembarang123'],
+    'admin NIP inline tautology' => ["5508150824' OR 'a'='a", 'sembarang123'],
+    'supervisor NIP comment truncation' => ["1672010896'/*", 'sembarang123'],
+    'valid NIP with SQLi in password' => ['1672010896', "' OR '1'='1' --"],
+    'UNION SELECT 3 columns' => ["' UNION SELECT 1,2,3--", 'sembarang123'],
+    'stacked query DROP TABLE attempt' => ["'; DROP TABLE users;--", 'sembarang123'],
+]);
+
+test('login rejects array type juggling injection and oversized sqli payloads at validation boundary', function () {
+    $arrayResponse = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => ['$ne' => null],
+        'password' => ['$gt' => ''],
+    ]);
+
+    $arrayResponse->assertRedirect(route('login'));
+    $arrayResponse->assertSessionHasErrors(['nip', 'password']);
+    $this->assertGuest();
+
+    $longSqlPayload = "' UNION SELECT id, nip, kata_sandi FROM tb_globalaccount WHERE '1'='1";
+    $longResponse = $this->from(route('login'))->post(route('login.store'), [
+        'nip' => $longSqlPayload,
+        'password' => 'rahasia123',
+    ]);
+
+    $longResponse->assertRedirect(route('login'));
+    $longResponse->assertSessionHasErrors([
+        'nip' => 'Nomor Induk Pegawai (NIP) maksimal 30 karakter.',
+    ]);
+    $this->assertGuest();
+});
+
+test('login and logout endpoints enforce csrf token protection against cross-site request forgery', function () {
+    $this->app->bind(
+        PreventRequestForgery::class,
+        fn ($app) => new class($app, $app->make(Encrypter::class)) extends PreventRequestForgery
+        {
+            protected function runningUnitTests(): bool
+            {
+                return false;
+            }
+        }
+    );
+
+    // TC-CSRF-01: Form login merender input hidden _token dan meta csrf-token
+    $loginPage = $this->get(route('login'));
+    $loginPage->assertSuccessful()
+        ->assertSee('name="_token"', false)
+        ->assertSee('name="csrf-token"', false);
+
+    // TC-CSRF-02: Login CSRF tanpa _token ditolak dengan HTTP 419
+    $missingTokenResponse = $this->withHeaders(['Sec-Fetch-Site' => 'cross-site'])
+        ->post(route('login.store'), [
+            'nip' => '1672010896',
+            'password' => 'rahasia123',
+        ]);
+
+    $missingTokenResponse->assertStatus(419);
+    $this->assertGuest();
+
+    // TC-CSRF-03: Login CSRF dengan _token palsu/dimanipulasi ditolak dengan HTTP 419
+    $invalidTokenResponse = $this->withSession(['_token' => 'token-sesi-asli-123'])
+        ->withHeaders(['Sec-Fetch-Site' => 'cross-site'])
+        ->post(route('login.store'), [
+            '_token' => 'token-palsu-999',
+            'nip' => '1672010896',
+            'password' => 'rahasia123',
+        ]);
+
+    $invalidTokenResponse->assertStatus(419);
+    $this->assertGuest();
+
+    // TC-CSRF-04: Login dengan _token sesi yang valid berhasil
+    $validTokenResponse = $this->withSession(['_token' => 'token-sesi-asli-123'])
+        ->post(route('login.store'), [
+            '_token' => 'token-sesi-asli-123',
+            'nip' => '1672010896',
+            'password' => 'rahasia123',
+        ]);
+
+    $validTokenResponse->assertRedirect(route('supervisi.create'));
+    $this->assertAuthenticated();
+
+    // TC-CSRF-05: Logout CSRF lintas situs dengan token palsu ditolak (HTTP 419) dan sesi tetap terjaga
+    $forgedLogoutResponse = $this->withSession(['_token' => 'token-sesi-baru-456'])
+        ->withHeaders(['Sec-Fetch-Site' => 'cross-site'])
+        ->post(route('logout'), [
+            '_token' => 'token-palsu-logout',
+        ]);
+
+    $forgedLogoutResponse->assertStatus(419);
+    $this->assertAuthenticated();
 });
