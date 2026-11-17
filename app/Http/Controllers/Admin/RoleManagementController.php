@@ -60,6 +60,7 @@ class RoleManagementController extends Controller
             ->all();
 
         $unregisteredEmployees = Employee::query()
+            ->active()
             ->nurses()
             ->whereNotIn('nip', $registeredNips)
             ->orderBy('nama')
@@ -242,35 +243,49 @@ class RoleManagementController extends Controller
             ->first(['nip', 'app_roles']);
 
         if (! $request->user()?->isAdmin()) {
-            if ($roleId === AppRole::ROLE_ADMIN || ($existingAppRole !== null && (int) $existingAppRole->app_roles === AppRole::ROLE_ADMIN)) {
+            $existingIsAdmin = $existingAppRole !== null
+                && $existingAppRole->app_roles !== null
+                && (int) $existingAppRole->app_roles === AppRole::ROLE_ADMIN;
+
+            if ($roleId === AppRole::ROLE_ADMIN || $existingIsAdmin) {
                 throw ValidationException::withMessages([
                     'app_roles' => 'Hanya Administrator utama yang dapat memberikan atau mengubah hak akses level Administrator.',
                 ]);
             }
         }
 
+        if ($existingAppRole !== null) {
+            throw ValidationException::withMessages([
+                'nip' => 'Pegawai dengan NIP tersebut sudah terdaftar. Silakan ubah role melalui tabel Daftar Pengguna Terdaftar.',
+            ]);
+        }
+
         $employee = Employee::query()
+            ->active()
             ->nurses()
             ->where('nip', $nip)
             ->first(['nip', 'nama']);
 
         if ($employee === null) {
             throw ValidationException::withMessages([
-                'nip' => 'Pegawai perawat dengan NIP tersebut tidak ditemukan di master pegawai rumah sakit.',
+                'nip' => 'Pegawai perawat aktif dengan NIP tersebut tidak ditemukan di master pegawai rumah sakit.',
             ]);
         }
 
-        AppRoleAssignment::upsertForSupervisiUser($employee->nip, $roleId);
+        $normalizedNip = trim((string) $employee->nip);
+        $normalizedNama = trim((string) $employee->nama);
+
+        AppRoleAssignment::upsertForSupervisiUser($normalizedNip, $roleId);
 
         User::query()
-            ->where('nip', $employee->nip)
+            ->where('nip', $normalizedNip)
             ->update([
-                'name' => trim((string) $employee->nama),
+                'name' => $normalizedNama,
                 'app_roles' => $roleId,
             ]);
 
         return redirect()->route('admin.roles.index')
-            ->with('success', "Hak akses untuk {$employee->nama} (NIP: {$employee->nip}) berhasil disimpan.");
+            ->with('success', "Hak akses untuk {$normalizedNama} (NIP: {$normalizedNip}) berhasil disimpan.");
     }
 
     public function updateUserRole(Request $request, string $nip): RedirectResponse

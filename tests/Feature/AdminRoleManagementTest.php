@@ -2,6 +2,7 @@
 
 use App\Models\AppRole;
 use App\Models\AppRoleAssignment;
+use App\Models\Employee;
 use App\Models\RefAppRole;
 use App\Models\RolePermission;
 use App\Models\User;
@@ -805,4 +806,267 @@ test('ref app role seeder syncs ref_approles without modifying tb_approles or te
         ->and($connection->table('tb_master_nurse_supervision_approles')->count())->toBe(0)
         ->and($connection->table('tb_approles')->where('app_id', 6)->orderBy('nip')->pluck('app_roles', 'nip')->all())
         ->toBe($initialProdUsers);
+});
+
+test('admin roles index and assignUserRole filter only active nursing employees across ref_profesi and degree patterns', function () {
+    $connection = DB::connection('sqlsrv');
+
+    $connection->table('ref_profesi')->insert([
+        ['id' => 10, 'nama' => '  Perawat  '],
+        ['id' => 11, 'nama' => 'Perawat PK I'],
+        ['id' => 12, 'nama' => 'Perawat Staf Keperawatan'],
+        ['id' => 13, 'nama' => 'PERAWAT GIGI'],
+        ['id' => 14, 'nama' => 'Asisten Perawat'],
+        ['id' => 15, 'nama' => 'Direktur Keperawatan'],
+        ['id' => 16, 'nama' => 'PK Pastoral Care Keperawatan'],
+    ]);
+
+    $connection->table('tb_employees')->insert([
+        ['nip' => '7788000001', 'nama' => 'Sr. Maria, OSF', 'id_profesi' => ' 888 ', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000002', 'nama' => 'Sr. Clara, SST', 'id_profesi' => '10', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000003', 'nama' => 'Dian Puspita', 'id_profesi' => '11', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000004', 'nama' => 'Novianti', 'id_profesi' => '12', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000005', 'nama' => 'Rina Wijaya, S.Kep. Ners', 'id_profesi' => '999', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000006', 'nama' => 'Lestari, A.Md.Kep', 'id_profesi' => null, 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000007', 'nama' => 'Yuniar, A.Md. Kep', 'id_profesi' => '', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000008', 'nama' => 'Ratna Sari, S.Tr.Kep.Ners', 'id_profesi' => '999', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000009', 'nama' => 'Dewi Sartika, AMK', 'id_profesi' => '999', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000010', 'nama' => 'Mantan Perawat, S.Kep.Ners', 'id_profesi' => '888', 'status_karyawan' => 'TIDAK AKTIF'],
+        ['nip' => '7788000011', 'nama' => 'Alumni AMK, AMK', 'id_profesi' => '10', 'status_karyawan' => 'RESIGN'],
+        ['nip' => '7788000012', 'nama' => 'Sari Gigi, AMKg', 'id_profesi' => '13', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000013', 'nama' => 'Admin Keperawatan, S.E.', 'id_profesi' => '56', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000014', 'nama' => 'Budi Asisten', 'id_profesi' => '14', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000015', 'nama' => 'Dr. Sinta Direktur', 'id_profesi' => '15', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000016', 'nama' => 'Romo Pastoral', 'id_profesi' => '16', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000017', 'nama' => 'Non Numeric Profesi', 'id_profesi' => 'ABC', 'status_karyawan' => 'AKTIF'],
+    ]);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+    $response->assertSuccessful();
+
+    $candidateNips = $response->viewData('unregisteredEmployees')->pluck('nip')->all();
+
+    expect($candidateNips)->toContain(
+        '1355010892',
+        '7788000001',
+        '7788000002',
+        '7788000003',
+        '7788000004',
+        '7788000005',
+        '7788000006',
+        '7788000007',
+        '7788000008',
+        '7788000009',
+    )->not->toContain(
+        '7788000010',
+        '7788000011',
+        '7788000012',
+        '7788000013',
+        '7788000014',
+        '7788000015',
+        '7788000016',
+        '7788000017',
+    );
+
+    // Inactive nurse, AMKg / PERAWAT GIGI, and non-nurse nursing admin must be rejected by assignUserRole
+    foreach (['7788000010', '7788000011', '7788000012', '7788000013', '7788000014', '7788000015', '7788000016', '7788000017'] as $rejectedNip) {
+        $this->actingAs($this->admin)
+            ->from(route('admin.roles.index'))
+            ->post(route('admin.roles.assign-user'), [
+                'nip' => $rejectedNip,
+                'app_roles' => 1,
+            ])
+            ->assertSessionHasErrors([
+                'nip' => 'Pegawai perawat aktif dengan NIP tersebut tidak ditemukan di master pegawai rumah sakit.',
+            ]);
+    }
+
+    // Active nurses from ref_profesi (OSF without nursing title) and expanded degree (A.Md.Kep) succeed
+    foreach (['7788000001', '7788000006'] as $acceptedNip) {
+        $this->actingAs($this->admin)
+            ->post(route('admin.roles.assign-user'), [
+                'nip' => $acceptedNip,
+                'app_roles' => 1,
+            ])
+            ->assertRedirect(route('admin.roles.index'));
+
+        expect(AppRole::where('app_id', 6)->where('nip', $acceptedNip)->value('app_roles'))->toBe(1);
+    }
+});
+
+test('employee scopeNurses falls back gracefully to degree matching when ref_profesi table does not exist', function () {
+    Schema::connection('sqlsrv')->dropIfExists('ref_profesi');
+
+    DB::connection('sqlsrv')->table('tb_employees')->insert([
+        ['nip' => '7788000031', 'nama' => 'Sari, A.Md.Kep', 'id_profesi' => '888', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000032', 'nama' => 'Sr. Maria, OSF', 'id_profesi' => '888', 'status_karyawan' => 'AKTIF'],
+        ['nip' => '7788000033', 'nama' => 'Nonaktif, S.Kep.Ners', 'id_profesi' => '888', 'status_karyawan' => 'TIDAK AKTIF'],
+    ]);
+
+    $nips = Employee::query()->active()->nurses()->pluck('nip')->all();
+
+    expect($nips)->toContain('1355010892', '7788000031')
+        ->not->toContain('7788000032', '7788000033');
+});
+
+test('admin roles index trims employee JSON fields and assignUserRole rejects already registered NIP', function () {
+    DB::connection('sqlsrv')->table('tb_employees')->insert([
+        [
+            'nip' => '7788000020',
+            'nama' => '  Siti Aminah, S.Kep.Ners   ',
+            'id_profesi' => '888',
+            'status_karyawan' => 'AKTIF',
+        ],
+        [
+            'nip' => '  7788000021  ',
+            'nama' => 'Rudi Hartono, AMK',
+            'id_profesi' => '888',
+            'status_karyawan' => 'AKTIF',
+        ],
+    ]);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+    $response->assertSuccessful()
+        ->assertSee('"nip":"7788000020","name":"Siti Aminah, S.Kep.Ners"', false)
+        ->assertSee('"nip":"7788000021","name":"Rudi Hartono, AMK"', false)
+        ->assertDontSee('Siti Aminah, S.Kep.Ners   ', false)
+        ->assertDontSee('"  7788000021  "', false);
+
+    // Already-registered NIP (1672010896) must be rejected by assignUserRole rather than silently updated
+    $this->actingAs($this->admin)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '1672010896',
+            'app_roles' => 0,
+        ])
+        ->assertSessionHasErrors([
+            'nip' => 'Pegawai dengan NIP tersebut sudah terdaftar. Silakan ubah role melalui tabel Daftar Pengguna Terdaftar.',
+        ]);
+
+    expect(AppRole::where('app_id', 6)->where('nip', '1672010896')->value('app_roles'))->toBe(1);
+
+    // Assigning unregistered employee with trailing spaces in nama stores trimmed name on local User and flash
+    $existingLocalUser = User::factory()->create([
+        'nip' => '7788000020',
+        'name' => 'Placeholder',
+        'app_roles' => 1,
+    ]);
+
+    $assignResponse = $this->actingAs($this->admin)
+        ->post(route('admin.roles.assign-user'), [
+            'nip' => '7788000020',
+            'app_roles' => 1,
+        ]);
+
+    $assignResponse->assertRedirect(route('admin.roles.index'))
+        ->assertSessionHas('success', 'Hak akses untuk Siti Aminah, S.Kep.Ners (NIP: 7788000020) berhasil disimpan.');
+
+    expect($existingLocalUser->fresh()->name)->toBe('Siti Aminah, S.Kep.Ners');
+});
+
+test('non-admin user with manage_roles does not see Administrator option in assign modal role select', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 2,
+        'role_name' => 'KOORDINATOR ROLE',
+    ]);
+    RefAppRole::syncPermissions(2, ['manage_roles']);
+
+    $coordinator = User::factory()->create([
+        'nip' => '2351151100',
+        'name' => 'Anastasia Naning Sudiar, S.Kep.Ners',
+        'app_roles' => 2,
+    ]);
+
+    $coordinatorResponse = $this->actingAs($coordinator)->get(route('admin.roles.index'));
+    $coordinatorResponse->assertSuccessful();
+
+    preg_match('/<select[^>]*id="assign_role"[^>]*>.*?<\/select>/s', $coordinatorResponse->getContent(), $coordinatorSelect);
+    expect($coordinatorSelect[0] ?? '')->not->toBe('')
+        ->toContain('value="1"')
+        ->toContain('value="2"')
+        ->not->toContain('value="0"');
+
+    $adminResponse = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+    $adminResponse->assertSuccessful();
+
+    preg_match('/<select[^>]*id="assign_role"[^>]*>.*?<\/select>/s', $adminResponse->getContent(), $adminSelect);
+    expect($adminSelect[0] ?? '')->toContain('value="0"')
+        ->toContain('value="1"')
+        ->toContain('value="2"');
+
+    // Coordinator cannot hijack or overwrite an existing Role 0 admin via assignUserRole
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            '_modal' => 'assign_user',
+            'nip' => $this->admin->nip,
+            'app_roles' => 1,
+        ])
+        ->assertSessionHasErrors('app_roles');
+
+    expect(AppRole::where('nip', $this->admin->nip)->value('app_roles'))->toBe(0);
+
+    // Tampered app_roles=0 submitted by non-admin recovers assignRoleId back to '1' rather than '0'
+    $tamperedRecovery = $this->actingAs($coordinator)
+        ->followingRedirects()
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            '_modal' => 'assign_user',
+            'nip' => '1355010892',
+            'app_roles' => 0,
+        ]);
+
+    $tamperedRecovery->assertSuccessful()
+        ->assertSee('const initialAssignRoleId = "1";', false)
+        ->assertSee('? "1355010892"', false);
+
+    // Non-admin coordinator also cannot re-assign an already registered non-admin supervisor
+    $this->actingAs($coordinator)
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            '_modal' => 'assign_user',
+            'nip' => '1672010896',
+            'app_roles' => 2,
+        ])
+        ->assertSessionHasErrors([
+            'nip' => 'Pegawai dengan NIP tersebut sudah terdaftar. Silakan ubah role melalui tabel Daftar Pengguna Terdaftar.',
+        ]);
+});
+
+test('admin roles page renders dropdown limit footer with eager SSR over 80 candidates and recovers old input safely', function () {
+    $extraEmployees = [];
+    for ($i = 1; $i <= 82; $i++) {
+        $extraEmployees[] = [
+            'nip' => sprintf('779900%04d', $i),
+            'nama' => sprintf('Perawat Uji %03d, S.Kep.Ners', $i),
+            'id_profesi' => '888',
+            'status_karyawan' => 'AKTIF',
+        ];
+    }
+    DB::connection('sqlsrv')->table('tb_employees')->insert($extraEmployees);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $response->assertSuccessful()
+        ->assertSee('filteredEmployees.length > 80', false)
+        ->assertSee('Menampilkan 80 dari', false)
+        ->assertSee('"nip":"7799000082"', false);
+
+    expect($response->viewData('unregisteredEmployees')->count())->toBeGreaterThan(80);
+
+    // Verify failed assign_user submission clears invalid oldNip and rejects non-integer app_roles in Alpine initialization
+    $failedSubmit = $this->actingAs($this->admin)
+        ->followingRedirects()
+        ->from(route('admin.roles.index'))
+        ->post(route('admin.roles.assign-user'), [
+            '_modal' => 'assign_user',
+            'nip' => 'INVALID999',
+            'app_roles' => '0.5',
+        ]);
+
+    $failedSubmit->assertSuccessful()
+        ->assertSee('const initialAssignRoleId = "1";', false)
+        ->assertSee('selectedNip: matchedOld ? matchedOld.nip : \'\'', false)
+        ->assertDontSee('NIP: INVALID999', false);
 });

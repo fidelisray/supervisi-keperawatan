@@ -5,11 +5,36 @@
         $unregisteredEmployeesJson = $unregisteredEmployees
             ->map(
                 fn($emp) => [
-                    'nip' => $emp->nip,
-                    'name' => $emp->nama,
+                    'nip' => trim((string) $emp->nip),
+                    'name' => trim((string) $emp->nama),
                 ],
             )
             ->values();
+
+        $isCurrentUserAdmin = (bool) auth()->user()?->isAdmin();
+        $assignableRoles = collect($availableRoles)
+            ->filter(
+                fn(string $roleName, int|string $roleId): bool => $isCurrentUserAdmin ||
+                    (int) $roleId !== \App\Models\AppRole::ROLE_ADMIN,
+            )
+            ->all();
+
+        $defaultAssignRoleId = (string) (array_key_exists(\App\Models\AppRole::ROLE_SUPERVISOR, $assignableRoles)
+            ? \App\Models\AppRole::ROLE_SUPERVISOR
+            : (array_key_first($assignableRoles) ?? \App\Models\AppRole::ROLE_SUPERVISOR));
+
+        $oldAssignRoleRaw = old('app_roles');
+        $oldAssignRoleStr = is_string($oldAssignRoleRaw) || is_int($oldAssignRoleRaw)
+            ? trim((string) $oldAssignRoleRaw)
+            : '';
+        $initialAssignRoleId =
+            $errors->any() &&
+            old('_modal') === 'assign_user' &&
+            $oldAssignRoleStr !== '' &&
+            ctype_digit($oldAssignRoleStr) &&
+            array_key_exists((int) $oldAssignRoleStr, $assignableRoles)
+                ? (string) ((int) $oldAssignRoleStr)
+                : $defaultAssignRoleId;
     @endphp
 
     <div class="max-w-7xl mx-auto space-y-8" x-data="adminRolesPage()">
@@ -641,7 +666,7 @@
                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     class="relative transform overflow-visible rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-slate-200">
                     <form x-data="adminAssignEmployeeRole()" action="{{ route('admin.roles.assign-user') }}" method="POST"
-                        @submit="handleSubmit($event)">
+                        @submit="handleSubmit($event)" @reset-assign-user-modal.window="resetState()">
                         @csrf
                         <input type="hidden" name="_modal" value="assign_user">
                         <input type="hidden" name="nip" :value="selectedNip">
@@ -667,7 +692,8 @@
 
                         <div class="px-6 py-5 space-y-5">
                             @if ($errors->any() && old('_modal') === 'assign_user')
-                                <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm font-medium"
+                                <div x-show="showServerError"
+                                    class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm font-medium"
                                     role="alert">
                                     {{ $errors->first() }}
                                 </div>
@@ -682,17 +708,18 @@
                                 <div class="relative" @click.outside="closeDropdown()">
                                     <div class="relative">
                                         <input type="text" id="assign_employee_search" x-ref="employeeSearchInput"
-                                            x-model="employeeSearch" @focus="isOpen = true"
-                                            @input="onSearchInput(); isOpen = true; highlightIndex = 0"
+                                            x-model="employeeSearch" @focus="openDropdown()"
+                                            @click="if (!isOpen) { openDropdown(); }"
+                                            @input="onSearchInput()"
                                             @keydown.arrow-down.prevent="highlightNext()"
                                             @keydown.arrow-up.prevent="highlightPrev()"
-                                            @keydown.enter.prevent="selectHighlighted()"
+                                            @keydown.enter="if (isOpen) { $event.preventDefault(); selectHighlighted(); }"
                                             @keydown.escape="if (isOpen) { $event.stopPropagation(); closeDropdown(); }"
                                             autocomplete="off" placeholder="Ketik Nama atau NIP pegawai..."
                                             class="w-full px-3.5 py-2.5 pr-9 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-teal-500">
                                         <button type="button" x-show="employeeSearch && employeeSearch.length > 0"
-                                            @click="selectedNip = ''; employeeSearch = ''; isOpen = true; $refs.employeeSearchInput.focus()"
-                                            class="absolute inset-y-0 right-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                                            @click="clearSelection()"
+                                            class="absolute inset-y-0 right-2.5 flex items-center text-slate-500 hover:text-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
                                             aria-label="Hapus pilihan pegawai">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
@@ -706,7 +733,7 @@
                                     <div x-show="isOpen" x-cloak
                                         class="absolute left-0 right-0 z-30 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
                                         <template x-if="filteredEmployees.length === 0">
-                                            <div class="px-4 py-3 text-xs text-slate-500 text-center">
+                                            <div class="px-4 py-3 text-xs text-slate-600 text-center">
                                                 Pegawai tidak ditemukan atau seluruhnya sudah terdaftar.
                                             </div>
                                         </template>
@@ -722,9 +749,17 @@
                                                 class="w-full px-3.5 py-2.5 text-left flex items-center justify-between gap-2 transition cursor-pointer">
                                                 <span class="text-xs font-semibold truncate" x-text="emp.name"></span>
                                                 <span
-                                                    class="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0"
+                                                    class="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded shrink-0"
                                                     x-text="'NIP: ' + emp.nip"></span>
                                             </button>
+                                        </template>
+                                        <template x-if="filteredEmployees.length > 80">
+                                            <div
+                                                class="sticky bottom-0 px-3.5 py-2 text-xs text-slate-600 bg-slate-50 border-t border-slate-200 text-center">
+                                                Menampilkan 80 dari <span class="font-semibold text-slate-800"
+                                                    x-text="filteredEmployees.length"></span> pegawai. Ketik nama atau
+                                                NIP untuk mempersempit hasil.
+                                            </div>
                                         </template>
                                     </div>
                                 </div>
@@ -739,7 +774,7 @@
                                 </label>
                                 <select id="assign_role" name="app_roles" x-model="assignRoleId" required
                                     class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-teal-500">
-                                    @foreach ($availableRoles as $roleId => $roleName)
+                                    @foreach ($assignableRoles as $roleId => $roleName)
                                         <option value="{{ $roleId }}">{{ $roleId }} —
                                             {{ $roleName }}</option>
                                     @endforeach
@@ -827,7 +862,11 @@
                 },
 
                 closeAssignUserModal() {
+                    if (!this.assignUserModalOpen) {
+                        return;
+                    }
                     this.assignUserModalOpen = false;
+                    window.dispatchEvent(new CustomEvent('reset-assign-user-modal'));
                 },
 
                 openPermissionModal(roleId, roleName, currentPermissions) {
@@ -875,45 +914,93 @@
         function adminAssignEmployeeRole() {
             const allEmployees = @json($unregisteredEmployeesJson);
             const isAssignModalValidationError = @json($errors->any() && old('_modal') === 'assign_user');
-            const oldNip = isAssignModalValidationError ? @json((string) old('nip', '')) : '';
-            const matchedOld = allEmployees.find(e => e.nip === oldNip);
+            const oldNip = isAssignModalValidationError
+                ? @json(is_scalar(old('nip')) ? trim((string) old('nip')) : '')
+                : '';
+            const matchedOld = oldNip !== '' ? allEmployees.find(e => e.nip === oldNip) : undefined;
+            const defaultAssignRoleId = @json($defaultAssignRoleId);
+            const initialAssignRoleId = @json($initialAssignRoleId);
             const rolePermissionsMap = @json($rolePermissionsMap);
             const permissionLabels = @json($permissionLabels);
 
             return {
                 employees: allEmployees,
-                employeeSearch: matchedOld ? `${matchedOld.name} (NIP: ${matchedOld.nip})` : (oldNip ? `NIP: ${oldNip}` :
-                    ''),
-                selectedNip: oldNip,
-                assignRoleId: isAssignModalValidationError ? @json((string) old('app_roles', '1')) : '1',
+                employeeSearch: matchedOld ? `${matchedOld.name} (NIP: ${matchedOld.nip})` : '',
+                selectedNip: matchedOld ? matchedOld.nip : '',
+                assignRoleId: initialAssignRoleId,
                 isOpen: false,
                 highlightIndex: 0,
                 employeeError: '',
+                showServerError: isAssignModalValidationError,
 
                 get selectedRolePermissionLabels() {
                     const keys = rolePermissionsMap[Number(this.assignRoleId)] || [];
                     return keys.map(k => permissionLabels[k] || k);
                 },
 
+                formatEmployeeLabel(emp) {
+                    return `${emp.name} (NIP: ${emp.nip})`;
+                },
+
                 get filteredEmployees() {
-                    const q = (this.employeeSearch || '').trim().toLowerCase();
-                    if (!q) return this.employees;
+                    const rawSearch = (this.employeeSearch || '').trim();
+                    if (!rawSearch) {
+                        return this.employees;
+                    }
+
+                    if (this.selectedNip) {
+                        const selected = this.employees.find(e => e.nip === this.selectedNip);
+                        if (selected && rawSearch === this.formatEmployeeLabel(selected)) {
+                            return this.employees;
+                        }
+                    }
+
+                    const q = rawSearch.toLowerCase();
                     return this.employees.filter(e =>
                         e.name.toLowerCase().includes(q) ||
                         (e.nip && e.nip.toLowerCase().includes(q))
                     );
                 },
 
-                onSearchInput() {
-                    this.employeeError = '';
-                    if (!this.employeeSearch || this.employeeSearch.trim() === '') {
-                        this.selectedNip = '';
+                openDropdown() {
+                    this.isOpen = true;
+                    if (this.selectedNip) {
+                        const selectedIdx = this.filteredEmployees.findIndex(e => e.nip === this.selectedNip);
+                        this.highlightIndex = selectedIdx >= 0 && selectedIdx < 80 ? selectedIdx : 0;
+                    } else {
+                        this.highlightIndex = 0;
                     }
+                },
+
+                resetState() {
+                    this.employeeSearch = '';
+                    this.selectedNip = '';
+                    this.assignRoleId = defaultAssignRoleId;
+                    this.isOpen = false;
+                    this.highlightIndex = 0;
+                    this.employeeError = '';
+                    this.showServerError = false;
+                },
+
+                clearSelection() {
+                    this.selectedNip = '';
+                    this.employeeSearch = '';
+                    this.highlightIndex = 0;
+                    this.employeeError = '';
+                    this.isOpen = true;
+                    this.$refs.employeeSearchInput?.focus();
+                },
+
+                onSearchInput() {
+                    this.selectedNip = '';
+                    this.employeeError = '';
+                    this.isOpen = true;
+                    this.highlightIndex = 0;
                 },
 
                 selectEmployee(emp) {
                     this.selectedNip = emp.nip;
-                    this.employeeSearch = `${emp.name} (NIP: ${emp.nip})`;
+                    this.employeeSearch = this.formatEmployeeLabel(emp);
                     this.employeeError = '';
                     this.isOpen = false;
                 },
@@ -930,8 +1017,7 @@
                 highlightNext() {
                     const visibleLength = Math.min(this.filteredEmployees.length, 80);
                     if (!this.isOpen) {
-                        this.isOpen = true;
-                        this.highlightIndex = 0;
+                        this.openDropdown();
                         return;
                     }
                     if (this.highlightIndex < visibleLength - 1) {
@@ -945,39 +1031,76 @@
                     }
                 },
 
+                resolveExactMatch() {
+                    const raw = (this.employeeSearch || '').trim();
+                    if (!raw) {
+                        return { status: 'empty', employee: null };
+                    }
+
+                    const q = raw.toLowerCase();
+                    const nipMatch = this.employees.find(e => (e.nip || '').trim().toLowerCase() === q);
+                    if (nipMatch) {
+                        return { status: 'matched', employee: nipMatch };
+                    }
+
+                    const labelMatch = this.employees.find(e => this.formatEmployeeLabel(e).toLowerCase() === q);
+                    if (labelMatch) {
+                        return { status: 'matched', employee: labelMatch };
+                    }
+
+                    const nameMatches = this.employees.filter(e => (e.name || '').trim().toLowerCase() === q);
+                    if (nameMatches.length === 1) {
+                        return { status: 'matched', employee: nameMatches[0] };
+                    }
+
+                    if (nameMatches.length > 1) {
+                        return { status: 'ambiguous', employee: null };
+                    }
+
+                    return { status: 'none', employee: null };
+                },
+
                 closeDropdown() {
                     this.isOpen = false;
                     if (!this.employeeSearch || this.employeeSearch.trim() === '') {
                         this.selectedNip = '';
                         return;
                     }
-                    const exact = this.employees.find(e =>
-                        e.nip.toLowerCase() === this.employeeSearch.trim().toLowerCase() ||
-                        e.name.toLowerCase() === this.employeeSearch.trim().toLowerCase()
-                    );
-                    if (exact) {
-                        this.selectEmployee(exact);
-                    } else if (!this.selectedNip) {
-                        this.employeeSearch = '';
+
+                    if (this.selectedNip) {
+                        return;
+                    }
+
+                    const match = this.resolveExactMatch();
+                    if (match.status === 'matched') {
+                        this.selectEmployee(match.employee);
+                    } else if (match.status === 'ambiguous') {
+                        this.employeeError = 'Terdapat lebih dari satu pegawai dengan nama tersebut. Silakan pilih langsung berdasarkan NIP.';
                     }
                 },
 
                 handleSubmit(event) {
-                    if (!this.selectedNip && this.filteredEmployees.length > 0) {
-                        const exact = this.employees.find(e =>
-                            e.nip.toLowerCase() === this.employeeSearch.trim().toLowerCase() ||
-                            e.name.toLowerCase() === this.employeeSearch.trim().toLowerCase()
-                        );
-                        if (exact) {
-                            this.selectEmployee(exact);
-                        } else if (this.filteredEmployees.length === 1) {
+                    if (!this.selectedNip) {
+                        const match = this.resolveExactMatch();
+                        if (match.status === 'matched') {
+                            this.selectEmployee(match.employee);
+                        } else if (match.status === 'ambiguous') {
+                            event.preventDefault();
+                            this.employeeError = 'Terdapat lebih dari satu pegawai dengan nama tersebut. Silakan pilih langsung berdasarkan NIP.';
+                            this.openDropdown();
+                            this.$refs.employeeSearchInput?.focus();
+                            return;
+                        } else if (this.filteredEmployees.length === 1 && (this.employeeSearch || '').trim() !== '') {
                             this.selectEmployee(this.filteredEmployees[0]);
                         }
                     }
 
                     if (!this.selectedNip || this.selectedNip.trim() === '') {
                         event.preventDefault();
-                        this.employeeError = 'Silakan pilih salah satu pegawai dari hasil pencarian.';
+                        if (!this.employeeError) {
+                            this.employeeError = 'Silakan pilih salah satu pegawai dari hasil pencarian.';
+                        }
+                        this.openDropdown();
                         this.$refs.employeeSearchInput?.focus();
                         return;
                     }

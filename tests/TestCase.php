@@ -35,6 +35,20 @@ abstract class TestCase extends BaseTestCase
             ]);
         }
 
+        if (! $schema->hasTable('ref_profesi')) {
+            $schema->create('ref_profesi', function (Blueprint $table) {
+                $table->integer('id')->primary();
+                $table->string('nama', 100);
+            });
+
+            DB::connection('sqlsrv')->table('ref_profesi')->insert([
+                ['id' => 56, 'nama' => 'Administrasi Keperawatan '],
+                ['id' => 744, 'nama' => 'Programmer'],
+                ['id' => 888, 'nama' => 'Perawat PK III'],
+                ['id' => 999, 'nama' => 'Umum'],
+            ]);
+        }
+
         if (! $schema->hasTable('tb_employees')) {
             $schema->create('tb_employees', function (Blueprint $table) {
                 $table->string('nip', 256)->primary();
@@ -52,7 +66,7 @@ abstract class TestCase extends BaseTestCase
                 [
                     'nip' => '5508150824',
                     'nama' => 'Purwanto Ali Sastra, S.Kom',
-                    'id_profesi' => '888',
+                    'id_profesi' => '744',
                     'id_golongan' => '4A1',
                     'status_karyawan' => 'AKTIF',
                 ],
