@@ -1034,7 +1034,7 @@ test('non-admin user with manage_roles does not see Administrator option in assi
         ]);
 });
 
-test('admin roles page renders dropdown limit footer with eager SSR over 80 candidates and recovers old input safely', function () {
+test('admin roles page keeps silent 80-row DOM cap with eager SSR over 80 candidates without candidate count displays and recovers old input safely', function () {
     $extraEmployees = [];
     for ($i = 1; $i <= 82; $i++) {
         $extraEmployees[] = [
@@ -1049,8 +1049,10 @@ test('admin roles page renders dropdown limit footer with eager SSR over 80 cand
     $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
 
     $response->assertSuccessful()
-        ->assertSee('filteredEmployees.length > 80', false)
-        ->assertSee('Menampilkan 80 dari', false)
+        ->assertSee('filteredEmployees.slice(0, 80)', false)
+        ->assertDontSee('Menampilkan 80 dari', false)
+        ->assertDontSee('filteredEmployees.length > 80', false)
+        ->assertDontSee('kandidat aktif', false)
         ->assertSee('"nip":"7799000082"', false);
 
     expect($response->viewData('unregisteredEmployees')->count())->toBeGreaterThan(80);
@@ -1069,4 +1071,64 @@ test('admin roles page renders dropdown limit footer with eager SSR over 80 cand
         ->assertSee('const initialAssignRoleId = "1";', false)
         ->assertSee('selectedNip: matchedOld ? matchedOld.nip : \'\'', false)
         ->assertDontSee('NIP: INVALID999', false);
+});
+
+test('assign user modal renders two-pane permission matrix, role metadata, navy modal headers, and excludes em dashes', function () {
+    RefAppRole::create([
+        'app_id' => 6,
+        'role_id' => 2,
+        'role_name' => 'PERAWAT TANPA IZIN',
+    ]);
+    RefAppRole::syncPermissions(2, []);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $response->assertSuccessful()
+        ->assertSee('id="assign_employee_listbox"', false)
+        ->assertSee('Daftarkan Pegawai')
+        ->assertSee('Operasional Logbook')
+        ->assertSee('Analisis &amp; Pelaporan', false)
+        ->assertSee('Administrasi Sistem')
+        ->assertSee('Akses Penuh Administrator:')
+        ->assertSee('Belum ada izin modul aktif:')
+        ->assertSee('Bersihkan pencarian')
+        ->assertSee('bg-teal-700', false)
+        ->assertDontSee('—', false);
+
+    foreach (RolePermission::AVAILABLE_PERMISSIONS as $permMeta) {
+        $response->assertSee($permMeta['label']);
+    }
+
+    $html = $response->getContent();
+
+    // All 4 modal headers use Primary Navy (bg-blue-900), crisp scrims without blur, and self-dismiss wrappers without blocking @click.outside
+    expect(substr_count($html, 'bg-blue-900 px-4 py-3.5 sm:px-6 sm:py-4 text-white'))->toBe(4)
+        ->and(substr_count($html, 'bg-slate-950/55'))->toBe(4)
+        ->and($html)->not->toContain('backdrop-blur')
+        ->and($html)->not->toContain('@click.stop')
+        ->and($html)->toContain('@click.self="closePermissionModal()"')
+        ->and($html)->toContain('@click.self="closeRenameModal()"')
+        ->and($html)->toContain('@click.self="closeCreateRoleModal()"')
+        ->and($html)->toContain('@click.self="closeAssignUserModal()"');
+
+    // Role select uses regular hyphen and includes active user count metadata for custom role
+    preg_match('/<select[^>]*id="assign_role"[^>]*>.*?<\/select>/s', $html, $selectMatch);
+    expect($selectMatch[0] ?? '')
+        ->toContain('0 - ADMINISTRATOR')
+        ->toContain('1 - SUPERVISOR KEPERAWATAN')
+        ->toContain('2 - PERAWAT TANPA IZIN')
+        ->not->toContain('—');
+
+    expect($html)->toContain('"2":{"name":"PERAWAT TANPA IZIN","user_count":0}');
+});
+
+test('assign user modal renders empty candidate pool state when all active nurses are already registered', function () {
+    AppRoleAssignment::upsertForSupervisiUser('1355010892', AppRole::ROLE_SUPERVISOR);
+
+    $response = $this->actingAs($this->admin)->get(route('admin.roles.index'));
+
+    $response->assertSuccessful()
+        ->assertSee('Semua perawat aktif sudah terdaftar.');
+
+    expect($response->viewData('unregisteredEmployees')->count())->toBe(0);
 });
